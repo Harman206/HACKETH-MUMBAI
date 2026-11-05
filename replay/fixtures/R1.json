@@ -1,0 +1,39 @@
+{
+  "id": "R1",
+  "incident": "Curve Finance DNS hijack, 9 Aug 2022: cloned site asked users to approve an unverified contract; USDC and DAI drained.",
+  "sources": [
+    "CertiK incident write-up on the Curve DNS hijack (cited in the PRD Sources): date and mechanism only, no addresses",
+    "On chain: Approval(owner, 0x9eb5\u20268881) logs on USDC/DAI, blocks 15309722\u201315310260; drains via 0x9eb5\u20268881 to 0x50f9\u2026f331 (found with eth_getLogs, verified with cast tx)",
+    "https://etherscan.io/tx/0xec72bb412a3e56519af8cf96f7de56edb80de53c1d1b656d2e5d5d8ce2477f69",
+    "https://etherscan.io/tx/0x361bfdbd76290ead53b29a78c3e6f4633e6eb11459437f3c3955f59abfae1e6a"
+  ],
+  "victim": "0xb30Ca7383DBd1aC31459E8e1De3BCb022A1Db001",
+  "drainer": "0x9Eb5F8e83359Bb5013f3D8eee60bDCe5654e8881",
+  "attacker": "0x50f9202e0f1c1577822BD67193960B213CD2f331",
+  "approveTx": "0xec72bb412a3e56519af8cf96f7de56edb80de53c1d1b656d2e5d5d8ce2477f69",
+  "approveCalldata": "0x095ea7b30000000000000000000000009eb5f8e83359bb5013f3d8eee60bdce5654e88810000000000000000000000000000000000000000000000000000005d2f66e130",
+  "approveTarget": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "drainTx": "0x361bfdbd76290ead53b29a78c3e6f4633e6eb11459437f3c3955f59abfae1e6a",
+  "approveBlock": 15309929,
+  "drainBlock": 15309930,
+  "forkBlock": 15309928,
+  "tokens": [
+    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+  ],
+  "lossObserved": {
+    "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "amount": "400227230000",
+    "decimals": 6
+  },
+  "lps": [
+    {
+      "adapter": "curve-3pool",
+      "account": "0xe6981106f75a97ae808a72733089070ce9a08cd5"
+    },
+    {
+      "adapter": "uniswap-v3",
+      "account": "0x9cfacbcc92e9dbbf972befeefa16cc71ed5047c5",
+      "positionId": "287037"
+    }
+  ]
+}

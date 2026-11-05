@@ -171,6 +171,31 @@ importers:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
 
+  replay:
+    dependencies:
+      '@blackout/adapters':
+        specifier: workspace:*
+        version: link:../packages/adapters
+      '@blackout/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@blackout/exec':
+        specifier: workspace:*
+        version: link:../packages/exec
+      '@blackout/guard':
+        specifier: workspace:*
+        version: link:../packages/guard
+      '@blackout/quorum':
+        specifier: workspace:*
+        version: link:../packages/quorum
+      viem:
+        specifier: 2.21.55
+        version: 2.21.55(typescript@5.6.3)
+    devDependencies:
+      '@blackout/testkit':
+        specifier: workspace:*
+        version: link:../packages/testkit
+
 packages:
 
   '@adraffy/ens-normalize@1.11.1':
