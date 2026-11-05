@@ -1,0 +1,542 @@
+BLACKOUT — Technical PRD
+Nov 6, 2026 · @Harman Manik
+Summary
+BLACKOUT is a saved, verifiable emergency exit for DeFi positions. It works when the protocol's website, domain, company or RPC provider fails or is hijacked.
+Pitch: "We take down the DeFi app's website, and you can still withdraw directly from its smart contracts."
+What the demo proves:
+	•	A real withdrawal from the saved kit, with the website and primary RPC switched off by a judge.
+	•	A tampered kit is rejected by an independent fingerprint check against an ENSv2 record.
+	•	A stolen website key cannot change the release record or swap the name's resolver.
+	•	The Exit Guard rejects real attacker calldata from the Curve 2022 and Balancer 2023 frontend hijacks, replayed on mainnet forks.
+Protocols covered:
+	•	Uniswap v3: live on Sepolia and on a mainnet fork.
+	•	Aave v3 and Curve: on a mainnet fork.
+Partners targeted: EF (CROPS lead, Anon-RPC tag), ENS (Best Use of ENSv2), Uniswap Foundation.
+What it is not: protection against smart-contract exploits, oracle attacks, stolen user keys, or paused or insolvent contracts. The replay lab includes a contract exploit as a control to show this limit honestly.
+Problem and threat model
+DeFi contracts outlive their websites, but users reach them through those websites. In the frontend incidents below the contracts were fine. Users lost money by signing approvals on a hijacked site.
+Incident
+Date
+Mechanism
+Loss
+Curve DNS hijack (CertiK)
+9 Aug 2022
+Cloned site asked users to approve an unverified contract; USDC and DAI drained
+~$612k, 7 users
+Balancer frontend hijack (Cointelegraph)
+19–20 Sep 2023
+Registrar social engineering; Angel Drainer approvals then transferFrom
+~$238k
+Polymarket third-party script (The Hacker News)
+29 Oct 2026
+Hijacked third-party script on the real site
+~$2.7M
+Name.com DNS hijack (The Block)
+30–31 Oct 2026
+12–15 DeFi sites served drainers
+Not collected
+The 2026 rows come from the team's research file and were not re-checked here.
+Threat model
+Threat
+In scope
+BLACKOUT's response
+Website or hosting outage, company shutdown
+Yes
+Exit kit runs locally; no company server
+DNS or registrar hijack serving a fake site
+Yes
+User exits via the verified kit; Exit Guard blocks approvals and foreign recipients
+Malicious third-party script on the real site
+Yes
+Kit loads zero third-party code (strict CSP)
+Primary RPC outage or censorship
+Yes
+Read quorum across 3 paths; user-chosen endpoints; optional Anon-RPC
+Stolen website or DNS key
+Yes
+ENSv2 roles: that key can write only url
+Stolen release key
+Partly
+Release role held by a 2-of-3 Safe; disclosed as a trust assumption
+Smart-contract exploit (Euler-style)
+No
+Replay control C1 shows funds are lost unless exited before the exploit block
+User's own key stolen, paused or insolvent contracts, oracle manipulation
+No
+Out of scope; stated in the README
+Correction to the pitch: never claim "no user funds will ever be lost." The honest claim is: if the website dies or is hijacked, you can still exit, and a hijacked site cannot trick the kit into an approval or a foreign recipient.
+Users and core flows
+Three people use BLACKOUT: the LP or lender who needs to exit, the protocol team that publishes releases, and the security team that runs drills.
+Publish (protocol team)
+	•	Build the kit reproducibly and compute its sha256.
+	•	The release Safe writes org.blackout.release (hash and version) and org.blackout.manifest (exit contracts per chain) on the protocol's ENSv2 name.
+	•	Host the kit on the website and on any mirror. Hosting is not trusted; the ENS record is.
+Prepare (user, any time before an incident)
+	•	Download the kit from the site or any mirror.
+	•	Verify it independently: sha256sum blackout-kit.html must match the ENS release record, read with any ENS client or the ENS app.
+	•	Take the ENS name from the protocol's docs or the moment you deposit, never from the kit itself.
+Exit (user, during an incident)
+	•	Serve the kit on http://localhost (npx serve or python3 -m http.server). Wallets don't inject into file:// pages.
+	•	Connect the wallet. The kit reads the manifest from ENS through the read quorum.
+	•	Adapters find the user's positions from the wallet. No position file is needed.
+	•	For each position the kit simulates the exit, runs the Exit Guard, then asks the wallet to sign.
+	•	The kit shows "Recovered" only after a confirmed receipt and a positive balance change. It then writes an exit report.
+Drill (judge or security team)
+	•	Pick the failure: website down, RPC down, or hijacked site.
+	•	The harness switches it off for real.
+	•	Run the exit. The report records time-to-exit, transaction hashes and balances before and after.
+System architecture
+The kit sits between ENS and the user's wallet. The company's website and primary RPC are not on the exit path, so switching them off cannot block an exit.
+
+BLACKOUT architecture · release trust, exit kit, chains
+Read it top to bottom: the Safe and the website key write different ENS records; the kit reads them through the quorum, runs each exit through the Guard, and only the wallet signs.
+Trust boundaries:
+	•	Trusted: the wallet and its broadcast RPC, Ethereum, ENS contracts, the release Safe's signers.
+	•	Verified, not trusted: the kit file (hash against ENS), RPC answers (quorum), every exit call (Guard).
+	•	Not trusted at all: the website, its DNS, its third-party scripts, wherever the kit is hosted.
+ENSv2 release and role design
+Each protected app gets one ENSv2 name on Sepolia. The website key can write only url; a 2-of-3 Safe owns everything else. A stolen web or DNS key therefore cannot publish a release, swap the resolver or upgrade it.
+ENSv2 is deployed on Sepolia (deployments). Mainnet ENSv2 contracts exist, but mainnet resolution still runs through ENSv1 until launch completes, so build on Sepolia.
+Sepolia ENSv2 contract
+Address
+VerifiableFactory
+0xda70306c98e97ece36f997a21368e53298572991
+PermissionedResolverImpl
+0x115eb53f0c60696633855f90b138178fb40b2b2c
+ETHRegistrar
+0xf633e7fc17e2bbe0d0965d18ec1821dcb754a3d3
+UniversalResolverV2
+0x24e1d8e068620b647ca097f961a61055f4f42d72
+These go in a config file that cites the deployments table. They are not baked into the kit's logic.
+Name and records
+Use a top-level name such as demoswap-blackout.eth, owned by the Safe. A subname would let the parent's ROLE_SET_SUBREGISTRY holder redirect it (registry docs).
+Record
+Value
+Writer
+url
+Official website URL
+Website key (one scoped grant)
+org.blackout.release
+sha256:<hex> of the kit HTML, plus a version number
+Safe
+org.blackout.manifest
+Compact JSON: per chain, each protocol's exit contracts and allowed selectors
+Safe
+org.blackout.site (P2)
+sha256 of the official site bundle, for hijack detection
+Safe
+The kit takes every protocol address from the manifest record. This keeps ENS central and meets ENS's "no hard-coded values" rule.
+Role map
+Holder
+Gets
+Never gets
+Website key
+grantSetterRoles(setText(node, "url", ""), webKey) on the resolver
+ROLE_SET_RESOLVER, ROLE_SET_SUBREGISTRY, ROLE_UPGRADE, root roles, name ownership
+Release Safe (2-of-3)
+Name owner; ROLE_SET_RESOLVER; all resolver roles; writes release and manifest
+—
+Setup steps
+	•	Register the name with the Sepolia ETHRegistrar into the Safe. Public registration is not confirmed in the docs; if blocked, ask the ENS booth first thing.
+	•	Deploy the resolver: VerifiableFactory.deployProxy(PermissionedResolverImpl, salt, initialize([{Safe, ALL_ROLES}], [])) (factory docs). Grant ALL_ROLES only to the Safe; the docs' example grants it to the caller.
+	•	The Safe calls setResolver on the registry, pointing the name at the new resolver.
+	•	The Safe grants the website key one scoped role for url (resolver docs).
+	•	The Safe writes the release and manifest records.
+Must-revert checks (run live in the demo)
+	•	Website key writes org.blackout.release → reverts with EACUnauthorizedAccountRoles.
+	•	Website key calls setResolver on the registry → reverts.
+	•	Website key upgrades the resolver proxy → reverts.
+	•	Website key grants itself roles → reverts.
+	•	The Safe updates the release → succeeds; the kit shows the new version. Versions only go up, so an attacker can't roll back to an old release.
+Exit Kit and protocol adapters
+The kit is one self-contained HTML file that loads no external code. Three adapters find positions from the wallet and build exit calls that need no approvals.
+Packaging
+	•	Stack: Vite + Preact (or React) + viem, bundled into one file with vite-plugin-singlefile.
+	•	Content Security Policy: default-src 'none'; script-src 'sha256-<build hash>'; style-src 'unsafe-inline'; connect-src https: wss: http://127.0.0.1:*; img-src data:.
+	•	Reproducible build: pinned Node and pnpm lockfile, SOURCE_DATE_EPOCH, no timestamps. CI builds twice and the hashes must match.
+	•	Serving: http://localhost only. The kit never fetches code after load.
+	•	Size target: under 1 MB.
+Adapter interface
+interface ExitAdapter {   id: 'uniswap-v3' | 'aave-v3' | 'curve-3pool';   discover(user: Address, ctx: Ctx): Promise<Position[]>;   buildExit(pos: Position, ctx: Ctx): Promise<ExitPlan>; // calls + expected token deltas }
+ctx holds the read quorum, the chain ID and the ENS manifest. Adapters never read addresses from code.
+Adapters
+Protocol
+Network
+Discover
+Exit call
+MVP scope
+Uniswap v3 (P0)
+Sepolia live + mainnet fork
+Position manager balanceOf + tokenOfOwnerByIndex, then positions(id)
+multicall[decreaseLiquidity(id, liquidity, min0, min1, deadline), collect(id, user, max128, max128)]
+NFT positions held directly by the wallet. Not v4, vaults or staked positions
+Aave v3 (P2)
+Mainnet fork
+getReservesList, each reserve's aToken balance, getUserAccountData
+Pool.withdraw(asset, type(uint256).max, user) per reserve
+Supply-only. Positions with debt are flagged "manual" because repaying needs an approval
+Curve 3pool (P2)
+Mainnet fork
+3CRV LP balance
+remove_liquidity(amount, minAmounts[3]), paid to the caller
+3pool only. Gauge-staked LP out of scope
+None of these exits needs an approval, so the Exit Guard can ban approvals outright.
+Amounts and success
+	•	Minimum amounts = simulated output (eth_call at a pinned block) × (1 − slippage). Default slippage is 0.5%.
+	•	"Recovered" appears only after receipt status = 1 and a positive balance change for each expected token. Otherwise the kit shows "Not recovered" and why.
+Contract addresses (from memory — verify on Etherscan before use)
+Contract
+Network
+Address
+Uniswap v3 NonfungiblePositionManager
+Mainnet
+0xC36442b4a4522E871399CD717aBDD847Ab11FE88
+Uniswap v3 NonfungiblePositionManager
+Sepolia
+0x1238536071E1c677A632429e3655c799b22cDA52
+Aave v3 Pool
+Mainnet
+0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2
+Curve 3pool
+Mainnet
+0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7
+All of these go into the ENS manifest record, not into the kit's code.
+Exit Guard
+Every transaction the kit builds passes a pure-TypeScript policy check before the wallet sees it. The Guard rejects anything that is not a known exit to the user's own address, and fails closed on anything it cannot decode.
+guard(tx: TxRequest, ctx: { account: Address; chainId: number; manifest: Manifest }): { ok: boolean; reasons: string[] }
+Rules, applied in order
+	•	Chain: chainId must be listed in the ENS manifest.
+	•	Target: to must be on the manifest allowlist for that chain.
+	•	Function: the selector must be on the allowlist for that target. Calls nested in multicall are decoded and checked recursively.
+	•	Recipient pinned: every decoded recipient argument (collect.recipient, withdraw.to) must equal the connected account. Pools that pay the caller need caller = account.
+	•	Always banned: approve, increaseAllowance, EIP-2612 and DAI permit, setApprovalForAll, transfer, transferFrom, and Permit2 permits. The kit never requests typed-data signatures.
+	•	No ETH sent: value must be 0.
+	•	Simulation: an eth_call at a block pinned across the quorum must succeed and return the expected amounts.
+	•	After send: the receipt must show success and each expected token balance must rise. Otherwise the kit reports "Not recovered".
+Any decode failure, unknown selector or quorum disagreement means reject. The Guard has no override switch in the UI.
+Why this is the protection mechanism to test
+In the Curve and Balancer hijacks the attacker's lever was an approval signed on a fake site. Rules 3 and 5 reject that calldata whatever page produced it. Rule 4 rejects a quieter attack that only swaps the recipient. Section "Incident Replay Lab" feeds the attackers' real calldata into this function.
+Stretch (P3)
+	•	Check a transaction: paste the calldata a live site asks you to sign; the Guard explains whether it is a safe exit.
+	•	Hijack detection: hash the live site's main bundle and compare it with org.blackout.site.
+Read quorum and network trust
+The kit reads from three independent RPC paths. It refuses to sign if fewer than two answer or if they disagree.
+	•	Endpoints: endpoints the user enters, plus two public providers, plus Anon-RPC through Nox for Sepolia if it passes its go/no-go. Settings are stored only in the browser.
+	•	Agreement: all paths must report the same chain ID. Critical reads (ENS records, ownerOf, positions, balances) are pinned to one block number and compared. Any mismatch stops the flow.
+	•	Timeouts: 4 s per call, 2 retries, then the path is marked down.
+	•	Broadcast: through the wallet's own RPC. This is a trusted dependency and is disclosed under CROPS "C".
+	•	Anon-RPC: Nox is the only listed Sepolia network and is a testnet demo (adopters). Ship its worker inside the kit, pinned by hash, so nothing is fetched at run time. Cap: 2 person-hours, decided by 7 AM Fri. If dropped, the EF entry leads with CROPS.
+What each third party learns (CROPS "P"): RPC providers see reads for the user's address. With Anon-RPC they don't see the IP. There is no BLACKOUT server and no analytics.
+Fire Drill harness
+A docker-compose stack lets a judge break the real website, the primary RPC and the release, live, with three buttons.
+Service
+What it runs
+Switch
+site
+nginx serving "DemoSwap", a normal app frontend that loads several third-party origins on purpose
+docker stop site
+rpc-proxy
+Node proxy to the primary Sepolia RPC
+docker stop rpc-proxy; the kit fails over through the quorum
+hijack
+A cloned DemoSwap with an injected script that asks for approve(attacker, max), plus a tampered kit build
+Reverse proxy routes the site's hostname to hijack
+control
+A small page with three buttons and live status, for the judge
+—
+Scan hook (cut at 4 PM if not done): a Playwright script lists the third-party origins DemoSwap loads (N) against the kit (0). Scan only the team's own site live. Show any real dapp only as a recorded, neutral count.
+Drill report (JSON plus an HTML view):
+	•	failures injected and their timestamps
+	•	time-to-exit in seconds
+	•	exit transaction hashes
+	•	balances before and after
+	•	tampered kit detected (yes or no)
+	•	hijacked site's approval request rejected by the Guard (yes or no)
+Incident Replay Lab
+For each real frontend hijack, we fork Ethereum mainnet just before a victim's malicious approval, replay the attack, then replay the same moment with BLACKOUT and compare balances. A smart-contract exploit is included only as a control, to show where BLACKOUT does not help.
+Tooling
+	•	Foundry: forge test with vm.createSelectFork(rpc, block) and vm.transact(txHash), which fetches a historical transaction and executes it on the current fork state (docs). Also vm.rollFork to move a fork to a block or transaction (docs); confirm its transaction-hash overload before relying on it.
+	•	Anvil: anvil --fork-url $ARCHIVE_RPC --fork-block-number N so the real TypeScript kit code (adapters and Guard) runs against historical state, using anvil_impersonateAccount.
+	•	Archive RPC: a historical fork needs an archive node (Alchemy or Infura archive tier). Cache fork state locally to avoid rate limits.
+Scenarios
+ID
+Incident
+Replay "as it happened"
+BLACKOUT counterfactual
+Pass condition
+R1 (P1)
+Curve DNS hijack, 9 Aug 2022
+Victim's approve to the drainer, then the drain → victim loses USDC/DAI
+(a) Victim's real approve calldata into the Guard; (b) skip the approve, replay the drain; (c) a 3pool LP and a Uniswap v3 LP exit through the kit at that block
+(a) rejected; (b) drain reverts or moves 0; (c) exits land with positive deltas
+R2 (P2)
+Balancer frontend hijack, 19–20 Sep 2023 (Angel Drainer)
+Victim's approve, then transferFrom drain
+Same as R1, plus an Aave v3 supplier exit (Aave v3 was live on mainnet by then)
+Same as R1
+R3 (P2)
+Malicious third-party script, Polymarket-style (Oct 2026), synthetic
+DemoSwap on a current fork with an injected script that swaps the recipient or requests a permit
+Same calls go through the Guard; kit has no third-party scripts
+All injected calls rejected
+C1 (control)
+A smart-contract exploit, such as Euler (Mar 2023)
+Exploit transaction drains the pool
+A user who exited via the kit before the exploit block keeps funds; one who didn't, loses them
+Documented as out of scope; shows why time-to-exit matters
+R1 uses Uniswap v3 and Curve only, because Aave v3 was not on mainnet in August 2022.
+Finding the replay transactions
+The CertiK and Cointelegraph write-ups give dates and mechanisms, but no addresses or hashes in text. Collect them from Etherscan:
+	•	Find the drainer or attacker address from incident threads (CertiK Alert, MistTrack, SlowMist) or Etherscan's phishing labels.
+	•	On the drainer contract, open incoming token transfers and pick one victim's drain transaction.
+	•	From the victim's history, find their earlier approve to the drainer.
+	•	Inspect both locally with cast run <hash> and cast tx <hash> input.
+	•	Save replay/fixtures/<id>.json with victim, approveTx, drainTx, tokens and block numbers.
+Timebox: 2 hours for R1. If Curve 2022 addresses are hard to pin down, use R2 first; Angel Drainer contracts are labelled on Etherscan.
+Pipeline (pnpm replay R1)
+	•	Fork: createSelectFork at the approve transaction's block, so the state is from before the victim signed.
+	•	As it happened: vm.transact(approveTx), then vm.transact(drainTx). Record the victim's balances: the loss.
+	•	Counterfactual: a fresh fork at the same block. Skip the approve and vm.transact(drainTx). Expect a revert or zero moved.
+	•	Guard: a vitest test loads the real approve calldata from the fixture into guard(). Expect a rejection, with reasons: selector banned, spender not on the allowlist.
+	•	Exits at the incident block: Anvil fork at the same block. Impersonate a real 3pool LP and a real Uniswap v3 LP. Run the kit's adapters and Guard, send, and assert positive balance deltas.
+	•	Report: a Markdown and HTML table per scenario with lost without BLACKOUT, lost with BLACKOUT, Guard verdicts, exit transactions and gas.
+Honesty labels in the report and the demo
+Every result is labelled "mainnet fork", "impersonated account" and "counterfactual". Never present a replay as a live mainnet rescue.
+Test plan and acceptance criteria
+The build is demo-ready when every P0 row below passes three times in a row. The Guard and ENS permission tests run in CI on every push.
+Layer
+Tool
+What it proves
+Pass bar
+Priority
+Guard rules
+vitest
+Each rule accepts real exits and rejects its target
+Every rule covered; 0 accepts on the banned-call corpus
+P0
+Guard properties
+fast-check
+Random mutations of real exits (recipient, target, selector, value, a nested multicall injection) are always rejected; unmutated exits always pass
+10,000 runs, 0 failures
+P1
+ENS permissions
+Foundry script on Sepolia
+Website key: release write, setResolver, resolver upgrade and role grants all revert (EACUnauthorizedAccountRoles on the record write); Safe update succeeds
+All as expected, transaction hashes in README
+P0
+Integrity
+CI
+Two builds give the same sha256; one changed byte fails sha256sum against the ENS record
+Identical hash; tamper caught
+P0
+Uniswap v3 live
+viem + MetaMask on Sepolia
+Discover and exit every test position via the ENS manifest
+3 clean runs
+P0
+Fork exits
+Anvil + viem test client, impersonated accounts
+Uniswap v3, Aave v3 and Curve exits at the current block and at the R1/R2 blocks
+All exits land; every expected delta > 0
+P2
+Incident replays
+Foundry createSelectFork + transact
+R1–R3 and C1 outcomes from the Replay Lab section
+As specified there
+P1 (R1), P2 (rest)
+No trackers (CROPS)
+Playwright network log
+The kit contacts only the configured RPC origins
+0 third-party requests
+P0
+Fire drill
+Playwright + docker
+Each switch (site, RPC, hijack), then a full exit
+Time-to-exit under 60 s on Sepolia
+P0
+Wallets
+Manual
+Connect and sign on http://localhost
+MetaMask and Rabby both work
+P0
+Quorum
+vitest with fake RPCs
+One path lying or down → refuse or fail over correctly
+Never signs on disagreement
+P1
+Banned-call corpus for the Guard
+	•	Real approve calldata from R1 and R2 (from the fixtures).
+	•	approve and increaseAllowance to any address; EIP-2612 and DAI permit; setApprovalForAll; Permit2 permits.
+	•	transfer and transferFrom from the user.
+	•	A valid collect with the recipient changed to the attacker.
+	•	A valid withdraw with to changed.
+	•	A multicall wrapping a valid exit plus one hidden approve.
+	•	Any call with value > 0, or to an address not in the manifest.
+Metrics in the drill and replay reports
+	•	Time-to-exit, in seconds, from "site down" to confirmed receipt.
+	•	Guard verdicts: rejected and accepted counts, with the reasons.
+	•	Value at risk vs value recovered, in tokens and USD at the fork block.
+	•	Gas used per exit.
+Demo script (4 min) and video
+The judge breaks things; the kit still gets the money out; the attacker's own calldata bounces. Every on-screen claim is a real transaction or a labelled replay.
+Time
+Beat
+Proof on screen
+0:00–0:20
+Hook: last week's Name.com hijack and Polymarket script. "We take down the app's website; you still withdraw from its contracts."
+Two headlines
+0:20–0:45
+Scan: DemoSwap loads N third-party origins; the saved kit loads 0. Show the ENS roles.
+Playwright output; ENS records
+0:45–1:10
+The judge presses the switches: site down, RPC down, hijack on.
+control page; dead site
+1:10–2:05
+WOW: the hijacked site asks for an approval and the Guard explains the block. The kit's sha256 matches ENS. Exit the Uniswap v3 position.
+Receipt + balance delta
+2:05–2:35
+The stolen website key tries the release record, then setResolver. Both revert.
+Two reverted transactions
+2:35–3:20
+Replay Lab, Curve 2022 on a mainnet fork: without BLACKOUT the victim loses funds; with it the drain reverts, the Guard rejects the real calldata, and an LP exits at that block.
+Report, plus one live forge test if cached
+3:20–4:00
+What is still trusted; the honest limit (control C1); mainnet is a config change.
+One slide
+Plan B: a hotspot on a second carrier; a recorded scan; if Sepolia is unreachable, an Anvil fork labelled "LOCAL FORK" alongside that morning's real Sepolia transaction hashes.
+Video: 2:30–2:55. That fits ETHGlobal's 2–4 minutes and the CROPS 3-minute cap. 720p or higher, screen-recorded, human voice, no speed-up, intro under 20 s, at most 4 bullets per slide. It must show the backend being switched off, as CROPS requires.
+Partner prizes and submission checklist
+BLACKOUT enters three partners: EF, ENS and Uniswap Foundation. Each track's official criteria map to a specific feature, demo moment and deliverable below (EF, all prizes).
+Ethereum Foundation: Best CROPS App ($3,500: 2k / 1k / 500), with an Anon-RPC tag ($5,000: 2.5k / 1.5k / 1k)
+One EF prize per project; EF judges place us. The CROPS idea list names our case: "a frontend that keeps working when its domain, backend or RPC provider disappears."
+CROPS criterion
+How BLACKOUT meets it
+Where judges see it
+Works end to end
+Exit with the site and primary RPC switched off
+Demo 0:45–2:05
+Lead property is structural, not cosmetic
+Censorship resistance: the exit needs no BLACKOUT or protocol server
+The judge kills the backend live
+Other three hold, or trade-offs stated
+O: MIT, builds from the repo. P: no analytics; RPC sees reads. S: keys stay in the wallet; Guard; release Safe
+README CROPS section
+Usable without knowing CROPS
+One button per position; plain-language Guard messages
+Kit UI
+Could ship after the hackathon
+Mainnet is a config change; protocols publish their own release
+Demo 3:20
+Anon-RPC criteria: works end to end; UX; share of traffic through Anon-RPC; shippability; depth. Qualifies only if the kit routes reads through Anon-RPC by default. Ship it as the default Sepolia read path only if Nox passes the 7 AM go/no-go. If we exclude some traffic for speed, say so; EF says that can count in our favour.
+ENS: Best Use of ENSv2 ($7,000: 3k / 2k / 1k / 1k)
+ENS requirement
+How BLACKOUT meets it
+Built on ENSv2, mainnet or Sepolia
+Sepolia ENSv2: registrar, VerifiableFactory, Permissioned Resolver
+ENSv2 central, not cosmetic
+The kit cannot run without the release and manifest records. The trust model is ENSv2's Enhanced Access Control: the website key edits only url
+Uses the features ENS lists
+Per-app Permissioned Resolver; argument-scoped setter roles ("letting an account edit only certain text records" is ENS's own example); role revocation
+Functional, no hard-coded values
+Protocol addresses come from the manifest record; the Safe updates it and the kit follows live
+Live demo link + open source
+Hosted page: download, independent verifier, read-only kit that resolves the records live
+ENS enhancement (P2): a shared blackout-exits.eth namespace where each protocol gets an emancipated subname with its own Permissioned Resolver. ENS's prize page lists "forever names with no parent control". Emancipation also closes the parent-override risk from the registry docs.
+Uniswap Foundation: Build with Uniswap ($10,000: 4k / 3k / 2k / 1k)
+	•	Use case: independent exit tooling for Uniswap v3 LPs when the app, DNS or an RPC fails. It is "tooling built for the broader ecosystem" and makes Uniswap positions survive any single frontend.
+	•	Integration: NonfungiblePositionManager discovery, positions, decreaseLiquidity + collect in one multicall. Live on Sepolia and replayed on mainnet forks.
+	•	Framing: never show Uniswap's own site graded red. Uniswap's contracts are the hero: they outlive every frontend.
+	•	Required: public repo, FEEDBACK.md, the developer feedback form with the FEEDBACK.md link, and README pointers to the adapter's exact lines.
+Partners skipped (3-partner cap)
+Partner
+Why not
+World
+No moment that needs a human-identity check
+Arc / Circle
+Every Arc prize must start in Arc Studio; a different stack
+0G
+No AI in the product
+Hedera, Whitechain
+Payment tracks; no fit
+Arkiv
+Could mirror release records, but it would be the fourth partner and is bolted on
+Chainlink
+A CRE workflow would be decoration
+Submission checklist
+	•	☐ Repo public under MIT, with a steady commit history (no single final-day commit)
+	•	☐ README: how to run, architecture diagram, CROPS section (C/O/P/S), honest limits
+	•	☐ README: deployed addresses and Sepolia transaction hashes for every claim
+	•	☐ AI-use disclosure, plus spec and prompt files if spec-driven tools were used
+	•	☐ FEEDBACK.md + Uniswap feedback form submitted with its link
+	•	☐ ENS live demo link that works with every BLACKOUT machine off
+	•	☐ No trackers or analytics in the kit or the hosted page
+	•	☐ Video 2:30–2:55, 720p+, human voice, intro under 20 s, at most 4 bullets per slide
+	•	☐ Partners selected: EF, ENS, Uniswap. Per partner: how we used the tool + feedback
+	•	☐ Submitted by 7 AM Sat (hard deadline 9 AM, no late entries)
+Build plan
+The core (P0) is about 40–50 person-hours; with the replay lab and the two extra adapters it is about 60–70. A team of four has roughly 85–90 useful hours before Saturday morning, so build strictly in priority order.
+Priority
+Scope
+Owner
+P0
+ENS name, resolver, role split, must-revert checks; Uniswap v3 exit on Sepolia; Exit Guard; kit verify; drill harness; README, CROPS, FEEDBACK.md; video
+All
+P1
+Replay R1 (Curve 2022); Guard property tests; read quorum
+C, B
+P2
+Aave v3 + Curve adapters on a fork; R2, R3, C1; ENS shared namespace
+B, C
+P3
+Scan hook, Anon-RPC, "check a transaction" page, site-hash hijack detection
+D
+Owners (assumes four people; rebalance if different):
+	•	A, ENS and release: Sepolia name, resolver through the factory, Safe, roles, records, permission tests.
+	•	B, kit and adapters: single-file kit, Uniswap v3 adapter, then Aave v3 and Curve on a fork, UI, exit report.
+	•	C, Guard and Replay Lab: Guard and its tests, fixtures from Etherscan, Foundry replays, replay report.
+	•	D, harness, docs and demo: docker drill, control page, hosted link, README, FEEDBACK.md, video.
+Checkpoints (IST):
+	•	Fri 05:00: ENS spike passes (name, resolver, scoped write reverts). A Uniswap Sepolia position is withdrawn from the kit on localhost. If ENS fails, go to the ENS booth when it opens.
+	•	Fri 07:00: Anon-RPC go or no-go. R1 fixture found (victim, approve and drain hashes), or switch to R2.
+	•	Fri 12:00: P0 end to end: Sepolia exit driven by the ENS manifest, through the Guard, with the receipt check. Core frozen.
+	•	Fri 16:00: R1 replay green; drill harness working; scan hook done or cut.
+	•	Fri 20:00: Feature freeze. Two full rehearsals.
+	•	Sat 02:00: Docs complete. Video recorded by 04:00.
+	•	Sat 07:00: Submitted. The hard deadline is 09:00.
+Risks, honest limits and Q&A prep
+The biggest risk is the ENSv2 setup on Sepolia; everything else has a fallback that keeps the core demo real.
+Risk
+Mitigation
+Public .eth registration on ENSv2 Sepolia not open, or setResolver underdocumented
+ENS booth first thing; spike done by 05:00
+Wallet won't inject on localhost
+Test MetaMask and Rabby now; fallback is serving the kit from a mirror, since the ENS check makes any mirror safe
+Replay hashes for Curve 2022 hard to find
+2-hour timebox, then R2 (labelled Angel Drainer contracts)
+Archive RPC rate limits during fork tests
+Cache fork state; pre-run reports; one live run only if cached
+Anon-RPC unreliable on Sepolia
+Drop by 07:00; lead EF with CROPS
+Three adapters too much
+Uniswap v3 first; Aave v3 and Curve stay fork-only P2
+Venue Wi-Fi
+Hotspot on a second carrier; recorded fallbacks, labelled
+Honest limits (say them before judges do)
+	•	Does not stop smart-contract exploits; control C1 shows it.
+	•	Still trusted: the user's wallet and its broadcast RPC, Ethereum itself, ENS, the release Safe's signers, and sha256sum.
+	•	MVP covers Uniswap v3 NFTs held directly, Aave v3 supply-only and Curve 3pool LP. Not Uniswap v4, vaults or staked positions.
+	•	The user must save or fetch the kit and know the ENS name from a source other than the kit.
+Q&A prep
+	•	"Why not Etherscan?" Blockscout's own guide shows the manual route (guide). It needs the contract address, ABI fields, raw amounts and a separate collect step. An explorer is also another company frontend. BLACKOUT is one click, pins the recipient and cannot send an approval.
+	•	"Why would anyone save it before an outage?" Offer it at deposit time. Protocols host it on every mirror, and wallets could cache kits by ENS hash. The hash in ENS, not the host, makes any copy safe.
+	•	"Who holds the release key?" The protocol's own Safe, separate from web operations. A stolen website or DNS key cannot publish.
+	•	"Why ENS and not a hash in the README?" A README lives on the same infrastructure that gets hijacked. ENS gives an updatable record with enforced role separation that any client can read.
+	•	"Uniswap v4?" v4 positions aren't enumerable the same way. Discovery would use a log scan over the same read quorum; it is next on the roadmap.
+	•	"Privacy?" No server, no analytics. RPC providers see reads; Anon-RPC hides the IP when enabled.
+Sources
+	•	ENS deployments (Sepolia ENSv2) · Verifiable Factory · Permissioned Resolver · Permissioned Registry
+	•	Foundry transact · Foundry rollFork
+	•	Anon-RPC adopters
+	•	CertiK: Curve incident · Cointelegraph: Balancer hijack
+	•	ETHGlobal Mumbai EF prizes · All Mumbai prizes
+	•	Blockscout: recovering funds when a dapp is down
