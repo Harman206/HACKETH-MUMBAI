@@ -1,0 +1,26 @@
+{
+  "name": "@blackout/kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node scripts/inject-csp.mjs dist && node scripts/hash.mjs dist",
+    "check-repro": "node scripts/check-repro.mjs",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@blackout/adapters": "workspace:*",
+    "@blackout/core": "workspace:*",
+    "@blackout/ens": "workspace:*",
+    "@blackout/exec": "workspace:*",
+    "@blackout/guard": "workspace:*",
+    "@blackout/quorum": "workspace:*",
+    "preact": "10.25.4",
+    "viem": "2.21.55"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.9.4",
+    "vite": "5.4.11",
+    "vite-plugin-singlefile": "2.0.3"
+  }
+}

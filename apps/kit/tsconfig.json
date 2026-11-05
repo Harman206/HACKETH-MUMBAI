@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../node_modules/.tsbuild/kit",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "types": ["vite/client"]
+  },
+  "references": [
+    { "path": "../../packages/core" }, { "path": "../../packages/guard" }, { "path": "../../packages/quorum" },
+    { "path": "../../packages/ens" }, { "path": "../../packages/adapters" }, { "path": "../../packages/exec" }
+  ],
+  "include": ["src", "test", "vite.config.ts"]
+}
