@@ -57,7 +57,8 @@ describe('single-file kit build', () => {
 
     const tampered = join(mkdtempSync(join(tmpdir(), 'kit-')), 'blackout-kit.html');
     const buf = readFileSync(FILE);
-    buf[Math.floor(buf.length / 2)] ^= 0x01;
+    const i = Math.floor(buf.length / 2);
+    buf[i] = buf[i]! ^ 0x01;
     writeFileSync(tampered, buf);
     const bad = spawnSync('bash', [join(REPO, 'scripts/verify-kit.sh'), tampered, 'demoswap-blackout.eth'], { env, encoding: 'utf8' });
     expect(bad.status).toBe(1);
