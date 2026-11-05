@@ -1,0 +1,10 @@
+{
+  "name": "@blackout/ens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@blackout/core": "workspace:*", "@blackout/quorum": "workspace:*", "viem": "2.21.55" }
+}
