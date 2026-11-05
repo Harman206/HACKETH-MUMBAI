@@ -1,0 +1,30 @@
+{
+  "ens": {
+    "chainId": 11155111,
+    "universalResolver": "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe",
+    "universalResolverImpl": "0x24e1d8e068620b647ca097f961a61055f4f42d72",
+    "verifiableFactory": "0xda70306c98e97ece36f997a21368e53298572991",
+    "permissionedResolverImpl": "0x115eb53f0c60696633855f90b138178fb40b2b2c",
+    "ethRegistrar": "0xf633e7fc17e2bbe0d0965d18ec1821dcb754a3d3",
+    "ethRegistry": "0xD4eBcbBdF463C9c45784603Db0dDD499BC44A8B4",
+    "paymentToken": "0x240b0316Df57887DBBE58b586508b19e633a14aa",
+    "source": "ENS docs deployments table (ENSv2 Sepolia), cross-checked on chain 2026-11-06; see docs/ens-notes.md"
+  },
+  "safe": {
+    "proxyFactory": "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67",
+    "singletonL2": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+    "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99"
+  },
+  "defaultRpcs": {
+    "11155111": [
+      "https://ethereum-sepolia-rpc.publicnode.com",
+      "https://sepolia.gateway.tenderly.co",
+      "https://1rpc.io/sepolia"
+    ],
+    "1": [
+      "https://ethereum-rpc.publicnode.com",
+      "https://gateway.tenderly.co/public/mainnet",
+      "https://1rpc.io/eth"
+    ]
+  }
+}
