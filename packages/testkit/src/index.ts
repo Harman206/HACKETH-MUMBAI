@@ -25,10 +25,11 @@ export const ANVIL_ACCOUNTS: Address[] = [
   '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
 ];
 
-export const DEFAULT_RPC = {
-  1: process.env.MAINNET_RPC ?? 'https://ethereum-rpc.publicnode.com',
-  11155111: process.env.SEPOLIA_RPC ?? 'https://sepolia.gateway.tenderly.co',
-} as const;
+/** Fork sources, tried in order (env first). Public endpoints flake; anvil only needs one. */
+export const FORK_RPCS: Record<1 | 11155111, string[]> = {
+  1: [process.env.MAINNET_RPC, 'https://ethereum-rpc.publicnode.com', 'https://1rpc.io/eth', 'https://gateway.tenderly.co/public/mainnet'].filter(Boolean) as string[],
+  11155111: [process.env.SEPOLIA_RPC, 'https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://1rpc.io/sepolia'].filter(Boolean) as string[],
+};
 
 function anvilBin(): string {
   const local = `${homedir()}/.foundry/bin/anvil`;
@@ -55,8 +56,22 @@ export interface Fork {
 }
 
 export async function startFork(opts: { chainId: 1 | 11155111; forkUrl?: string; blockNumber?: bigint }): Promise<Fork> {
+  const sources = opts.forkUrl ? [opts.forkUrl] : FORK_RPCS[opts.chainId];
+  let last: unknown;
+  for (const src of sources) {
+    try {
+      return await startForkFrom(opts.chainId, src, opts.blockNumber);
+    } catch (e) {
+      last = e;
+    }
+  }
+  throw last;
+}
+
+async function startForkFrom(chainId: 1 | 11155111, forkUrl: string, blockNumber?: bigint): Promise<Fork> {
+  const opts = { chainId, blockNumber };
   const port = await freePort();
-  const args = ['--fork-url', opts.forkUrl ?? DEFAULT_RPC[opts.chainId], '--port', String(port), '--silent'];
+  const args = ['--fork-url', forkUrl, '--port', String(port), '--silent'];
   if (opts.blockNumber) args.push('--fork-block-number', opts.blockNumber.toString());
   const proc: ChildProcess = spawn(anvilBin(), args, { stdio: ['ignore', 'ignore', 'pipe'] });
   let stderr = '';
