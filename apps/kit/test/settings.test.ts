@@ -52,6 +52,13 @@ describe('settings', () => {
     expect(rpcUrlsFor({ ...s, useDefaultRpcs: false }, 1, { '1': ['https://a'] })).toEqual(['https://mine']);
   });
 
+  test('drillUrl accepts only localhost http URLs', () => {
+    saveSettings({ ...DEFAULT_SETTINGS, drillUrl: 'http://localhost:8090' });
+    expect(loadSettings().drillUrl).toBe('http://localhost:8090');
+    localStorage.setItem('blackout.settings.v1', JSON.stringify({ drillUrl: 'https://evil.example' }));
+    expect(loadSettings().drillUrl).toBe('');
+  });
+
   test('default ENS name is empty: it must come from the protocol docs, not the kit', () => {
     expect(DEFAULT_SETTINGS.ensName).toBe('');
   });

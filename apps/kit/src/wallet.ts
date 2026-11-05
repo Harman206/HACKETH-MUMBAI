@@ -13,8 +13,12 @@ export interface WalletInfo {
 
 export class WrongChainError extends Error {
   override name = 'WrongChainError';
-  constructor(public readonly want: number, public readonly have: number | null) {
+  readonly want: number;
+  readonly have: number | null;
+  constructor(want: number, have: number | null) {
     super(`Switch your wallet to chain ${want}${have ? ` (it is on ${have})` : ''}.`);
+    this.want = want;
+    this.have = have;
   }
 }
 

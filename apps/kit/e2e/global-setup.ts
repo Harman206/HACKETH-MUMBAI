@@ -12,6 +12,10 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 import { startFork } from '@blackout/testkit';
+import { createServer as netServer } from 'node:net';
+import { startHarness } from '../../../harness/services/control';
+
+const free = () => new Promise<number>((r) => { const s = netServer(); s.listen(0, () => { const p = (s.address() as { port: number }).port; s.close(() => r(p)); }); });
 
 const KIT = join(HERE, '..');
 const CONTRACTS = join(KIT, '..', '..', 'contracts');
@@ -27,6 +31,7 @@ const K = [
   '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
   '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
   '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba',
+  '0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e',
 ];
 
 export default async function globalSetup() {
@@ -51,6 +56,11 @@ export default async function globalSetup() {
   forge(['script', 'script/SetupName.s.sol', '--sig', 'finish()']);
   forge(['script', 'script/SeedPositions.s.sol']);
   const positions = JSON.parse(readFileSync(join(CONTRACTS, env.POSITIONS_FILE), 'utf8'));
+  // A second wallet for the fire drill, so specs do not consume each other's positions.
+  env.TEST_WALLET_KEY = K[6];
+  env.POSITIONS_FILE = 'deployments/rehearsal-e2e-drill-positions.json';
+  forge(['script', 'script/SeedPositions.s.sol']);
+  const drillPositions = JSON.parse(readFileSync(join(CONTRACTS, env.POSITIONS_FILE), 'utf8'));
 
   const html = readFileSync(kitFile);
   const server = createServer((req, res) => {
@@ -62,19 +72,34 @@ export default async function globalSetup() {
   const port = (server.address() as { port: number }).port;
 
   const port_ = new URL(fork.url).port;
+  const rpcs = [`http://127.0.0.1:${port_}`, `http://localhost:${port_}`];
+  const hp = { control: await free(), router: await free(), site: await free(), hijack: await free(), rpc: await free() };
+  const harness = await startHarness({
+    primaryRpc: fork.url, kitFile, ensName: `${label}.eth`, ensRpcs: rpcs, chainId: 11155111,
+    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: positions.token0, ports: hp, mode: 'process',
+  });
   writeFileSync(
     STATE,
     JSON.stringify({
       kitUrl: `http://localhost:${port}/`,
       kitSha256: sha,
-      rpcs: [`http://127.0.0.1:${port_}`, `http://localhost:${port_}`],
+      rpcs,
       ensName: `${label}.eth`,
       wallet: positions.wallet,
       positions: { inRange: String(positions.inRange), outOfRange: String(positions.outOfRange), owedOnly: String(positions.owedOnly) },
+      drill: {
+        wallet: drillPositions.wallet,
+        positions: [drillPositions.inRange, drillPositions.outOfRange, drillPositions.owedOnly].map(String),
+        control: `http://localhost:${hp.control}`,
+        router: `http://127.0.0.1:${hp.router}`,
+        site: `http://127.0.0.1:${hp.site}`,
+        rpcProxy: `http://localhost:${hp.rpc}`,
+      },
     }),
   );
 
   return async () => {
+    await harness.stop();
     server.close();
     await fork.stop();
   };

@@ -26,12 +26,10 @@ export interface BlackoutRecords {
 
 export class RecordsError extends Error {
   override name = 'RecordsError';
-  constructor(
-    public readonly key: EnsKey | 'name',
-    message: string,
-    options?: { cause?: unknown },
-  ) {
+  readonly key: EnsKey | 'name';
+  constructor(key: EnsKey | 'name', message: string, options?: { cause?: unknown }) {
     super(message, options);
+    this.key = key;
   }
 }
 

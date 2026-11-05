@@ -58,6 +58,15 @@ export function App() {
         sender: (account) => senderFrom((window as { __blackoutProvider?: Eip1193 }).__blackoutProvider!, account),
       },
       now: () => Date.now(),
+      // Fire Drill mode (localhost control page only): pull failure timestamps, push the exit report.
+      drillFailures: async () => {
+        const u = loadSettings().drillUrl;
+        return u ? ((await (await fetch(`${u}/failures`)).json()) as { kind: string; at: number }[]) : [];
+      },
+      onReport: (r) => {
+        const u = loadSettings().drillUrl;
+        if (u) void fetch(`${u}/kit-report`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: reportToJson(r) }).catch(() => {});
+      },
     });
   }, []);
   const state = useFlowState(flow);

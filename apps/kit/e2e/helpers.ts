@@ -12,6 +12,7 @@ export interface E2EState {
   ensName: string;
   wallet: string;
   positions: { inRange: string; outOfRange: string; owedOnly: string };
+  drill: { wallet: string; positions: string[]; control: string; router: string; site: string; rpcProxy: string };
 }
 
 export const state = (): E2EState => JSON.parse(readFileSync(join(HERE, '.state.json'), 'utf8'));
@@ -20,7 +21,7 @@ export const state = (): E2EState => JSON.parse(readFileSync(join(HERE, '.state.
  * Test wallet: an EIP-1193 provider announced via EIP-6963, backed by anvil's unlocked account.
  * It is injected with addInitScript (CDP), so it is not part of the kit and not subject to the kit's CSP.
  */
-export async function installTestWallet(page: Page, s: E2EState) {
+export async function installTestWallet(page: Page, s: E2EState, account = s.wallet) {
   await page.addInitScript(
     ({ rpc, account }) => {
       let id = 1;
@@ -44,13 +45,13 @@ export async function installTestWallet(page: Page, s: E2EState) {
         window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: { info: { name: 'Test Wallet', rdns: 'test.wallet', uuid: 't', icon: 'data:,' }, provider } })),
       );
     },
-    { rpc: s.rpcs[0]!, account: s.wallet },
+    { rpc: s.rpcs[0]!, account },
   );
 }
 
-export async function presetSettings(page: Page, s: E2EState) {
+export async function presetSettings(page: Page, s: E2EState, over: Record<string, unknown> = {}) {
   await page.addInitScript(
     (settings) => localStorage.setItem('blackout.settings.v1', JSON.stringify(settings)),
-    { ensName: s.ensName, targetChainId: 11155111, userRpcs: { '11155111': s.rpcs }, slippageBps: 50, useDefaultRpcs: false },
+    { ensName: s.ensName, targetChainId: 11155111, userRpcs: { '11155111': s.rpcs }, slippageBps: 50, useDefaultRpcs: false, drillUrl: '', ...over },
   );
 }

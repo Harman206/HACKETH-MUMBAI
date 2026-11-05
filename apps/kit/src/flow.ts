@@ -37,6 +37,8 @@ export interface FlowDeps {
   runExit?: typeof defaultRunExit;
   /** Drill mode only: failure timestamps from the Fire Drill control page. */
   drillFailures?: () => Promise<{ kind: string; at: number }[]>;
+  /** Drill mode only: receives the report after every exit (posted to the control page). */
+  onReport?: (r: ExitReport) => void;
 }
 
 export interface Flow {
@@ -128,6 +130,7 @@ export function createFlow(deps: FlowDeps): Flow {
     if (deps.drillFailures) failures = await deps.drillFailures().catch(() => failures);
     const cur = state.get();
     if (cur.step === 'positions') state.set({ ...cur, busy: null, results: { ...cur.results, [id]: result } });
+    if (deps.onReport) deps.onReport(report());
   }
 
   async function exitAll() {

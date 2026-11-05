@@ -128,4 +128,14 @@ describe('exit flow', () => {
     await f.exit('7');
     expect(f.report().timeToExitSec).toBe(4);
   });
+
+  test('drill mode: the report is handed to onReport after every exit', async () => {
+    const onReport = vi.fn();
+    const { d } = deps({ onReport, drillFailures: async () => [{ kind: 'rpc-down', at: 2_000 }] });
+    const f = createFlow(d);
+    await f.start(settings);
+    await f.exit('7');
+    expect(onReport).toHaveBeenCalledTimes(1);
+    expect(onReport.mock.calls[0]![0].failures).toEqual([{ kind: 'rpc-down', at: 2_000 }]);
+  });
 });
