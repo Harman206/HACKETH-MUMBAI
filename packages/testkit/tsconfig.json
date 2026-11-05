@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "../../node_modules/.tsbuild/testkit" },
+  "references": [{ "path": "../core" }],
+  "include": ["src"]
+}

@@ -10,7 +10,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "test:fork": "vitest run -c vitest.fork.config.ts"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

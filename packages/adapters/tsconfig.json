@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "../../node_modules/.tsbuild/adapters" },
+  "references": [{ "path": "../core" }, { "path": "../guard" }, { "path": "../quorum" }],
+  "include": ["src", "test"]
+}
