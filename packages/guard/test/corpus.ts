@@ -8,7 +8,7 @@ const PERMIT2: Address = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 const Z32 = `0x${'00'.repeat(32)}` as Hex;
 
 const enc = (sig: string, args: unknown[]): Hex => {
-  const abi = parseAbi([`function ${sig}`]) as Abi;
+  const abi = parseAbi([`function ${sig}`] as string[]) as Abi;
   const fn = (abi[0] as { name: string }).name;
   return encodeFunctionData({ abi, functionName: fn, args } as never);
 };

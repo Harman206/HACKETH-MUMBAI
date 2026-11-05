@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "../../node_modules/.tsbuild/quorum" },
+  "references": [{ "path": "../core" }],
+  "include": ["src", "test"]
+}
