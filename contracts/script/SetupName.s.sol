@@ -12,7 +12,9 @@ import {IPermissionedResolver, IETHRegistrar} from "../src/interfaces/IENSv2.sol
 /// Env: DEPLOYER_KEY, OWNER_KEY_1, OWNER_KEY_2, OWNER_KEY_3, WEB_KEY_ADDR, LABEL,
 ///      SITE_URL, RELEASE, MANIFEST_FILE (path to compact manifest JSON)
 contract SetupName is BlackoutSetup {
-    string internal constant OUT = "deployments/sepolia.json";
+    function _out() internal view returns (string memory) {
+        return vm.envOr("DEPLOYMENTS_FILE", string("deployments/sepolia.json"));
+    }
 
     function _ownerKeys() internal view returns (uint256[] memory k) {
         k = new uint256[](2);
@@ -53,12 +55,12 @@ contract SetupName is BlackoutSetup {
         vm.serializeAddress(o, "webKey", vm.envAddress("WEB_KEY_ADDR"));
         vm.serializeAddress(o, "deployer", deployer);
         string memory json = vm.serializeBytes32(o, "secret", secret);
-        vm.writeJson(json, OUT);
+        vm.writeJson(json, _out());
     }
 
     function finish() external {
         Cfg memory c = loadCfg();
-        string memory j = vm.readFile(OUT);
+        string memory j = vm.readFile(_out());
         string memory label = vm.parseJsonString(j, ".label");
         ISafe safe = ISafe(vm.parseJsonAddress(j, ".safe"));
         IPermissionedResolver resolver = IPermissionedResolver(vm.parseJsonAddress(j, ".resolver"));
@@ -69,6 +71,6 @@ contract SetupName is BlackoutSetup {
         grantUrlRole(safe, resolver, label, vm.envAddress("WEB_KEY_ADDR"), _ownerKeys());
         vm.stopBroadcast();
 
-        vm.writeJson(vm.toString(tokenId), OUT, ".tokenId");
+        vm.writeJson(vm.toString(tokenId), _out(), ".tokenId");
     }
 }

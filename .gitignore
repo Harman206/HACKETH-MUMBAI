@@ -11,3 +11,4 @@ coverage/
 test-results/
 playwright-report/
 contracts/broadcast/*/31337/
+contracts/deployments/rehearsal*
