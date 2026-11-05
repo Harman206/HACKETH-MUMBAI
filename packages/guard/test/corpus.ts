@@ -2,6 +2,7 @@ import { encodeFunctionData, parseAbi, type Abi } from 'viem';
 import { SIGS, type TxRequest, type Hex, type Address } from '@blackout/core';
 import { approveData, ATTACKER, aaveWithdrawData, collectData, curveRemoveData, decreaseData, multicallData, USER } from './helpers';
 import { AAVE_POOL, CURVE_POOL, NPM_MAINNET, tx } from './manifest-fixture';
+import { INCIDENT_CORPUS } from './incidents';
 
 const USDC: Address = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 const PERMIT2: Address = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
@@ -62,4 +63,5 @@ export const BANNED_CORPUS: CorpusCase[] = [
   { name: 'curve exit with value', tx: tx(CURVE_POOL, curveRemoveData(), { value: 1n }) },
   { name: 'valid exit to an address not in the manifest', tx: tx(ATTACKER, uniExit) },
   { name: 'curve exit sent from another account', tx: tx(CURVE_POOL, curveRemoveData(), { from: ATTACKER }) },
+  ...INCIDENT_CORPUS,
 ];

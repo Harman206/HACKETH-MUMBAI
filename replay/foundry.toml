@@ -1,0 +1,11 @@
+[profile.default]
+src = "test"
+test = "test"
+libs = ["../contracts/lib"]
+remappings = ["forge-std/=../contracts/lib/forge-std/src/"]
+solc_version = "0.8.26"
+fs_permissions = [{ access = "read-write", path = "./out-replay" }, { access = "read", path = "./fixtures" }]
+
+[rpc_storage_caching]
+chains = "all"
+endpoints = "all"

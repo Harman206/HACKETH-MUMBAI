@@ -16,3 +16,6 @@ apps/kit/dist/
 apps/kit/e2e/.state.json
 contracts/deployments/rehearsal-e2e*
 harness/.state/
+replay/out/
+replay/cache/
+replay/out-replay/
