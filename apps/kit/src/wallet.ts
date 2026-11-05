@@ -53,17 +53,28 @@ export async function ensureChain(p: Eip1193, chainId: number): Promise<void> {
   if (now !== chainId) throw new WrongChainError(chainId, now);
 }
 
-/** The only wallet method the kit ever calls to move funds. No typed-data signing exists in the kit. */
+/** Gas headroom over the wallet's own estimate (forked/cold state can be underestimated). */
+const GAS_HEADROOM_PCT = 125n;
+
+/**
+ * The only wallet methods the kit calls: eth_estimateGas, then eth_sendTransaction.
+ * No typed-data signing exists in the kit.
+ */
 export function senderFrom(p: Eip1193, account: Address): Sender {
   return {
     async sendTransaction(tx: TxRequest): Promise<Hex> {
       if (tx.from.toLowerCase() !== account.toLowerCase()) throw new Error('Refusing to send for an account other than the connected account.');
       const have = Number(await p.request({ method: 'eth_chainId' }));
       if (have !== tx.chainId) throw new WrongChainError(tx.chainId, have);
-      return (await p.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: tx.from, to: tx.to, data: tx.data, value: toHex(tx.value) }],
-      })) as Hex;
+      const params = { from: tx.from, to: tx.to, data: tx.data, value: toHex(tx.value) };
+      let estimate: bigint;
+      try {
+        estimate = BigInt((await p.request({ method: 'eth_estimateGas', params: [params] })) as string);
+      } catch (e) {
+        throw new Error(`Your wallet's simulation says this exit would fail: ${(e as Error).message}`);
+      }
+      const gas = toHex((estimate * GAS_HEADROOM_PCT) / 100n);
+      return (await p.request({ method: 'eth_sendTransaction', params: [{ ...params, gas }] })) as Hex;
     },
   };
 }

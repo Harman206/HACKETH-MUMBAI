@@ -13,3 +13,5 @@ playwright-report/
 contracts/broadcast/*/31337/
 contracts/deployments/rehearsal*
 apps/kit/dist/
+apps/kit/e2e/.state.json
+contracts/deployments/rehearsal-e2e*

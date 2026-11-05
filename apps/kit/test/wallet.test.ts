@@ -10,6 +10,7 @@ function provider(over: Record<string, (params?: unknown) => unknown> = {}): Eip
     eth_requestAccounts: () => [ACC],
     eth_chainId: () => chain,
     wallet_switchEthereumChain: (p) => { chain = (p as [{ chainId: string }])[0].chainId; return null; },
+    eth_estimateGas: () => '0x186a0',
     eth_sendTransaction: () => '0xabc',
     ...over,
   };
@@ -54,14 +55,21 @@ describe('wallet', () => {
     await expect(ensureChain(p, 1)).rejects.toBeInstanceOf(WrongChainError);
   });
 
-  test('senderFrom only ever issues eth_sendTransaction (never typed-data signing)', async () => {
+  test('senderFrom only estimates and sends (never typed-data signing), with 25% gas headroom', async () => {
     const p = provider();
     const s = senderFrom(p, ACC);
     await s.sendTransaction({ chainId: 11155111, from: ACC, to: ACC, data: '0x1234', value: 0n });
     const methods = p.request.mock.calls.map((c) => (c[0] as { method: string }).method);
-    expect(methods.filter((m) => m !== 'eth_chainId')).toEqual(['eth_sendTransaction']);
+    expect(methods.filter((m) => m !== 'eth_chainId')).toEqual(['eth_estimateGas', 'eth_sendTransaction']);
     expect(methods.some((m) => /sign/i.test(m))).toBe(false);
-    expect(p.request).toHaveBeenCalledWith({ method: 'eth_sendTransaction', params: [{ from: ACC, to: ACC, data: '0x1234', value: '0x0' }] });
+    // 0x186a0 = 100000 → 125000 = 0x1e848
+    expect(p.request).toHaveBeenCalledWith({ method: 'eth_sendTransaction', params: [{ from: ACC, to: ACC, data: '0x1234', value: '0x0', gas: '0x1e848' }] });
+  });
+
+  test('senderFrom surfaces a failing wallet estimate as a plain error and does not send', async () => {
+    const p = provider({ eth_estimateGas: () => { throw new Error('execution reverted'); } });
+    await expect(senderFrom(p, ACC).sendTransaction({ chainId: 11155111, from: ACC, to: ACC, data: '0x', value: 0n })).rejects.toThrow(/would fail/);
+    expect(p.request.mock.calls.map((c) => (c[0] as { method: string }).method)).not.toContain('eth_sendTransaction');
   });
 
   test('senderFrom refuses a tx for another account or chain', async () => {
