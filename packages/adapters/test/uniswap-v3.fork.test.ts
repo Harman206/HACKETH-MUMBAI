@@ -67,7 +67,7 @@ beforeAll(async () => {
   const after = await f.publicClient.readContract({ address: NPM, abi: npmAbi, functionName: 'positions', args: [ids.feesOnly] });
   if (after[7] !== 0n) throw new Error(`fees-only position still has liquidity ${after[7]}`);
 
-  const q = createQuorum({ urls: [f.url, f.url] });
+  const q = createQuorum({ urls: [f.url, f.url], timeoutMs: 60_000 }); // anvil fetches cold fork state lazily
   ctx = { q, chainId: 1, manifest: repoManifest(), block: await q.pinBlock(), account: USER, slippageBps: 50, nowSec: () => Math.floor(Date.now() / 1000) };
 }, 180_000);
 
