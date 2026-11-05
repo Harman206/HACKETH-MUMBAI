@@ -23,14 +23,16 @@ export const aavePoolAbi = parseAbi([
   'function withdraw(address asset, uint256 amount, address to) returns (uint256)',
 ]);
 
-/** Curve 3pool (subset). */
+/** Curve 3pool (subset). The Vyper 3pool's remove_liquidity returns nothing; outputs are computed from balances. */
 export const curve3poolAbi = parseAbi([
   'function coins(uint256 i) view returns (address)',
-  'function remove_liquidity(uint256 _amount, uint256[3] min_amounts) returns (uint256[3])',
+  'function balances(uint256 i) view returns (uint256)',
+  'function remove_liquidity(uint256 _amount, uint256[3] min_amounts)',
 ]);
 
 export const erc20Abi = parseAbi([
   'function balanceOf(address owner) view returns (uint256)',
+  'function totalSupply() view returns (uint256)',
   'function decimals() view returns (uint8)',
   'function symbol() view returns (string)',
 ]);
