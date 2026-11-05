@@ -58,6 +58,24 @@ importers:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
 
+  packages/exec:
+    dependencies:
+      '@blackout/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@blackout/core':
+        specifier: workspace:*
+        version: link:../core
+      '@blackout/guard':
+        specifier: workspace:*
+        version: link:../guard
+      '@blackout/quorum':
+        specifier: workspace:*
+        version: link:../quorum
+      viem:
+        specifier: 2.21.55
+        version: 2.21.55(typescript@5.6.3)
+
   packages/guard:
     dependencies:
       '@blackout/core':
