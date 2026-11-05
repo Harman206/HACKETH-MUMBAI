@@ -4,7 +4,7 @@ import { createQuorum, type Quorum } from '@blackout/quorum';
 import { reportToHtml, reportToJson, type ExitResult } from '@blackout/exec';
 import type { Position } from '@blackout/core';
 import { createFlow, type FlowState } from './flow';
-import { loadSettings, saveSettings, type Settings } from './settings';
+import { loadSettings, rpcUrlsFor, saveSettings, type Settings } from './settings';
 import { connect, discoverWallets, ensureChain, senderFrom, type Eip1193 } from './wallet';
 import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
 import { COPY } from './copy';
@@ -32,15 +32,13 @@ export function App() {
   const [provider, setProvider] = useState<Eip1193 | null>(null);
 
   const flow = useMemo(() => {
-    const cache = new Map<number, Quorum>();
+    const cache = new Map<string, Quorum>();
     return createFlow({
       quorumFor: (chainId) => {
-        if (!cache.has(chainId)) {
-          const s = loadSettings();
-          const urls = [...(s.userRpcs[String(chainId)] ?? []), ...(DEFAULT_RPCS[String(chainId)] ?? [])];
-          cache.set(chainId, createQuorum({ urls: [...new Set(urls)] }));
-        }
-        return cache.get(chainId)!;
+        const urls = rpcUrlsFor(loadSettings(), chainId, DEFAULT_RPCS);
+        const key = `${chainId}|${urls.join(',')}`;
+        if (!cache.has(key)) cache.set(key, createQuorum({ urls }));
+        return cache.get(key)!;
       },
       ens: ENS_CONFIG,
       adapters: ADAPTERS,
@@ -79,7 +77,7 @@ export function App() {
         <button aria-pressed={tab === 'check'} onClick={() => setTab('check')}>Check a transaction</button>
       </nav>
       {tab === 'check' ? (
-        <CheckScreen settings={settings} quorumFor={(id) => createQuorum({ urls: [...(settings.userRpcs[String(id)] ?? []), ...(DEFAULT_RPCS[String(id)] ?? [])] })} />
+        <CheckScreen settings={settings} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS) })} />
       ) : (
         <ExitTab state={state} settings={settings} update={update} flow={flow} />
       )}
@@ -128,6 +126,10 @@ function Setup(props: { settings: Settings; update(p: Partial<Settings>): void; 
         value={(settings.userRpcs[cid] ?? []).join('\n')}
         onInput={(e) => update({ userRpcs: { ...settings.userRpcs, [cid]: (e.target as HTMLTextAreaElement).value.split(/\s+/).filter(Boolean) } })}
       />
+      <label style="font-weight:400;display:flex;gap:8px;align-items:center">
+        <input type="checkbox" style="width:auto" checked={settings.useDefaultRpcs} onChange={(e) => update({ useDefaultRpcs: (e.target as HTMLInputElement).checked })} />
+        Also check answers against public RPC providers (recommended)
+      </label>
       <div style="margin-top:16px">
         <button onClick={props.onStart}>Connect wallet and find my positions</button>
       </div>

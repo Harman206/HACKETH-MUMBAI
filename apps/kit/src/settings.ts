@@ -7,9 +7,11 @@ export interface Settings {
   /** User-entered RPC endpoints per chain ID, added to the quorum ahead of the public defaults. */
   userRpcs: Record<string, string[]>;
   slippageBps: number;
+  /** When false, only the user's endpoints are used (e.g. a local fork). */
+  useDefaultRpcs: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { ensName: '', targetChainId: 11155111, userRpcs: {}, slippageBps: 50 };
+export const DEFAULT_SETTINGS: Settings = { ensName: '', targetChainId: 11155111, userRpcs: {}, slippageBps: 50, useDefaultRpcs: true };
 
 const KEY = 'blackout.settings.v1';
 const isRpcUrl = (u: unknown): u is string => typeof u === 'string' && /^(https:\/\/|wss:\/\/|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$))/.test(u);
@@ -31,7 +33,15 @@ export function loadSettings(): Settings {
     userRpcs,
     slippageBps:
       Number.isInteger(raw.slippageBps) && raw.slippageBps! >= 0 && raw.slippageBps! <= 500 ? raw.slippageBps! : DEFAULT_SETTINGS.slippageBps,
+    useDefaultRpcs: typeof raw.useDefaultRpcs === 'boolean' ? raw.useDefaultRpcs : DEFAULT_SETTINGS.useDefaultRpcs,
   };
+}
+
+/** Quorum paths for a chain: the user's endpoints first, then the bundled public defaults (deduplicated). */
+export function rpcUrlsFor(s: Settings, chainId: number, defaults: Record<string, string[]>): string[] {
+  const mine = s.userRpcs[String(chainId)] ?? [];
+  const pub = s.useDefaultRpcs ? (defaults[String(chainId)] ?? []) : [];
+  return [...new Set([...mine, ...pub])];
 }
 
 export function saveSettings(s: Settings): void {

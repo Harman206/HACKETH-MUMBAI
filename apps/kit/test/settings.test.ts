@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings } from '../src/settings';
+import { DEFAULT_SETTINGS, loadSettings, rpcUrlsFor, saveSettings } from '../src/settings';
 import { maxSeenVersion, recordSeenVersion, safeGet, safeSet } from '../src/storage';
 
 afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
@@ -36,6 +36,20 @@ describe('settings', () => {
     localStorage.setItem('blackout.settings.v1', JSON.stringify({ slippageBps: 99999, userRpcs: { '1': ['javascript:alert(1)'] } }));
     expect(loadSettings().slippageBps).toBe(DEFAULT_SETTINGS.slippageBps);
     expect(loadSettings().userRpcs['1']).toEqual([]);
+  });
+
+  test('useDefaultRpcs defaults to true and round trips', () => {
+    expect(DEFAULT_SETTINGS.useDefaultRpcs).toBe(true);
+    saveSettings({ ...DEFAULT_SETTINGS, useDefaultRpcs: false });
+    expect(loadSettings().useDefaultRpcs).toBe(false);
+    localStorage.setItem('blackout.settings.v1', JSON.stringify({ useDefaultRpcs: 'no' }));
+    expect(loadSettings().useDefaultRpcs).toBe(true);
+  });
+
+  test('rpcUrlsFor puts user endpoints first, then defaults unless disabled', () => {
+    const s = { ...DEFAULT_SETTINGS, userRpcs: { '1': ['https://mine'] } };
+    expect(rpcUrlsFor(s, 1, { '1': ['https://a', 'https://mine'] })).toEqual(['https://mine', 'https://a']);
+    expect(rpcUrlsFor({ ...s, useDefaultRpcs: false }, 1, { '1': ['https://a'] })).toEqual(['https://mine']);
   });
 
   test('default ENS name is empty: it must come from the protocol docs, not the kit', () => {
