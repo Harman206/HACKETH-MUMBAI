@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// Signatures copied from ensdomains/contracts-v2 (main, 2026-11-05) and ensdomains/verifiable-factory.
+/// Signatures from the live Sepolia bytecode, ENS docs, ensjs-abi v2 and ensdomains/verifiable-factory.
 /// See docs/ens-notes.md for sources and how they differ from the PRD.
 
 interface IEnhancedAccessControl {
@@ -15,13 +15,19 @@ interface IEnhancedAccessControl {
     function hasRoles(uint256 resource, uint256 roleBitmap, address account) external view returns (bool);
 }
 
+/// Live Sepolia PermissionedResolver (impl 0x115e…2b2c). Name-based setters, argument-scoped grants.
+/// Matches ensdomains/docs ensv2/permissioned-resolver and ensjs-abi v2, not the contracts-v2 main branch.
 interface IPermissionedResolver is IEnhancedAccessControl {
-    function initialize(address admin, uint256 roleBitmap, bytes[] calldata setters) external;
-    function setText(bytes32 node, string calldata key, string calldata value) external;
-    function text(bytes32 node, string calldata key) external view returns (string memory);
-    function authorizeTextRoles(bytes calldata toName, string calldata key, address account, bool grant)
-        external
-        returns (bool);
+    struct Grant {
+        address account;
+        uint256 roleBitmap;
+    }
+
+    function initialize(Grant[] calldata grants, bytes[] calldata calls) external;
+    function setText(bytes calldata name, string calldata key, string calldata value) external;
+    function grantSetterRoles(bytes calldata setter, address account) external returns (bool);
+    function revokeRoles(uint256 resource, uint256 roleBitmap, address account) external returns (bool);
+    function resolve(bytes calldata name, bytes calldata data) external view returns (bytes memory);
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
 }
 
@@ -102,8 +108,8 @@ library ENSName {
         return keccak256(abi.encodePacked(ethNode, keccak256(bytes(label))));
     }
 
-    /// Text resource for a key on a node: keccak(node, keccak(key)) (PermissionedResolverLib.resource/partHash)
-    function textResource(bytes32 node, string memory key) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encode(node, keccak256(bytes(key)))));
+    /// Resolver resource for a text key: keccak256(bytes(key)). Names play no part (docs: Resource Scheme).
+    function textResource(string memory key) internal pure returns (uint256) {
+        return uint256(keccak256(bytes(key)));
     }
 }

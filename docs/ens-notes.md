@@ -23,30 +23,38 @@ The repo's `deployments/sepolia*` folders hold **older** sets with different add
 - It is paid in an **ERC20** (`paymentToken`), pulled from `msg.sender` via `transferFrom`. On Sepolia it is mock USDC with a free `mint(address,uint256)`. 28 days of `demoswap-blackout` = 0.61 USDC.
 - `register(label, owner, secret, subregistry, resolver, duration, paymentToken, referrer)` sets the **owner and resolver in one call**. The owner receives `ROLE_SET_SUBREGISTRY(+ADMIN) | ROLE_SET_RESOLVER(+ADMIN) | ROLE_CAN_TRANSFER_ADMIN` on the registry.
 
-## PermissionedResolver: differs from the PRD
+## PermissionedResolver — the live API (the PRD was right, contracts-v2 `main` is NOT what is deployed)
 
-| PRD says | Source says |
+The live implementation `0x115e…2b2c` matches the ENS docs (`ensv2/permissioned-resolver`) and
+`ensjs-abi/src/v2/permissionedResolver.ts`. Its selectors come from the deployed bytecode
+(`cast selectors`). The `contracts-v2` `main` branch has a different, node-based API (`authorizeTextRoles`, `initialize(admin, bitmap, setters)`). Do not use it.
+
+| Function | Notes |
 |---|---|
-| `initialize([{Safe, ALL_ROLES}], [])` | `initialize(address admin, uint256 roleBitmap, bytes[] setters)`; setters run as a multicall during init, without role checks |
-| `grantSetterRoles(setText(node,"url",""), webKey)` | `authorizeTextRoles(bytes dnsName, string key, address account, bool grant)`; caller needs `ROLE_SET_TEXT_ADMIN` on `resource(node,0)` |
-| generic `grantRoles` | `grantRoles` / `revokeRoles` are **disabled** (always revert `EACCannotGrantRoles`) |
-| upgrade role | `_authorizeUpgrade` requires root `ROLE_UPGRADE` (1<<124); UUPS `upgradeToAndCall` |
+| `initialize((address account, uint256 roleBitmap)[] grants, bytes[] calls)` | grants on ROOT_RESOURCE; `calls` run as a multicall with role checks skipped |
+| `setText(bytes dnsName, string key, string value)` | **name-based** (DNS-encoded), not node-based |
+| `grantSetterRoles(bytes setter, address account)` | `setter` = calldata of e.g. `setText(anyName, "url", "")`; only the selector and key matter |
+| `revokeRoles(uint256 resource, uint256 bitmap, address)` | argument resource = `uint256(keccak256(bytes(key)))` |
+| `grantRoles(...)` | disabled, always reverts `EACCannotGrantRoles` |
+| `grantRootRoles(bitmap, account)` | needs the admin role for each bit |
+| `upgradeToAndCall` | root `ROLE_UPGRADE` (1<<124) |
 
-- Text write check (`onlyPartRoles`): passes if the caller holds `ROLE_SET_TEXT` on `resource(node, keccak(key))`, on `resource(0, keccak(key))`, or on `resource(node, 0)` (which falls back to root). Otherwise it reverts `EACUnauthorizedAccountRoles(resource(node,0), ROLE_SET_TEXT, caller)`.
-- `resource(node, part) = keccak256(abi.encode(node, part))`; `partHash(key) = keccak256(bytes(key))`.
-- `ALL_ROLES = 0x1111…1111` (every role nybble + admin nybble).
+Roles: `ROLE_SET_TEXT = 1<<4`, `ROLE_LINK = 1<<28`, `ROLE_UPGRADE = 1<<124`, admin = role<<128. `ALL_ROLES = 0x1111…1111`.
 
-## Our setup (replaces PRD "Setup steps")
+**Scope caveat (docs):** resolver roles are per resolver, not per name. The web key's `url` grant covers `url` on every name this resolver serves. We deploy one resolver per protocol name, so that is exactly one name.
 
-1. Deployer EOA: `VerifiableFactory.deployProxy(PermissionedResolverImpl, salt, initialize(Safe, ALL_ROLES, [setText url, release, manifest]))`. Only the Safe holds roles; the deployer holds none.
-2. Deployer EOA: mint mock USDC, approve the registrar, `commit`, wait 60 s, `register(label, owner=Safe, resolver=proxy, …)`. No separate `setResolver` is needed.
-3. Safe (2-of-3, `execTransaction`): `authorizeTextRoles(dns("demoswap-blackout.eth"), "url", webKey, true)`.
-4. Safe: later `setText` updates of release/manifest.
+## Our setup (replaces the PRD "Setup steps"), proven in `test/SetupName.fork.t.sol`
+
+1. Deployer EOA: `SafeProxyFactory.createProxyWithNonce` → a 2-of-3 Safe.
+2. Deployer EOA: `VerifiableFactory.deployProxy(PermissionedResolverImpl, salt, initialize([(Safe, ALL_ROLES)], [setText url, release, manifest]))`. Only the Safe holds roles.
+3. Deployer EOA: mint mock USDC, approve, `commit`. Wait ≥ 60 s. Then `register(label, owner=Safe, resolver=proxy, …)`. No separate `setResolver` step.
+4. Safe (`execTransaction`, 2 owner signatures): `grantSetterRoles(setText(name,"url",""), webKey)`.
+5. Safe: later `setText` updates of release and manifest.
 
 ## Must-revert (web key)
 
-- `resolver.setText(node, "org.blackout.release", …)` → `EACUnauthorizedAccountRoles`
-- `registry.setResolver(tokenId, evil)` → `EACUnauthorizedAccountRoles` (registry is EAC too)
-- `resolver.upgradeToAndCall(evilImpl, "")` → `EACUnauthorizedAccountRoles` (root `ROLE_UPGRADE`)
-- `resolver.authorizeTextRoles(name, "org.blackout.release", webKey, true)` and `grantRootRoles(ALL, webKey)` → revert
-- `resolver.setText(node, "url", …)` → succeeds
+- `resolver.setText(name, "org.blackout.release", …)` → `EACUnauthorizedAccountRoles`
+- `registry.setResolver(tokenId, evil)` → revert (registry EAC)
+- `resolver.upgradeToAndCall(evilImpl, "")` → revert (root `ROLE_UPGRADE`)
+- `resolver.grantSetterRoles(setText(name,"org.blackout.release",""), webKey)` and `grantRootRoles(ALL, webKey)` → revert
+- `resolver.setText(name, "url", …)` → succeeds
