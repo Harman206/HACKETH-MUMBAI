@@ -67,6 +67,24 @@ importers:
         specifier: 2.0.3
         version: 2.0.3(rollup@4.67.5)(vite@5.4.11(@types/node@22.10.2))
 
+  harness:
+    dependencies:
+      '@blackout/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@blackout/ens':
+        specifier: workspace:*
+        version: link:../packages/ens
+      '@blackout/guard':
+        specifier: workspace:*
+        version: link:../packages/guard
+      '@blackout/quorum':
+        specifier: workspace:*
+        version: link:../packages/quorum
+      viem:
+        specifier: 2.21.55
+        version: 2.21.55(typescript@5.6.3)
+
   packages/adapters:
     dependencies:
       '@blackout/core':

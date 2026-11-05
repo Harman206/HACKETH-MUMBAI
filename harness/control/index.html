@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Fire Drill</title>
+<style>
+:root{--bg:#fafaf9;--fg:#1c1917;--card:#fff;--line:#e7e5e4;--ok:#15803d;--bad:#b91c1c}
+@media (prefers-color-scheme:dark){:root{--bg:#0c0a09;--fg:#f5f5f4;--card:#1c1917;--line:#292524;--ok:#4ade80;--bad:#f87171}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}main{max-width:720px;margin:0 auto;padding:24px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+button{width:100%;padding:14px;border-radius:8px;border:0;background:#b91c1c;color:#fff;font:inherit;font-weight:700;cursor:pointer}button.reset{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.up{color:var(--ok);font-weight:700}.down{color:var(--bad);font-weight:700}code{word-break:break-all}
+</style></head><body><main>
+<h1>BLACKOUT fire drill</h1><p>Break the protocol's infrastructure for real. Then exit from the saved kit.</p>
+<div class="grid">
+  <div class="card"><b>Website</b><p>Status: <span id="site">…</span></p><button data-switch="site-down">Take the website down</button></div>
+  <div class="card"><b>Primary RPC</b><p>Status: <span id="rpc">…</span></p><button data-switch="rpc-down">Take the RPC down</button></div>
+  <div class="card"><b>DNS</b><p>Status: <span id="dns">…</span></p><button data-switch="hijack-on">Hijack the domain</button></div>
+</div>
+<div class="card" style="margin-top:12px"><b>Failures injected</b><ul id="failures"></ul>
+<p><a href="/drill-report.html">Drill report (HTML)</a> · <a href="/drill-report.json">JSON</a></p>
+<button class="reset" data-switch="reset">Reset all</button></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+async function refresh() {
+  const s = await (await fetch('/status')).json();
+  $('site').textContent = s.site; $('site').className = s.site === 'up' ? 'up' : 'down';
+  $('rpc').textContent = s.rpc; $('rpc').className = s.rpc === 'up' ? 'up' : 'down';
+  $('dns').textContent = s.hijack ? 'HIJACKED' : 'ok'; $('dns').className = s.hijack ? 'down' : 'up';
+  $('failures').innerHTML = s.failures.map((f) => `<li>${f.kind} at ${new Date(f.at).toLocaleTimeString()}</li>`).join('') || '<li>none yet</li>';
+}
+document.querySelectorAll('[data-switch]').forEach((b) => b.addEventListener('click', async () => { await fetch('/switch/' + b.dataset.switch, { method: 'POST' }); refresh(); }));
+refresh(); setInterval(refresh, 1000);
+</script></body></html>

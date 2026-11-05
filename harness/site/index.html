@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DemoSwap</title>
+  <!-- A normal app frontend: several third-party origins, on purpose. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <style>body{font-family:Inter,system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;background:#0f172a;color:#e2e8f0}
+  .card{background:#1e293b;border-radius:12px;padding:20px;margin:16px 0}button{background:#6366f1;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:600}</style>
+</head>
+<body>
+  <h1>DemoSwap</h1>
+  <p>Provide liquidity. Earn fees. (Demo app for the BLACKOUT fire drill.)</p>
+  <div class="card"><h2>Your liquidity</h2><p id="status">Connect your wallet to see positions.</p><button id="connect">Connect wallet</button></div>
+  <img alt="" width="1" height="1" style="display:none" src="https://www.google-analytics.com/collect?v=1&t=pageview&tid=UA-DEMO">
+  <script src="/app.js"></script>
+</body>
+</html>

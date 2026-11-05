@@ -1,0 +1,14 @@
+{
+  "name": "@blackout/harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "tsx start.ts" },
+  "dependencies": {
+    "@blackout/core": "workspace:*",
+    "@blackout/ens": "workspace:*",
+    "@blackout/guard": "workspace:*",
+    "@blackout/quorum": "workspace:*",
+    "viem": "2.21.55"
+  }
+}

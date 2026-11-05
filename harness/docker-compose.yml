@@ -1,0 +1,37 @@
+# Fire Drill: the judge breaks the real website, the primary RPC and DNS with three buttons.
+#   docker compose -f harness/docker-compose.yml up --build
+#   control http://localhost:8090 · site http://demoswap.localhost:8080 · kit http://localhost:8000
+# The control service stops/starts `site` and `rpc-proxy` with `docker stop` (Docker socket mounted).
+x-svc: &svc
+  build: { context: .., dockerfile: harness/Dockerfile }
+  environment: &env
+    PRIMARY_RPC: ${PRIMARY_RPC:-https://ethereum-sepolia-rpc.publicnode.com}
+    ENS_NAME: ${ENS_NAME:-demoswap-blackout.eth}
+    KIT_FILE: /repo/apps/kit/dist/blackout-kit.html
+    HIJACK_TOKEN: ${HIJACK_TOKEN:-0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8}
+    BIND_HOST: 0.0.0.0
+
+services:
+  site:
+    <<: *svc
+    container_name: site
+    command: ["pnpm", "tsx", "harness/services/site.ts"]
+  rpc-proxy:
+    <<: *svc
+    container_name: rpc-proxy
+    command: ["pnpm", "tsx", "harness/services/main-rpc-proxy.ts"]
+    ports: ["8645:8645"]
+  hijack:
+    <<: *svc
+    container_name: hijack
+    command: ["pnpm", "tsx", "harness/services/main-hijack.ts"]
+  control:
+    <<: *svc
+    container_name: control
+    environment:
+      <<: *env
+      HARNESS_MODE: docker
+    command: ["pnpm", "tsx", "harness/start.ts"]
+    ports: ["8090:8090", "8080:8080", "8000:8000"]
+    volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
+    depends_on: [site, rpc-proxy, hijack]

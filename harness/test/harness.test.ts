@@ -1,0 +1,88 @@
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fakeRpc, type Fake } from '../../packages/quorum/test/fake-rpc';
+import { startHarness } from '../services/control';
+
+const free = () => new Promise<number>((r) => { const s = createServer(); s.listen(0, () => { const p = (s.address() as { port: number }).port; s.close(() => r(p)); }); });
+
+let upstream: Fake;
+let h: Awaited<ReturnType<typeof startHarness>>;
+let kitFile: string;
+const ports = { control: 0, router: 0, site: 0, hijack: 0, rpc: 0 };
+const get = (port: number, path = '/', host = 'demoswap.localhost') => fetch(`http://127.0.0.1:${port}${path}`, { headers: { host } });
+const post = (path: string) => fetch(`http://127.0.0.1:${ports.control}${path}`, { method: 'POST' });
+
+beforeAll(async () => {
+  upstream = await fakeRpc({ chainId: 11155111 });
+  for (const k of Object.keys(ports) as (keyof typeof ports)[]) ports[k] = await free();
+  kitFile = join(mkdtempSync(join(tmpdir(), 'h-')), 'blackout-kit.html');
+  writeFileSync(kitFile, '<!doctype html><html><head><title>BLACKOUT exit kit</title></head><body>kit</body></html>');
+  h = await startHarness({
+    primaryRpc: upstream.url, kitFile, ensName: 'x.eth', ensRpcs: ['http://127.0.0.1:1'], chainId: 11155111,
+    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', ports, mode: 'process',
+  });
+});
+afterAll(async () => { await h?.stop(); await upstream?.close(); });
+
+describe('fire drill harness', () => {
+  test('router serves DemoSwap, which loads several third-party origins', async () => {
+    const html = await (await get(ports.router)).text();
+    expect(html).toContain('<h1>DemoSwap</h1>');
+    const origins = new Set([...html.matchAll(/(?:src|href)="(https:\/\/[^/"]+)/g)].map((m) => m[1]));
+    expect(origins.size).toBeGreaterThanOrEqual(4);
+  });
+
+  test('primary RPC proxy forwards to the upstream', async () => {
+    const r = await fetch(`http://127.0.0.1:${ports.rpc}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }) });
+    expect((await r.json()).result).toBe('0xaa36a7');
+  });
+
+  test('tampered kit differs and fails the independent verifier', () => {
+    const real = readFileSync(kitFile);
+    const bad = readFileSync(h.tamperedFile);
+    expect(bad.equals(real)).toBe(false);
+    expect(bad.length).toBe(real.length);
+    const hex = createHash('sha256').update(real).digest('hex');
+    const r = spawnSync('bash', [join(__dirname, '../../scripts/verify-kit.sh'), h.tamperedFile, 'x.eth'], { env: { ...process.env, BLACKOUT_RELEASE_OVERRIDE: `sha256:${hex};v=1` }, encoding: 'utf8' });
+    expect(r.status).toBe(1);
+  });
+
+  test('switches: site down → 502, RPC down → refused, hijack → clone with injected approve; failures are timestamped', async () => {
+    expect((await (await post('/switch/site-down')).json()).ok).toBe(true);
+    expect((await get(ports.router)).status).toBe(502);
+    await expect(fetch(`http://127.0.0.1:${ports.site}/`)).rejects.toThrow();
+
+    await post('/switch/rpc-down');
+    await expect(fetch(`http://127.0.0.1:${ports.rpc}`, { method: 'POST', body: '{}' })).rejects.toThrow();
+
+    await post('/switch/hijack-on');
+    const hijacked = await (await get(ports.router)).text();
+    expect(hijacked).toContain('/inject.js');
+    expect(hijacked).toContain('0x095ea7b3'); // approve selector in the injected request
+    expect(await (await get(ports.router, '/blackout-kit.html')).text()).toContain('BLACKOUT exit klt');
+
+    const status = await (await fetch(`http://127.0.0.1:${ports.control}/status`)).json();
+    expect(status).toMatchObject({ site: 'down', rpc: 'down', hijack: true });
+    const failures = await (await fetch(`http://127.0.0.1:${ports.control}/failures`)).json();
+    expect(failures.map((f: { kind: string }) => f.kind)).toEqual(['site-down', 'rpc-down', 'hijack-on']);
+    expect(failures.every((f: { at: number }) => f.at > 0)).toBe(true);
+  });
+
+  test('reset brings everything back', async () => {
+    await post('/switch/reset');
+    expect((await get(ports.router)).status).toBe(200);
+    expect(await (await get(ports.router)).text()).not.toContain('/inject.js');
+    const r = await fetch(`http://127.0.0.1:${ports.rpc}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }) });
+    expect(r.status).toBe(200);
+  });
+
+  test('control page has the three switches', async () => {
+    const html = await (await fetch(`http://127.0.0.1:${ports.control}/`)).text();
+    for (const s of ['site-down', 'rpc-down', 'hijack-on']) expect(html).toContain(`data-switch="${s}"`);
+  });
+});
