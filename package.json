@@ -3,7 +3,9 @@
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@9.15.9",
-  "engines": { "node": ">=22 <23" },
+  "engines": {
+    "node": ">=22 <23"
+  },
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -11,8 +13,9 @@
     "build": "pnpm -r build"
   },
   "devDependencies": {
+    "@types/node": "22.10.2",
+    "tsx": "4.19.2",
     "typescript": "5.6.3",
-    "vitest": "2.1.9",
-    "@types/node": "22.10.2"
+    "vitest": "2.1.9"
   }
 }
