@@ -1,0 +1,26 @@
+/** Every user-facing string in the kit. Plain language; no jargon in primary text. */
+export const COPY = {
+  title: 'BLACKOUT exit kit',
+  tagline: "Withdraw straight from the protocol's contracts, even when its website is down or hijacked.",
+  needName: "Enter the protocol's ENS name. Get it from the protocol's docs or where you deposited, never from this file.",
+  nameHint: "From the protocol's docs, never from this file",
+  loadingRecords: (n: string) => `Reading ${n} from ENS through several RPC providers…`,
+  connecting: 'Connecting your wallet…',
+  findingPositions: 'Looking for your positions…',
+  noExitsOnChain: (id: number) => `This protocol has no exits listed for chain ${id}.`,
+  verifyTitle: 'Check this file yourself',
+  verifyBody:
+    'This page cannot prove it has not been tampered with. Compare its fingerprint with the ENS release record using a tool outside this page:',
+  rollback: 'Warning: this release is older than one you used before. Someone may be trying to roll back to an old kit.',
+  noPositions: 'No positions found for this wallet on this network.',
+  exit: 'Exit',
+  exitAll: 'Exit all',
+  exiting: 'Exiting…',
+  recovered: 'Recovered',
+  notRecovered: 'Not recovered',
+  blocked: 'Blocked by the Exit Guard',
+  downloadJson: 'Download report (JSON)',
+  downloadHtml: 'Download report (HTML)',
+  manual: 'Needs manual action',
+  trusted: 'Still trusted: your wallet and its RPC, Ethereum, ENS, and the protocol’s release Safe.',
+} as const;
