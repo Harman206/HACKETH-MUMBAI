@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "../../node_modules/.tsbuild/guard" },
+  "references": [{ "path": "../core" }],
+  "include": ["src", "test"]
+}
