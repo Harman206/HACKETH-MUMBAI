@@ -11,7 +11,7 @@
  * Plain-language reasons only; the extension's trusted UI shows them.
  */
 import { encodeFunctionData, getAddress, hexToBytes, isAddress, parseAbi, type Hex } from 'viem';
-import { KNOWN_CONTRACTS, knownContract, type Address, type KnownContract, type KnownTable, type Manifest, type TxRequest } from '@copeybara/core';
+import { KNOWN_CONTRACTS, knownContract, type Address, type KnownContract, type ExitSpec, type KnownTable, type Manifest, type TxRequest } from '@copeybara/core';
 import { decodeCall, type Decoded } from './decode';
 import { guard } from './guard';
 
@@ -21,6 +21,8 @@ const ORDER: RequestVerdict[] = ['pass', 'exit', 'known', 'unknown', 'risky', 'd
 export interface FollowedManifest {
   name: string;
   manifest: Manifest;
+  /** The protocol's org.copeybara.exits: without it, calls to its `spec` contracts are never an exit. */
+  exitSpec?: ExitSpec | null;
 }
 export interface ClassifyCtx {
   account: Address | null;
@@ -133,6 +135,10 @@ function classifyControl(method: string, s: Decoded, target: Address, chainId: n
     return { verdict: 'risky', method, counterparty: who, reasons: [`This removes ${who ? short(who) : 'an owner'} as an owner of ${safe}. Only continue if the owners planned this.`] };
   }
   if (!who) return { verdict: 'dangerous', method, reasons: [`This changes who controls ${contract}, and the new controller cannot be read.`] };
+  if (mine(who) && (s.control === 'implementation' || s.control === 'delegatecall')) {
+    // Your own account is not contract code: pointing a proxy (or a delegatecall) at it breaks the contract.
+    return { verdict: 'risky', method, counterparty: who, reasons: [`This points ${contract} at your own account address as its code. An account is not contract code, so the contract would likely stop working and anything in it could be stuck.`] };
+  }
   if (mine(who)) return { verdict: 'unknown', method, counterparty: who, reasons: [`This hands control of ${contract} to your own address.`] };
   const k = wellKnown(who, chainId, ctx);
   const p = protocolOf(who, chainId, ctx);
@@ -195,7 +201,7 @@ function classifyCall(method: string, call: Record<string, unknown>, chainId: nu
   if (ctx.account && protocol && call.authorizationList === undefined) {
     const tx: TxRequest = { chainId, from: ctx.account, to: target, data: data as Hex, value };
     for (const m of ctx.manifests) {
-      if (guard(tx, { account: ctx.account, chainId, manifest: m.manifest }).ok) {
+      if (guard(tx, { account: ctx.account, chainId, manifest: m.manifest, exitSpec: m.exitSpec ?? null }).ok) {
         return { verdict: 'exit', method, protocol: m.name, reasons: [`A withdrawal from ${m.name} that pays only your own address.`] };
       }
     }

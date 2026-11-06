@@ -5,6 +5,7 @@
 /* eslint-disable */
 export interface BenchCase { tx: string; id: string; account: string; request: { method: string; params: any[] } }
 export const CASES: Record<string, BenchCase[]> = {
+ "proxyUpgradeToSelf": [{"tx": "0x8cb95212117cd1bd58b8893c7ccb8e0bd451b08a837c7ecff1f432f540ea9283", "id": "ptx:J:0x8cb9521211:0x8cb9521211", "account": "0xacdaEEb57ff6886fC8e203B9Dd4C2b241DF89b7a", "request": {"method": "eth_sendTransaction", "params": [{"from": "0xacdaeeb57ff6886fc8e203b9dd4c2b241df89b7a", "to": "0xe0a85bb928954ecfd6714ce75003451cfea197ab", "data": "0x3659cfe6000000000000000000000000acdaeeb57ff6886fc8e203b9dd4c2b241df89b7a", "value": "0x0"}]}}],
  "proxyUpgrade": [
   {
    "tx": "0x9810ffd1d283c5f9943e0e8159e8f057e87a56183f130b8300677c3d7933bcf8",
