@@ -1,0 +1,22 @@
+{
+  "name": "@blackout/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node scripts/copy-kit.mjs",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@blackout/core": "workspace:*",
+    "@blackout/ens": "workspace:*",
+    "@blackout/quorum": "workspace:*",
+    "preact": "10.25.4",
+    "viem": "2.21.55"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.9.4",
+    "jsdom": "25.0.1",
+    "vite": "5.4.11"
+  }
+}

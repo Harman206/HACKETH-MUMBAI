@@ -24,3 +24,4 @@ contracts/broadcast/
 contracts/cache/
 contracts/out/
 contracts/deployments/*.site-published
+apps/site/dist/

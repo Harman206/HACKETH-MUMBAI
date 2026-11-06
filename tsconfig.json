@@ -24,6 +24,9 @@
     },
     {
       "path": "apps/kit"
+    },
+    {
+      "path": "apps/site"
     }
   ]
 }
