@@ -1,10 +1,12 @@
-import { BANNED_SELECTORS, type Address, type Hex, type Manifest, type TargetEntry, type TxRequest } from '@copeybara/core';
-import { decodeCall, DecodeError, type Decoded } from './decode';
+import { BANNED_SELECTORS, type AdapterId, type Address, type ExitSpec, type Hex, type Manifest, type TargetEntry, type TxRequest } from '@copeybara/core';
+import { decodeCall, DecodeError, decodeSpecCall, type Decoded } from './decode';
 
 export interface GuardCtx {
   account: Address;
   chainId: number;
   manifest: Manifest;
+  /** org.copeybara.exits, as checked against the manifest by readCopeybaraRecords. */
+  exitSpec?: ExitSpec | null;
 }
 
 export type GuardCode = 'CHAIN' | 'TARGET' | 'SELECTOR' | 'BANNED' | 'RECIPIENT' | 'CALLER' | 'VALUE' | 'DECODE';
@@ -27,12 +29,18 @@ function flatten(d: Decoded): Decoded[] {
   return [d, ...d.nested.flatMap(flatten)];
 }
 
-function findTarget(m: Manifest, chainId: number, to: Address): TargetEntry | undefined {
+interface Target {
+  entry: TargetEntry;
+  adapter: AdapterId;
+  role: string;
+}
+
+function findTarget(m: Manifest, chainId: number, to: Address): Target | undefined {
   const cm = m.chains[String(chainId)];
   if (!cm) return undefined;
-  for (const targets of Object.values(cm)) {
-    for (const t of Object.values(targets ?? {})) {
-      if (eq(t.address, to) && t.selectors.length > 0) return t;
+  for (const [adapter, targets] of Object.entries(cm)) {
+    for (const [role, t] of Object.entries(targets ?? {})) {
+      if (eq(t.address, to) && t.selectors.length > 0) return { entry: t, adapter: adapter as AdapterId, role };
     }
   }
   return undefined;
@@ -41,16 +49,24 @@ function findTarget(m: Manifest, chainId: number, to: Address): TargetEntry | un
 /**
  * Static policy check. Rejects anything that is not a known exit paying the connected account.
  * Fails closed on anything it cannot decode. Simulation and receipt checks live in @copeybara/exec.
+ * A contract listed under `spec` is decoded only with its own exit kind from org.copeybara.exits; without that kind
+ * nothing sent to it can pass.
  */
 export function guard(tx: TxRequest, ctx: GuardCtx): GuardResult {
   const reasons: GuardReason[] = [];
+  const found = findTarget(ctx.manifest, tx.chainId, tx.to);
 
   let decoded: Decoded;
   try {
-    decoded = decodeCall(tx.data);
+    if (found?.adapter === 'spec') {
+      const kind = ctx.exitSpec?.kinds[found.role];
+      if (!kind) throw new DecodeError(`no published exit description (org.copeybara.exits) for ${found.role}`);
+      decoded = decodeSpecCall(tx.data, kind);
+    } else decoded = decodeCall(tx.data);
   } catch (e) {
     const detail = e instanceof DecodeError ? e.message : 'calldata could not be decoded';
-    return { ok: false, reasons: [{ code: 'DECODE', detail }] };
+    const extra: GuardReason[] = tx.value !== 0n ? [{ code: 'VALUE', detail: `transaction sends ${tx.value} wei; exits never send ETH` }] : [];
+    return { ok: false, reasons: [{ code: 'DECODE', detail }, ...extra] };
   }
   const calls = flatten(decoded);
 
@@ -62,7 +78,7 @@ export function guard(tx: TxRequest, ctx: GuardCtx): GuardResult {
   }
 
   // 2. Target
-  const target = findTarget(ctx.manifest, tx.chainId, tx.to);
+  const target = found?.entry;
   if (!target) reasons.push({ code: 'TARGET', detail: `${tx.to} is not an exit contract in the manifest`, subject: tx.to });
 
   // 3. Selector (outer + nested), only meaningful with a known target

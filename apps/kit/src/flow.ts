@@ -165,6 +165,7 @@ export function createFlow(deps: FlowDeps): Flow {
         q,
         chainId: s.targetChainId,
         manifest: records.manifest,
+        exitSpec: records.exitSpec ?? null,
         block: await q.pinBlock(),
         account,
         slippageBps: s.slippageBps,

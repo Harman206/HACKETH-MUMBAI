@@ -1,6 +1,6 @@
 import { normaliseBundle, scriptHash } from '@copeybara/sitecheck';
 import { isAddress } from 'viem';
-import type { Address, Hex, Manifest } from '@copeybara/core';
+import type { Address, ExitSpec, Hex, Manifest } from '@copeybara/core';
 import { classifyRequest, explain, guard, type GuardCtx } from '@copeybara/guard';
 
 export interface PastedTx {
@@ -84,14 +84,14 @@ export function checkPasted(input: { to: string; data: string; value?: string; f
  * What the Check screen calls. The account checked is ONLY the address the user typed (or their connected wallet):
  * a pasted `from` is attacker-controlled and is never used as "you".
  */
-export function checkPastedText(input: { text: string; to: string; account: string; chainId: number; manifest: Manifest }): CheckResult {
+export function checkPastedText(input: { text: string; to: string; account: string; chainId: number; manifest: Manifest; exitSpec?: ExitSpec | null }): CheckResult {
   if (!isAddress(input.account.trim(), { strict: false })) {
     return { verdict: 'not-exit', sentences: ['Enter your address first: the check compares where the funds would go with your own address.'] };
   }
   const p = parsePasted(input.text);
   const account = input.account.trim() as Address;
   const chainId = p.chainId ?? input.chainId; // evaluate against the chain the request is actually for
-  return checkPasted({ to: p.to ?? input.to, data: p.data ?? '', value: p.value, from: p.from, chainId }, { account, chainId, manifest: input.manifest });
+  return checkPasted({ to: p.to ?? input.to, data: p.data ?? '', value: p.value, from: p.from, chainId }, { account, chainId, manifest: input.manifest, exitSpec: input.exitSpec });
 }
 
 export interface SiteCheck {

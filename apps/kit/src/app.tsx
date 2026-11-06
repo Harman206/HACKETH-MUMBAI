@@ -407,8 +407,8 @@ function Setup(props: { settings: Settings; update(p: Partial<Settings>): void; 
   );
 }
 
-const ADAPTER_NAMES: Record<string, string> = { 'uniswap-v3': 'Uniswap v3', 'uniswap-v4': 'Uniswap v4', 'aave-v3': 'Aave v3', 'curve-3pool': 'Curve 3pool' };
-const ADAPTER_SHORT: Record<string, string> = { 'uniswap-v3': 'U3', 'uniswap-v4': 'U4', 'aave-v3': 'AV', 'curve-3pool': 'CV' };
+const ADAPTER_NAMES: Record<string, string> = { 'uniswap-v3': 'Uniswap v3', 'uniswap-v4': 'Uniswap v4', 'aave-v3': 'Aave v3', 'curve-3pool': 'Curve 3pool', spec: 'Protocol vault' };
+const ADAPTER_SHORT: Record<string, string> = { 'uniswap-v3': 'U3', 'uniswap-v4': 'U4', 'aave-v3': 'AV', 'curve-3pool': 'CV', spec: 'PV' };
 
 function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positions' }>; flow: ReturnType<typeof createFlow> }) {
   const { records } = state;
