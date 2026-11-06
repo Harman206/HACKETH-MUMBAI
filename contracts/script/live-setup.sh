@@ -13,6 +13,7 @@ export RELEASE=${RELEASE:-"sha256:$(printf 'blackout-placeholder' | shasum -a 25
 DEPLOYER=$(cast wallet address --private-key "$DEPLOYER_KEY")
 export DEPLOYMENTS_FILE=${DEPLOYMENTS_FILE:-deployments/sepolia.json}
 DF=$DEPLOYMENTS_FILE
+export PERMISSIONS_FILE=${PERMISSIONS_FILE:-${DF%.json}-permissions.json}
 echo "deployer $DEPLOYER balance $(cast balance $DEPLOYER --ether --rpc-url $SEPOLIA_RPC) ETH"
 
 if [ ! -f "$DF" ] || [ "$(jq -r '.tokenId // empty' "$DF")" = "" ]; then
