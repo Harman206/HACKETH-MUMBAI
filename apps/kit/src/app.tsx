@@ -9,6 +9,7 @@ import { connect, discoverWallets, ensureChain, senderFrom, type Eip1193 } from 
 import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
 import { COPY } from './copy';
 import { CheckScreen } from './screens/Check';
+import { ReleaseScreen } from './screens/Release';
 import './styles.css';
 
 function download(name: string, text: string, type: string) {
@@ -28,7 +29,7 @@ function useFlowState(flow: ReturnType<typeof createFlow>): FlowState {
 
 export function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings);
-  const [tab, setTab] = useState<'exit' | 'check'>('exit');
+  const [tab, setTab] = useState<'exit' | 'check' | 'release'>('exit');
   const [provider, setProvider] = useState<Eip1193 | null>(null);
 
   const flow = useMemo(() => {
@@ -84,8 +85,11 @@ export function App() {
       <nav aria-label="Mode">
         <button aria-pressed={tab === 'exit'} onClick={() => setTab('exit')}>Exit my positions</button>
         <button aria-pressed={tab === 'check'} onClick={() => setTab('check')}>Check a transaction</button>
+        <button aria-pressed={tab === 'release'} onClick={() => setTab('release')}>Release &amp; exits</button>
       </nav>
-      {tab === 'check' ? (
+      {tab === 'release' ? (
+        <ReleaseScreen settings={settings} update={update} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS) })} />
+      ) : tab === 'check' ? (
         <CheckScreen settings={settings} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS) })} />
       ) : (
         <ExitTab state={state} settings={settings} update={update} flow={flow} />

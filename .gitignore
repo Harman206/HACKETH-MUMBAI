@@ -19,3 +19,4 @@ harness/.state/
 replay/out/
 replay/cache/
 replay/out-replay/
+apps/hosted/dist/
