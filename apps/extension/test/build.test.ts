@@ -1,16 +1,20 @@
 import { beforeAll, describe, expect, test } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
+import { createHash } from 'node:crypto';
+import { BUILD_FILES, parseBuildFiles, treeHash } from '../src/shared/buildproof';
 
 const ROOT = join(__dirname, '..');
 const DIST = join(ROOT, 'dist');
 const files = (d: string): string[] => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? files(join(d, f)) : [join(d, f)]));
 let firstSha = '';
+let firstTree = '';
 
 beforeAll(() => {
   execFileSync('node', ['scripts/build.mjs'], { cwd: ROOT, stdio: 'pipe' });
   firstSha = readFileSync(join(DIST, 'copeybara-extension-chrome.zip.sha256'), 'utf8');
+  firstTree = readFileSync(join(DIST, 'copeybara-extension-chrome.tree.sha256'), 'utf8');
 }, 300_000);
 
 describe('extension build', () => {
@@ -60,8 +64,16 @@ describe('extension build', () => {
     // the shim must not drag the hashing / guard code into every page
     expect(readFileSync(join(DIST, 'chrome', 'shim.js'), 'utf8').length).toBeLessThan(8000);
   });
-  test('reproducible: a second build gives the same zip bytes', () => {
+  test.each(['chrome', 'firefox'])('%s: build-files.json lists every file (itself included); .tree.sha256 = the tree hash the worker computes', async (b) => {
+    const dir = join(DIST, b);
+    const onDisk = files(dir).map((f) => relative(dir, f).split('\\').join('/')).sort();
+    expect(parseBuildFiles(readFileSync(join(dir, BUILD_FILES), 'utf8'))).toEqual(onDisk);
+    const tree = await treeHash(onDisk.map((p) => ({ path: p, sha256: createHash('sha256').update(readFileSync(join(dir, p))).digest('hex') })));
+    expect(readFileSync(join(DIST, `copeybara-extension-${b}.tree.sha256`), 'utf8')).toBe(`${tree}  ${b}/\n`);
+  });
+  test('reproducible: a second build gives the same zip bytes and tree hash', () => {
     execFileSync('node', ['scripts/build.mjs'], { cwd: ROOT, stdio: 'pipe' });
     expect(readFileSync(join(DIST, 'copeybara-extension-chrome.zip.sha256'), 'utf8')).toBe(firstSha);
+    expect(readFileSync(join(DIST, 'copeybara-extension-chrome.tree.sha256'), 'utf8')).toBe(firstTree);
   }, 300_000);
 });

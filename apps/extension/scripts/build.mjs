@@ -1,5 +1,8 @@
 // Builds the extension for Chrome and Firefox, and a reproducible zip for each:
-//   dist/chrome/  dist/firefox/  dist/copeybara-extension-{chrome,firefox}.zip (+ .sha256)
+//   dist/chrome/  dist/firefox/  dist/copeybara-extension-{chrome,firefox}.zip (+ .sha256, + .tree.sha256)
+// The tree hash (src/shared/buildproof.ts) = sha256 over the sorted "<path>\t<sha256>\n" lines of every file in
+// dist/<browser>/, build-files.json (the sorted path list the worker reads) included. The running extension can
+// recompute it from its own files; the zip hash it cannot. EXTENSION_OUT_DIR=<dir> builds somewhere other than dist/.
 // Three Vite passes: (1) worker + trusted pages (ES modules), (2) content script (IIFE), (3) MAIN-world shim (IIFE).
 // Same sources → same bytes (fixed zip timestamps, sorted entries, no build-time values). The Chrome zip's sha256
 // is what the protocol Safe publishes as org.copeybara.extension.
@@ -7,13 +10,13 @@ import { build } from 'vite';
 import preact from '@preact/preset-vite';
 import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync, crc32 } from 'node:zlib';
 
 process.env.NODE_ENV = 'production';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DIST = join(ROOT, 'dist');
+const DIST = process.env.EXTENSION_OUT_DIR ? resolve(process.env.EXTENSION_OUT_DIR) : join(ROOT, 'dist');
 const STAGE = join(DIST, 'stage');
 const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 const VERSION = pkg.version;
@@ -139,16 +142,34 @@ function zip(dir) {
   return Buffer.concat([...locals, cd, end]);
 }
 
+const BUILD_FILES = 'build-files.json';
+const PATH_RE = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
+const sha256 = (b) => createHash('sha256').update(b).digest('hex');
+/** Same algorithm as src/shared/buildproof.ts treeHash (tests cross-check). */
+function treeHash(dir) {
+  const lines = files(dir)
+    .map((f) => relative(dir, f).split('\\').join('/'))
+    .sort()
+    .map((p) => `${p}\t${sha256(readFileSync(join(dir, p)))}\n`)
+    .join('');
+  return sha256(lines);
+}
+
 for (const [browser, manifest] of Object.entries(manifests)) {
   const out = join(DIST, browser);
   cpSync(STAGE, out, { recursive: true });
   writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  const paths = [...files(out).map((f) => relative(out, f).split('\\').join('/')), BUILD_FILES].sort();
+  for (const p of paths) if (!PATH_RE.test(p)) throw new Error(`build output has a path the build proof cannot list: ${p}`);
+  writeFileSync(join(out, BUILD_FILES), JSON.stringify({ v: 1, files: paths }) + '\n');
+  const tree = treeHash(out);
+  writeFileSync(join(DIST, `copeybara-extension-${browser}.tree.sha256`), `${tree}  ${browser}/\n`);
   const z = zip(out);
   const file = `copeybara-extension-${browser}.zip`;
   writeFileSync(join(DIST, file), z);
   const sha = createHash('sha256').update(z).digest('hex');
   writeFileSync(join(DIST, `${file}.sha256`), `${sha}  ${file}\n`);
-  console.log(`${browser}: dist/${file} sha256 ${sha}`);
+  console.log(`${browser}: dist/${file} sha256 ${sha} tree ${tree}`);
 }
 rmSync(STAGE, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });

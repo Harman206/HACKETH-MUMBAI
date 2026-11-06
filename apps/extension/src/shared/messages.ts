@@ -30,7 +30,9 @@ export type PageMsg =
   | { t: 'openKit'; name: string }
   | { t: 'testRpc'; url: string }
   | { t: 'resetStats' }
-  | { t: 'getTab'; tabId: number };
+  | { t: 'getTab'; tabId: number }
+  /** hash the installed files and compare with the followed protocols' org.copeybara.extension record */
+  | { t: 'buildProof' };
 
 const obj = (m: unknown): m is Record<string, unknown> => typeof m === 'object' && m !== null && !Array.isArray(m);
 const str = (v: unknown, max = 200): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -115,6 +117,7 @@ export function parsePageMsg(m: unknown): PageMsg | null {
     case 'acceptAddress':
     case 'rejectAddress':
     case 'resetStats':
+    case 'buildProof':
       return { t: m.t };
     case 'follow':
     case 'unfollow':

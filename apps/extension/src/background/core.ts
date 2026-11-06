@@ -7,6 +7,7 @@ import { hostMatches, type Address, type ReleaseRecord } from '@copeybara/core';
 import { normaliseName, type CopeybaraRecords } from '@copeybara/ens';
 import { classifyRequest, type Classification } from '@copeybara/guard';
 import { checkScripts, sha256Hex, type CodeItem } from '@copeybara/sitecheck';
+import { BUILD_FILES, parseBuildFiles, sha256Bytes, treeHash, type BuildProof } from '../shared/buildproof';
 import { classifySender, parseContentMsg, parsePageMsg, type SenderLike } from '../shared/messages';
 import {
   emptyStats,
@@ -23,7 +24,7 @@ import {
 import { buildRules, warningPath, type DnrRule } from './rules';
 
 export interface ChromeLike {
-  runtime: { id: string; getURL(path: string): string };
+  runtime: { id: string; getURL(path: string): string; getManifest?(): { version: string } };
   storage: { local: { get(keys: string[]): Promise<Record<string, unknown>>; set(items: Record<string, unknown>): Promise<void> } };
   tabs: {
     update(tabId: number, props: { url: string }): Promise<unknown>;
@@ -352,6 +353,34 @@ export function createCore(deps: CoreDeps) {
     return { ok: true };
   }
 
+  // ---------- build proof ----------
+  /** Hash this extension's own files (as Chrome serves them) and compare with the ENS extension record. */
+  async function buildProof(): Promise<BuildProof | { error: string }> {
+    let paths: string[];
+    let listing: Uint8Array;
+    try {
+      listing = await deps.fetchBytes(chrome.runtime.getURL(BUILD_FILES));
+      paths = parseBuildFiles(new TextDecoder().decode(listing));
+    } catch (e) {
+      return { error: `Could not read ${BUILD_FILES} from the installed extension: ${(e as Error).message}` };
+    }
+    const entries: { path: string; sha256: string }[] = [];
+    for (const path of paths) {
+      try {
+        // the listing is hashed from the bytes just parsed, so what was read is what is proven
+        entries.push({ path, sha256: await sha256Bytes(path === BUILD_FILES ? listing : await deps.fetchBytes(chrome.runtime.getURL(path))) });
+      } catch (e) {
+        return { error: `Could not read ${path} from the installed extension: ${(e as Error).message}` };
+      }
+    }
+    const tree = await treeHash(entries);
+    const recs = protocols.flatMap((p) => (p.snapshot?.extension ? [{ name: p.name, rel: p.snapshot.extension }] : []));
+    const pick = recs.find((r) => r.rel.tree === tree) ?? recs.find((r) => r.rel.tree) ?? recs[0];
+    const ens = pick ? { name: pick.name, version: pick.rel.version, tree: pick.rel.tree ?? null, zip: pick.rel.sha256 } : null;
+    const verdict = !ens ? 'no-record' : !ens.tree ? 'old-record' : ens.tree === tree ? 'match' : 'mismatch';
+    return { version: chrome.runtime.getManifest?.().version ?? deps.version, treeHash: tree, files: entries.length, ens, verdict };
+  }
+
   const publicState = (): PublicState => ({ settings, protocols, stats, pendingAddress, version: deps.version });
 
   // ---------- messages ----------
@@ -422,6 +451,8 @@ export function createCore(deps: CoreDeps) {
           stats = emptyStats();
           await save(['stats']);
           return publicState();
+        case 'buildProof':
+          return buildProof();
       }
     }
 
