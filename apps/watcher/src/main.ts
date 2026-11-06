@@ -9,9 +9,10 @@
  *   INTERVAL_MS        default 15000
  *   STATUS_PORT        if set, GET /status returns the watcher state as JSON (used by the theater)
  *   ANTHROPIC_API_KEY  optional: Claude writes the plain-language incident note from structured facts
+ *   AGENT_NAME         this watcher's ENS identity (default watcher.<first WATCH_NAMES>; contracts/script/RegisterAgent.s.sol)
  */
 import { createServer } from 'node:http';
-import { createPublicClient, createWalletClient, http, parseAbi, toHex, type Hex } from 'viem';
+import { createPublicClient, createWalletClient, http, keccak256, parseAbi, toHex, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 import { packetToBytes } from 'viem/ens';
@@ -19,6 +20,7 @@ import type { Address } from '@copeybara/core';
 import { readCopeybaraRecords } from '@copeybara/ens';
 import { createQuorum } from '@copeybara/quorum';
 import networks from '../../../config/networks.json';
+import { ensReaders, identityLine, readAgentIdentity, type AgentIdentity } from './identity';
 import { claudeNote } from './note';
 import { createWatcher } from './watcher';
 
@@ -42,7 +44,13 @@ const account = privateKeyToAccount(key);
 const chain = { ...sepolia, rpcUrls: { default: { http: [writeRpc] } } };
 const wallet = createWalletClient({ account, chain, transport: http(writeRpc) });
 const pub = createPublicClient({ chain, transport: http(writeRpc) });
-const setText = parseAbi(['function setText(bytes name, string key, string value)']);
+const setText = parseAbi([
+  'function setText(bytes name, string key, string value)',
+  'error EACUnauthorizedAccountRoles(uint256 resource, uint256 roleBitmap, address account)',
+]);
+const rolesAbi = parseAbi(['function hasRoles(uint256 resource, uint256 roleBitmap, address account) view returns (bool)']);
+const ROLE_SET_TEXT = 1n << 4n;
+const WRITABLE = ['org.copeybara.status', 'org.copeybara.blocklist'];
 const q = createQuorum({ urls: rpcs, expectedChainId: 11155111, timeoutMs: 8000 });
 
 const watcher = createWatcher({
@@ -62,14 +70,30 @@ const watcher = createWatcher({
     return hash;
   },
   writeNote: env.ANTHROPIC_API_KEY ? claudeNote : undefined,
+  canWrite: async (_name, resolver) => {
+    const held = await Promise.all(
+      WRITABLE.map((k) =>
+        pub.readContract({ address: resolver, abi: rolesAbi, functionName: 'hasRoles', args: [BigInt(keccak256(toHex(k))), ROLE_SET_TEXT, account.address] }),
+      ),
+    );
+    return held.every(Boolean);
+  },
   now: () => Date.now(),
   log: (l) => console.log(new Date().toISOString(), l),
+});
+
+const agentName = env.AGENT_NAME ?? `watcher.${names[0]}`;
+let identity: AgentIdentity | null = null;
+const ens = ensReaders(q, networks.ens.universalResolver as Address);
+void readAgentIdentity(agentName, ens.readText, ens.readAddr, account.address).then((id) => {
+  identity = id;
+  console.log(new Date().toISOString(), identityLine(id));
 });
 
 console.log(`watcher ${account.address} watching ${names.join(', ')} every ${Number(env.INTERVAL_MS ?? 15000) / 1000} s${env.ANTHROPIC_API_KEY ? ' (Claude notes on)' : ''}`);
 if (env.STATUS_PORT) {
   createServer((req, res) => {
-    res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }).end(JSON.stringify({ watcher: account.address, names: watcher.state() }));
+    res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }).end(JSON.stringify({ watcher: account.address, identity, revoked: watcher.revoked(), names: watcher.state() }));
   }).listen(Number(env.STATUS_PORT), '127.0.0.1');
 }
 const loop = async () => {

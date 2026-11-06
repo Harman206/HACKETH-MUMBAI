@@ -58,3 +58,15 @@ Roles: `ROLE_SET_TEXT = 1<<4`, `ROLE_LINK = 1<<28`, `ROLE_UPGRADE = 1<<124`, adm
 - `resolver.upgradeToAndCall(evilImpl, "")` → revert (root `ROLE_UPGRADE`)
 - `resolver.grantSetterRoles(setText(name,"org.blackout.release",""), webKey)` and `grantRootRoles(ALL, webKey)` → revert
 - `resolver.setText(name, "url", …)` → succeeds
+
+## Subnames (agent identity), proven in `test/AgentIdentity.fork.t.sol`
+
+Docs: `ensv2/subnames`, `ensv2/registry-template`. Checked 2026-11-07.
+
+- The live ETH registry has `setSubregistry(uint256 anyId, address)`, `register(string label, address owner, address registry, address resolver, uint256 roleBitmap, uint64 expiry)` and `setParent(address, string)` (selectors from bytecode + 4byte). `anyId` accepts the labelhash.
+- UserRegistry implementation: `0x840Fa461059862Ea466A711E8C98c8dE732061C0` (`contracts-v2/contracts/docs/addresses/sepolia.md`). That file lists a newer ENSv2 set (other ETHRegistry, factory, LabelStore) that the UniversalResolver does **not** use, but this implementation works standalone: proxied through *our* VerifiableFactory (`0xda70…2991`) with `initialize(address rootAccount, uint256 roleBitmap)`, attached under the live ETH registry, and the live UniversalResolver walks into it. No UserRegistry of the `0xD4eB…` generation was found among the factory's `ProxyDeployed` implementations.
+- Steps: deployer deploys the UserRegistry proxy (roles: Safe only) and a separate PermissionedResolver for the subname (records written in `initialize`, roles: Safe only). Safe: `ethRegistry.setSubregistry(labelhash, subregistry)`, `subregistry.setParent(ethRegistry, label)`, `subregistry.register("watcher", Safe, 0, agentResolver, roles, parentExpiry)`. The Safe's fallback handler accepts the ERC-1155 token.
+- Why a separate resolver: resolver roles are per resolver, not per name. On the parent's resolver the website key's `url` grant would also cover `url` on the subname.
+- `addr(bytes32)` resolves via `setAddress(name, 60, abi.encodePacked(addr))`.
+- Revoke: `revokeRoles(uint256(keccak256(key)), ROLE_SET_TEXT, account)` works from the Safe (root admin roles), also inside the resolver's `multicall(bytes[])`. A non-admin gets `EACCannotRevokeRoles`.
+
