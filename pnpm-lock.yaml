@@ -170,6 +170,12 @@ importers:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
 
+  examples/demoswap:
+    devDependencies:
+      '@copeybara/protocol-cli':
+        specifier: workspace:*
+        version: link:../../packages/protocol-cli
+
   harness:
     dependencies:
       '@copeybara/core':

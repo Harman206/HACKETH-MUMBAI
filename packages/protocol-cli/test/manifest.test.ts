@@ -50,3 +50,12 @@ describe('copeybara manifest', () => {
     expect(bytecodeHasSelector('0x0063ba08765200', '0xba087652')).toBe(true);
   });
 });
+
+test('the demo config (examples/demoswap) rebuilds the published demo manifest byte for byte', async () => {
+  const { loadConfig } = await import('../src/config');
+  const { readFileSync } = await import('node:fs');
+  const l = await loadConfig(new URL('../../../examples/demoswap/copeybara.config.ts', import.meta.url).pathname);
+  const b = await buildManifest(l);
+  expect(b.problems).toEqual([]);
+  expect(b.text).toBe(readFileSync(new URL('../../../config/manifest.json', import.meta.url), 'utf8').trim());
+});
