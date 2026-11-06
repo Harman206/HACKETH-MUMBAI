@@ -1,0 +1,18 @@
+{
+  "id": "C1",
+  "incident": "CONTROL (out of scope): Euler Finance smart-contract exploit, 13 Mar 2023 — the contracts themselves were exploited; no frontend was involved.",
+  "sources": [
+    "On chain: exploit tx 0xc310…111d in block 16817996 (from 0x5F25…8B8c via 0xeBC2…Bf99); Euler 0x2718…25d3 DAI balance 8,904,507 DAI at 16817995 and 0 at 16817997 (verified with cast)",
+    "https://etherscan.io/tx/0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d"
+  ],
+  "victim": "0xb24b1b1b4b1f8e49d6d50f8e043e44ad1dac64e5",
+  "drainer": "0xeBC29199C817Dc47BA12E3F86102564D640CBf99",
+  "attacker": "0x5F259D0b76665c337c6104145894F4D1D2758B8c",
+  "drainTx": "0xc310a0affe2169d1f6feec1c63dbc7f7c62a887fa48795d327d4d2da2d6b111d",
+  "drainBlock": 16817996,
+  "forkBlock": 16817995,
+  "tokens": ["0x6B175474E89094C44Da98b954EedeAC495271d0F"],
+  "eToken": "0xe025E3ca2bE02316033184551D4d3Aa22024D9DC",
+  "euler": "0x27182842E098f60e3D576794A5bFFb0777E025d3",
+  "lps": []
+}
