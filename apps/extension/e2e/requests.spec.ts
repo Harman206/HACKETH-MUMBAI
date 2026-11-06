@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
-import { expect, follow, test } from './fixtures';
+import { expect, follow, shot, test } from './fixtures';
 
 const confirmWindow = (ctx: BrowserContext) => ctx.waitForEvent('page', { predicate: (p) => p.url().includes('/confirm.html'), timeout: 20_000 });
 const walletCalls = (p: Page) => p.evaluate(() => (window as any).__walletCalls as string[]);
@@ -13,6 +13,7 @@ test('an ordinary dapp asks for an unlimited approval to a drainer: stopped in a
   await expect(win.getByText('This looks like a wallet drainer')).toBeVisible();
   await expect(win.locator('[data-reasons]')).toContainText('ALL of this token');
   await expect(win.locator('#continue')).toBeDisabled(); // needs the tick box first
+  await shot(win, 'confirm');
   await win.locator('#cancel').click();
   await expect(dapp.locator('#result')).toHaveText('error 4001');
   expect(await walletCalls(dapp)).not.toContain('eth_sendTransaction');

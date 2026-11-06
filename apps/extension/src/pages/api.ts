@@ -52,5 +52,3 @@ export function siteText(s: SiteState): { tone: Tone; title: string; detail: str
       return { tone: 'bad', title: `${s.protocol} reports this site is compromised`, detail: 'Use the exit kit instead.' };
   }
 }
-
-export const ICON = new URL('../../public/icon-128.png', import.meta.url).href;
