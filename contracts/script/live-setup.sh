@@ -30,10 +30,6 @@ if [ ! -f "$DF" ] || [ "$(jq -r '.tokenId // empty' "$DF")" = "" ]; then
 fi
 jq . "$DF"
 
-# Top the web key up: 6 sends x 300k gas limit need headroom at Sepolia fee levels.
-if [ "$(cast balance "$WEB_KEY_ADDR" --rpc-url "$SEPOLIA_RPC")" -lt 30000000000000000 ]; then
-  cast send "$WEB_KEY_ADDR" --value 0.05ether --private-key "$DEPLOYER_KEY" --rpc-url "$SEPOLIA_RPC" >/dev/null
-fi
 # Publish the DemoSwap main-bundle fingerprint for hijack detection (org.blackout.site), once.
 if [ ! -f "$DF.site-published" ]; then
   env -u RELEASE -u MANIFEST_FILE SITE_HASH="$(node ../scripts/site-hash.mjs ../harness/site/app.js)" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow && touch "$DF.site-published"
@@ -41,6 +37,10 @@ fi
 if [ -f "$PERMISSIONS_FILE" ] && [ "$(jq '[.[] | select(.pass | not)] | length' "$PERMISSIONS_FILE")" = "0" ] && [ -z "${FORCE_PERMISSION_CHECKS:-}" ]; then
   echo "permission checks already recorded and passing ($PERMISSIONS_FILE); set FORCE_PERMISSION_CHECKS=1 to resend"
 else
+  # Top the web key up only when the checks will actually be sent (6 sends x 300k gas limit need headroom).
+  if [ "$(cast balance "$WEB_KEY_ADDR" --rpc-url "$SEPOLIA_RPC")" -lt 30000000000000000 ]; then
+    cast send "$WEB_KEY_ADDR" --value 0.05ether --private-key "$DEPLOYER_KEY" --rpc-url "$SEPOLIA_RPC" >/dev/null
+  fi
   ./script/permission-checks.sh
 fi
 
