@@ -18,6 +18,8 @@
   },
   "devDependencies": {
     "@copeybara/widget": "workspace:*",
+    "@fontsource-variable/geist": "5.3.0",
+    "@fontsource-variable/geist-mono": "5.3.0",
     "@preact/preset-vite": "2.9.4",
     "@types/qrcode": "1.5.5",
     "jsdom": "25.0.1",

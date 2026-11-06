@@ -17,9 +17,29 @@ export const SAFE = (deployment as { safe: string }).safe;
 export const RESOLVER = (deployment as { resolver: string }).resolver;
 
 export const HERO = {
-  title: 'An exit of your own.',
-  sub: 'Save the Copeybara exit kit to withdraw from supported DeFi positions if the protocol’s website goes down or gets hijacked. Currently a Sepolia testnet demo.',
+  title: 'The emergency exit for DeFi.',
+  sub: 'When a protocol’s website goes down or gets hijacked, Copeybara still gets your funds back to your wallet, straight from the protocol’s contracts.',
+  note: 'Sepolia testnet demo',
 };
+
+/** The three moments Copeybara is for, in plain words. */
+export const SCENARIOS = [
+  { kicker: 'Website down', title: 'The site won’t load.', body: 'Open your saved exit kit and withdraw anyway. It talks to the protocol’s contracts, not its website.' },
+  { kicker: 'Website hijacked', title: 'The site is lying to you.', body: 'The kit never uses the website, and the extension flags pages running code the protocol never published.' },
+  { kicker: 'Look-alike site', title: 'The link was a fake.', body: 'The extension stops drainer requests before your wallet even shows them. Cancel is the default.' },
+];
+
+export const STEPS_SIMPLE = [
+  { title: 'Save the kit once', body: 'One small file. Keep it on your laptop; it works when the website doesn’t.' },
+  { title: 'Check it, then open it', body: 'Its fingerprint is published on the protocol’s official ENS name, so you can tell it’s the real one.' },
+  { title: 'Get your funds back', body: 'Connect your wallet, press Exit. Withdrawals can only ever pay you.' },
+];
+
+export const EXT_PITCH = [
+  'Holds approvals and blind signatures to addresses no protocol you follow publishes.',
+  'Warns you before you connect to a look-alike site.',
+  'Blocks pages a protocol has flagged, before they load.',
+];
 
 export const EXTENSION = {
   title: 'Get the Copeybara extension',
@@ -43,24 +63,24 @@ export const EXTENSION = {
   note: 'Sepolia testnet preview, installed unpacked from the zip; no store listing yet. Checks inside a web page are best effort, because a hostile page can get around code running in it. The blocks you can rely on are the ones applied before a flagged site loads.',
 } as const;
 
-export interface Incident { name: string; date: string; what: string; loss: string; sources?: { label: string; url: string }[]; unverified?: boolean }
+export interface Incident { name: string; date: string; what: string; loss: string; /** headline figure in USD (the low end when sources disagree) */ usd?: number; usdAtLeast?: boolean; sources?: { label: string; url: string }[]; unverified?: boolean }
 export const INCIDENTS: Incident[] = [
   {
     name: 'Curve Finance DNS hijack', date: '9 Aug 2022',
     what: 'A cloned site asked users to approve an unverified contract; USDC and DAI were drained from 7 users. Replayed on a mainnet fork above.',
-    loss: 'about $612,000 (CertiK)',
+    loss: 'about $612,000 (CertiK)', usd: 612_000,
     sources: [{ label: 'CertiK', url: 'https://www.certik.com/blog/curve-finance-hack-incident-analysis' }],
   },
   {
     name: 'Balancer frontend hijack', date: '19–20 Sep 2023',
     what: 'Social engineering at the .fi registrar (EuroDNS); the fake site collected approvals for a drainer.',
-    loss: 'about $238,000 (Cointelegraph)',
+    loss: 'about $238,000 (Cointelegraph)', usd: 238_000,
     sources: [{ label: 'Cointelegraph', url: 'https://cointelegraph.com/news/balancer-social-engineering-attack-dns-provider-frontend-hijack' }],
   },
   {
     name: 'Polymarket third-party script', date: '29 Oct 2026',
     what: 'Attackers hijacked the DNS of DebugBear, a monitoring vendor, and replaced the script Polymarket loaded from it with a drainer. It used signed-in traders’ own signers; 726 wallets were hit.',
-    loss: 'about $2.7 million (Polymarket)',
+    loss: 'about $2.7 million (Polymarket)', usd: 2_700_000,
     sources: [
       { label: 'The Hacker News', url: 'https://thehackernews.com/2026/11/hackers-steal-about-27-million-from.html' },
       { label: 'SecurityWeek', url: 'https://www.securityweek.com/polymarket-returns-3-9-million-to-traders-as-debugbear-cites-dns-hijack/' },
@@ -69,7 +89,7 @@ export const INCIDENTS: Incident[] = [
   {
     name: 'Name.com DNS hijack', date: '30–31 Oct 2026',
     what: 'At least 12 DeFi sites registered at Name.com were redirected to copies running the Step Drainer kit; Name.com said 15 customer domains were affected.',
-    loss: 'about $138,000 to $202,000 traced so far (The Block, Bitquery)',
+    loss: 'about $138,000 to $202,000 traced so far (The Block, Bitquery)', usd: 138_000, usdAtLeast: true,
     sources: [
       { label: 'The Block', url: 'https://www.theblock.co/news/defi/2026-10-31-hackers-hijack-a-dozen-defi-websites-all-registered-with-name-com-and-steal-about-138000-432251' },
       { label: 'Bitquery', url: 'https://bitquery.io/investigations/name-com-dns-hijack' },
@@ -125,11 +145,4 @@ export const LIMITS = [
   'Withdrawals require contracts that are running and solvent.',
   'Keep a copy of the kit or use a mirror. Get the protocol’s ENS name independently before verifying.',
   'Supported: Uniswap v3, Uniswap v4 (ERC-20 pairs; native-ETH pools are manual), Aave v3 supply-only, and Curve 3pool LP. This is a Sepolia testnet demo: on Sepolia the manifest lists Uniswap v3 and v4; the Aave and Curve exits are tested on mainnet forks.',
-];
-
-export const PROTOCOL_STEPS = [
-  { title: 'Set up your ENS name', body: 'Put it under your 2-of-3 Safe and use a Permissioned Resolver. In this demo all three Safe keys are held by one maintainer; a real protocol needs independent signers.' },
-  { title: 'Publish the release and exit contracts', body: 'Set org.copeybara.release to the file fingerprint and version, and org.copeybara.manifest to the exit contract list. Leave the old org.blackout.* records in place for kits saved before the rename.' },
-  { title: 'Scope the website key to the URL', body: 'Give the web team permission to update the url record. Keep release and resolver changes under the Safe.' },
-  { title: 'Prove it, then get certified', body: 'The Copeybara SDK turns all of this into one Safe batch, checks it back through three RPCs, and runs a fork drill with your site switched off. Protocols that pass get the Copeybara certified tick.' },
 ];

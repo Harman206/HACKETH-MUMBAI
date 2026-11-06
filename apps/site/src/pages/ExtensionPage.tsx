@@ -12,7 +12,7 @@ export function ExtensionPage() {
             <h1 class="page-title">{EXT_HERO.title}</h1>
             <p class="lede">{EXT_HERO.sub}</p>
             <div class="cta">
-              <a class="btn" href="#extension">Download <span aria-hidden="true">↓</span></a>
+              <a class="btn" href="#/extension" onClick={(e) => { e.preventDefault(); document.getElementById('extension')?.scrollIntoView(); }}>Download <span aria-hidden="true">↓</span></a>
               <a class="text-link" href="#/developers">For protocol teams <span aria-hidden="true">→</span></a>
             </div>
           </div>
