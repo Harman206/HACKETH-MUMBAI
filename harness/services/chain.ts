@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPublicClient, createWalletClient, defineChain, http, parseAbi, parseEther, formatUnits, type Address, type Hex } from 'viem';
+import { createPublicClient, createWalletClient, defineChain, http, nonceManager, parseAbi, parseEther, formatUnits, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { erc20Abi, npmAbi } from '@blackout/core';
 import type { Quorum } from '@blackout/quorum';
@@ -24,7 +24,8 @@ export function loadEnv(file = join(REPO, 'contracts', '.env')): Record<string, 
 
 export function clients(rpcUrl: string, key: Hex) {
   const chain = defineChain({ id: 11155111, name: 'Sepolia', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [rpcUrl] } } });
-  const account = privateKeyToAccount(key);
+  // Local nonce tracking: load-balanced public RPCs can report a stale pending nonce, so back-to-back sends collided.
+  const account = privateKeyToAccount(key, { nonceManager });
   return {
     account,
     pub: createPublicClient({ chain, transport: http(rpcUrl) }),

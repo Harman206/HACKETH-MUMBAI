@@ -25,3 +25,4 @@ contracts/cache/
 contracts/out/
 contracts/deployments/*.site-published
 apps/site/dist/
+contracts/.rehearsal-victim.key

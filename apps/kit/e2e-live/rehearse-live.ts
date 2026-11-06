@@ -29,7 +29,9 @@ const ensName = 'demoswap-blackout.eth';
 const free = () => new Promise<number>((r) => { const s = netServer(); s.listen(0, () => { const p = (s.address() as { port: number }).port; s.close(() => r(p)); }); });
 const log = (m: string) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
 
-const victimKey = generatePrivateKey();
+const victimKey = (process.env.REHEARSAL_VICTIM_KEY as Hex | undefined) ?? generatePrivateKey();
+mkdirSync(join(REPO, 'contracts', 'deployments'), { recursive: true });
+writeFileSync(join(REPO, 'contracts', '.rehearsal-victim.key'), victimKey); // gitignored; lets a rerun reuse a funded victim
 const victim = privateKeyToAccount(victimKey);
 const pub = createPublicClient({ chain: sepolia, transport: http(RPC) });
 const victimWallet = createWalletClient({ chain: sepolia, account: victim, transport: http(RPC) });
@@ -69,7 +71,15 @@ await new Promise<void>((r) => siteServer.listen(sitePort, '127.0.0.1', r));
 // --- browser with a wallet that really signs (Node side) ---
 const browser = await chromium.launch({ channel: 'chromium' });
 const ctx = await browser.newContext();
-await ctx.exposeBinding('__bkRpc', async (_src, method: string, params: unknown[]) => {
+await ctx.exposeBinding('__bkRpc', async (src, method: string, params: unknown[]) => {
+  try {
+    return await rpcHandler(method, params);
+  } catch (e) {
+    log(`wallet ${method} from ${src.page?.url()} FAILED: ${(e as Error).message.split('\n')[0]}`);
+    throw e;
+  }
+});
+async function rpcHandler(method: string, params: unknown[]) {
   if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [victim.address];
   if (method === 'eth_chainId') return '0xaa36a7';
   if (method === 'wallet_switchEthereumChain') return null;
@@ -84,7 +94,7 @@ await ctx.exposeBinding('__bkRpc', async (_src, method: string, params: unknown[
   const j = await r.json();
   if (j.error) throw Object.assign(new Error(j.error.message), { code: j.error.code });
   return j.result;
-});
+}
 await ctx.addInitScript(() => {
   const provider = { request: ({ method, params }: { method: string; params?: unknown[] }) => (window as unknown as { __bkRpc(m: string, p: unknown[]): Promise<unknown> }).__bkRpc(method, params ?? []) };
   (window as unknown as { ethereum: unknown }).ethereum = provider;
@@ -109,7 +119,10 @@ try {
   log('chapter 2: hijack + approve');
   await site.getByRole('button', { name: 'Hijack the domain' }).click();
   const [demo] = await Promise.all([ctx.waitForEvent('page'), site.getByRole('link', { name: /Open DemoSwap \(now fake\)/ }).click()]);
+  demo.on('console', (m) => log(`demoswap console: ${m.text()}`));
+  await expect(demo.getByText('Approve to view your rewards')).toBeVisible(T);
   await demo.getByRole('button', { name: 'Connect wallet' }).click();
+  log('clicked Connect on the hijacked DemoSwap');
   await expect(site.locator('.scoreboard .big.bad')).toHaveText('10,000 DUSD', T);
   log('chapter 3: outage');
   await site.getByRole('button', { name: 'Take the website down' }).click();
