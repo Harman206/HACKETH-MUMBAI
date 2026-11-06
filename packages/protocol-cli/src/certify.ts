@@ -1,4 +1,4 @@
-import { COPEYBARA_KEYS, parseSiteRecord, type Address } from '@copeybara/core';
+import { COPEYBARA_KEYS, parseSiteRecord, parseStatus, type Address, type StatusRecord } from '@copeybara/core';
 import type { CopeybaraRecords } from '@copeybara/ens';
 import { hasAnyRootRole, writableKeys, type OnChainState } from './chain';
 import type { Check } from './verify';
@@ -66,7 +66,14 @@ export function certifyLive(e: Pick<CertifiedEntry, 'safe' | 'resolver' | 'websi
     site = null;
   }
   out.push(site?.length ? ok('site fingerprint', `${site.length} scripts`) : fail('site fingerprint', 'not published'));
-  const status = s.texts[COPEYBARA_KEYS.status] ?? '';
-  out.push(/state=compromised/.test(status) ? fail('status', 'compromised: certification suspended until the Safe clears it') : ok('status', status ? status.replace(/^v=1;/, '') : 'ok'));
+  let status: StatusRecord | null = null;
+  try {
+    status = parseStatus(s.texts[COPEYBARA_KEYS.status] ?? '');
+  } catch {
+    status = null;
+  }
+  if (!status) out.push(fail('status', 'unreadable'));
+  else if (status.state === 'compromised') out.push(fail('status', 'compromised: certification suspended until the Safe clears it'));
+  else out.push(ok('status', status.note ? `${status.state}: ${status.note}` : status.state));
   return out;
 }

@@ -22,6 +22,16 @@ for (const browser of ['chrome', 'firefox']) {
 }
 console.log('extension zips copied into site/dist');
 
+// <copeybara-exit>, served so protocols (and the developer page) load the exact file whose sha256 is published.
+const widget = new URL('../../../packages/widget/', import.meta.url);
+{
+  const want = readFileSync(new URL('copeybara-exit.js.sha256', widget), 'utf8').split(' ')[0];
+  const got = createHash('sha256').update(readFileSync(new URL('copeybara-exit.js', widget))).digest('hex');
+  if (want !== got) throw new Error(`copeybara-exit.js does not match its .sha256 (${got} ≠ ${want}): run pnpm --filter @copeybara/widget hash`);
+  for (const f of ['copeybara-exit.js', 'copeybara-exit.js.sha256']) copyFileSync(new URL(f, widget), new URL(`../dist/${f}`, import.meta.url));
+  console.log('widget copied into site/dist');
+}
+
 // The last recorded live theater run (written by scripts/rehearse-live.ts), if any.
 const run = new URL('../../../demo-runs/latest.json', import.meta.url);
 if (existsSync(run)) {

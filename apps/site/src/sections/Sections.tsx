@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { EXTENSION, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL, OLD_NAME_NOTE } from '../content';
 import { BrandMark, ExitIllustration } from './Icons';
+import { ExtensionPreview } from './ExtensionPreview';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
 
@@ -47,7 +48,7 @@ export function useSha(file: string): string | null {
   return sha;
 }
 
-export function Extension() {
+export function Extension({ preview }: { preview?: boolean }) {
   const chrome = useSha(EXTENSION.chromeZip);
   const firefox = useSha(EXTENSION.firefoxZip);
   return (
@@ -62,6 +63,7 @@ export function Extension() {
           <p class="mono" data-ext-sha>{chrome ?? <a href={`${EXTENSION.chromeZip}.sha256`}>Open the checksum file</a>}</p>
           <p class="checksum">Firefox zip (checksum from this site only; ENS publishes the Chrome zip’s)</p>
           <p class="mono">{firefox ?? <a href={`${EXTENSION.firefoxZip}.sha256`}>Open the checksum file</a>}</p>
+          {preview && <ExtensionPreview />}
         </div>
         <div class="download-steps">
           <h3>What it does</h3>
@@ -74,6 +76,7 @@ export function Extension() {
           <ol class="protocol-steps install-steps">{EXTENSION.steps.map((s) => <li key={s}><p>{s}</p></li>)}</ol>
           <p>{EXTENSION.note}</p>
           <p class="watcher-note">{EXTENSION.watcher}</p>
+          {preview && <p class="watcher-note"><a class="text-link" href="#/extension">How the extension decides <span aria-hidden="true">→</span></a></p>}
         </div>
       </div>
     </section>
@@ -194,11 +197,17 @@ export function Protocols() {
           <h2>Give your users a backup exit</h2>
           <p class="lede">For protocol teams setting up a release, ENS gives users a place to check the kit and its supported contracts.</p>
         </header>
-        <ol class="protocol-steps">
-          {PROTOCOL_STEPS.map((step) => (
-            <li key={step.title}><h3>{step.title}</h3><p>{step.body}</p></li>
-          ))}
-        </ol>
+        <div>
+          <ol class="protocol-steps">
+            {PROTOCOL_STEPS.map((step) => (
+              <li key={step.title}><h3>{step.title}</h3><p>{step.body}</p></li>
+            ))}
+          </ol>
+          <div class="cta protocol-cta">
+            <a class="btn" href="#/developers">Read the SDK guide <span aria-hidden="true">→</span></a>
+            <a class="text-link" href="#/certified">Copeybara certified protocols <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
       </div>
     </section>
   );

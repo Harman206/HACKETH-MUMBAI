@@ -123,6 +123,9 @@ importers:
       '@copeybara/ens':
         specifier: workspace:*
         version: link:../../packages/ens
+      '@copeybara/protocol-cli':
+        specifier: workspace:*
+        version: link:../../packages/protocol-cli
       '@copeybara/quorum':
         specifier: workspace:*
         version: link:../../packages/quorum
@@ -133,6 +136,9 @@ importers:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
     devDependencies:
+      '@copeybara/widget':
+        specifier: workspace:*
+        version: link:../../packages/widget
       '@preact/preset-vite':
         specifier: 2.9.4
         version: 2.9.4(@babel/core@7.29.13)(preact@10.25.4)(vite@5.4.11(@types/node@22.10.2))

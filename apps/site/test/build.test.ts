@@ -80,7 +80,7 @@ test('the extension section shows the Chrome zip sha256 the site serves, with do
   globalThis.fetch = (async (u: string) => new Response(served(String(u)), { status: 200 })) as typeof fetch;
   try {
     const root = document.createElement('div');
-    render(h(Extension, {}), root);
+    render(h(Extension, { preview: true }), root);
     for (let i = 0; i < 100 && root.querySelector('[data-ext-sha]')!.textContent !== sha; i++) await new Promise((r) => setTimeout(r, 10));
     expect(root.querySelector('[data-ext-sha]')!.textContent).toBe(sha);
     expect(root.textContent).toContain(served('copeybara-extension-firefox.zip.sha256').split(' ')[0]!);
@@ -96,4 +96,12 @@ test('the extension section shows the Chrome zip sha256 the site serves, with do
 test('the built page includes the extension section near the top', () => {
   expect(js).toContain('copeybara-extension-chrome.zip');
   expect(js).toContain('Get the Copeybara extension');
+});
+
+test('serves <copeybara-exit> byte for byte with its sha256, and the new pages are in the bundle', () => {
+  const src = readFileSync(join(SITE, '..', '..', 'packages', 'widget', 'copeybara-exit.js'));
+  const served = readFileSync(join(SITE, 'dist', 'copeybara-exit.js'));
+  expect(served.equals(src)).toBe(true);
+  expect(readFileSync(join(SITE, 'dist', 'copeybara-exit.js.sha256'), 'utf8').split(' ')[0]).toBe(createHash('sha256').update(served).digest('hex'));
+  for (const s of ['Ship an exit that outlives your website.', 'A tick you can check yourself.', 'Five verdicts, one decision point']) expect(js).toContain(s);
 });

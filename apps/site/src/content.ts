@@ -27,6 +27,8 @@ export const EXTENSION = {
   bullets: [
     { title: 'Checks the site you are on', body: 'It compares the scripts of every protocol site you open with the fingerprints the protocol published on ENS, and warns about code the protocol never published. Sites the protocol flags on ENS, and look-alike domains on its ENS blocklist, are blocked before they load.' },
     { title: 'Holds drainer requests', body: 'Approval and permit requests to unknown addresses, and blind signatures, are held before your wallet shows them. You see a warning with Cancel as the default; to go ahead anyway you must confirm you understand the risk.' },
+    { title: 'Warns before you connect to a look-alike', body: 'On a site that imitates a protocol you follow, “Don’t connect your wallet here” opens before your wallet’s own connect popup.' },
+    { title: 'Saved by Copey!', body: 'Cancel a risky request, or land on a blocked page, and a short celebration tells you what you just avoided.' },
     { title: 'One click to exit', body: 'When a site is down or hijacked, it opens the verified exit kit and you withdraw straight from the contracts.' },
   ],
   chromeZip: 'copeybara-extension-chrome.zip',
@@ -129,4 +131,5 @@ export const PROTOCOL_STEPS = [
   { title: 'Set up your ENS name', body: 'Put it under your 2-of-3 Safe and use a Permissioned Resolver. In this demo all three Safe keys are held by one maintainer; a real protocol needs independent signers.' },
   { title: 'Publish the release and exit contracts', body: 'Set org.copeybara.release to the file fingerprint and version, and org.copeybara.manifest to the exit contract list. Leave the old org.blackout.* records in place for kits saved before the rename.' },
   { title: 'Scope the website key to the URL', body: 'Give the web team permission to update the url record. Keep release and resolver changes under the Safe.' },
+  { title: 'Prove it, then get certified', body: 'The Copeybara SDK turns all of this into one Safe batch, checks it back through three RPCs, and runs a fork drill with your site switched off. Protocols that pass get the Copeybara certified tick.' },
 ];
