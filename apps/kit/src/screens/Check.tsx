@@ -1,9 +1,8 @@
 import { useState } from 'preact/hooks';
-import type { Address } from '@blackout/core';
 import { readBlackoutRecords } from '@blackout/ens';
 import type { Quorum } from '@blackout/quorum';
 import type { Settings } from '../settings';
-import { checkPasted, parsePasted, siteHashCheck, type CheckResult, type SiteCheck } from '../check';
+import { checkPastedText, siteHashCheck, type CheckResult, type SiteCheck } from '../check';
 import { ENS_CONFIG } from '../config';
 
 /** Paste what a live site asks you to sign; the Exit Guard explains whether it is a safe exit. */
@@ -31,14 +30,7 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
     setResult(null);
     try {
       const rec = await readBlackoutRecords(settings.ensName, props.quorumFor(ENS_CONFIG.chainId), ENS_CONFIG);
-      const p = parsePasted(pasted);
-      const me = (account || p.from || '0x0000000000000000000000000000000000000001') as Address;
-      setResult(
-        checkPasted(
-          { to: p.to ?? to, data: p.data ?? '', value: p.value, from: p.from, chainId: settings.targetChainId },
-          { account: me, chainId: settings.targetChainId, manifest: rec.manifest },
-        ),
-      );
+      setResult(checkPastedText({ text: pasted, to, account, chainId: settings.targetChainId, manifest: rec.manifest }));
     } catch (e) {
       setResult({ verdict: 'blocked', sentences: [`Could not check: ${(e as Error).message}`] });
     } finally {
@@ -59,7 +51,7 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
       </label>
       <input id="to" value={to} onInput={(e) => setTo((e.target as HTMLInputElement).value)} placeholder="0x…" />
       <label for="acct">
-        Your address <span class="hint">(to check where funds would go)</span>
+        Your address <span class="hint">(required: where the funds must go)</span>
       </label>
       <input id="acct" value={account} onInput={(e) => setAccount((e.target as HTMLInputElement).value)} placeholder="0x…" />
       <div style="margin-top:16px">

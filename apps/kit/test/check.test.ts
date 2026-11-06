@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { encodeFunctionData, maxUint128, maxUint256, parseAbi } from 'viem';
 import { EXIT_SELECTORS, npmAbi, type Address, type Manifest } from '@blackout/core';
-import { checkPasted, parsePasted } from '../src/check';
+import { checkPasted, checkPastedText, parsePasted } from '../src/check';
 
 const USER: Address = '0x1111111111111111111111111111111111111111';
 const ATTACKER: Address = '0x9999999999999999999999999999999999999999';
@@ -60,5 +60,27 @@ describe('parsePasted', () => {
   });
   test('raw hex is treated as data only', () => {
     expect(parsePasted(`  ${approve}  `)).toEqual({ data: approve });
+  });
+});
+
+describe('review C1: the pasted transaction must never choose whose account is checked', () => {
+  const collectTo = (r: Address) =>
+    encodeFunctionData({ abi: npmAbi, functionName: 'collect', args: [{ tokenId: 1n, recipient: r, amount0Max: maxUint128, amount1Max: maxUint128 }] });
+
+  test('pasted from = attacker, collect pays attacker, user address given → blocked', () => {
+    const r = checkPasted({ to: NPM, data: collectTo(ATTACKER), from: ATTACKER, chainId: 11155111 }, ctx);
+    expect(r.verdict).toBe('blocked');
+    expect(r.sentences.join(' ')).toMatch(/not your (connected )?(account|address)/);
+  });
+
+  test('no user address entered → blocked, asks for it (never falls back to pasted from)', () => {
+    const r = checkPastedText({ text: JSON.stringify({ from: ATTACKER, to: NPM, data: collectTo(ATTACKER) }), to: '', account: '', chainId: 11155111, manifest });
+    expect(r.verdict).toBe('blocked');
+    expect(r.sentences.join(' ')).toMatch(/Enter your address/);
+  });
+
+  test('safe exit only when recipient = the address the user typed', () => {
+    const r = checkPastedText({ text: JSON.stringify({ to: NPM, data: collectTo(USER) }), to: '', account: USER, chainId: 11155111, manifest });
+    expect(r.verdict).toBe('safe-exit');
   });
 });

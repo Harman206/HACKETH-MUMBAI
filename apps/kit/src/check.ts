@@ -1,5 +1,5 @@
 import { isAddress } from 'viem';
-import type { Address, Hex } from '@blackout/core';
+import type { Address, Hex, Manifest } from '@blackout/core';
 import { explain, guard, type GuardCtx } from '@blackout/guard';
 
 export interface PastedTx {
@@ -55,7 +55,24 @@ export function checkPasted(input: { to: string; data: string; value?: string; f
   if (value === null) return blocked('The ETH value is not a number, so this is blocked.');
   const from = (input.from && isAddress(input.from, { strict: false }) ? input.from : ctx.account) as Address;
   const r = guard({ chainId: input.chainId, from, to: input.to as Address, data: input.data as Hex, value }, ctx);
-  return { verdict: r.ok ? 'safe-exit' : 'blocked', sentences: explain(r) };
+  const sentences = explain(r);
+  if (from.toLowerCase() !== ctx.account.toLowerCase()) {
+    return { verdict: 'blocked', sentences: [`This request is for ${from.slice(0, 6)}…${from.slice(-4)}, not your address.`, ...(r.ok ? [] : sentences)] };
+  }
+  return { verdict: r.ok ? 'safe-exit' : 'blocked', sentences };
+}
+
+/**
+ * What the Check screen calls. The account checked is ONLY the address the user typed (or their connected wallet):
+ * a pasted `from` is attacker-controlled and is never used as "you".
+ */
+export function checkPastedText(input: { text: string; to: string; account: string; chainId: number; manifest: Manifest }): CheckResult {
+  if (!isAddress(input.account.trim(), { strict: false })) {
+    return { verdict: 'blocked', sentences: ['Enter your address first: the check compares where the funds would go with your own address.'] };
+  }
+  const p = parsePasted(input.text);
+  const account = input.account.trim() as Address;
+  return checkPasted({ to: p.to ?? input.to, data: p.data ?? '', value: p.value, from: p.from, chainId: input.chainId }, { account, chainId: input.chainId, manifest: input.manifest });
 }
 
 export interface SiteCheck {
