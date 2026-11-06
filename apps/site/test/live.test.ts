@@ -17,6 +17,9 @@ describe('live proof (public mode)', () => {
     expect(p.exits).toEqual(['Sepolia: uniswap-v3 positionManager', 'Ethereum mainnet: aave-v3 pool']);
     expect(p.permissions).toHaveLength(6);
     expect(p.permissions.every((x) => x.pass)).toBe(true);
+    expect(p.permissions.some((x) => x.check.includes('org.copeybara.release'))).toBe(true);
+    expect(p.watcherPermissions.length).toBeGreaterThan(0);
+    expect(p.watcherPermissions.every((x) => x.pass)).toBe(true);
     expect(p.lastRun).toEqual(run);
   });
 

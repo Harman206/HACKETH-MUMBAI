@@ -2,11 +2,27 @@ import { useEffect, useState } from 'preact/hooks';
 import { createQuorum } from '@copeybara/quorum';
 import { readCopeybaraRecords } from '@copeybara/ens';
 import networks from '../../../../config/networks.json';
-import { ENS_NAME, RESOLVER, SAFE } from '../content';
+import { ENS_NAME, RESOLVER, SAFE, type PermissionCheck } from '../content';
 import { readLiveProof, type DemoRun, type LiveProof as Proof } from '../live';
 
 const tx = (h: string) => `https://sepolia.etherscan.io/tx/${h}`;
 const addr = (a: string) => `https://sepolia.etherscan.io/address/${a}`;
+
+function PermissionTable({ rows, label }: { rows: PermissionCheck[]; label: string }) {
+  return (
+    <table class="perm" aria-label={label}>
+      <tbody>
+        {rows.map((x) => (
+          <tr key={x.check}>
+            <td>{x.check}</td>
+            <td class={x.pass ? 'ok' : 'bad'}>{x.pass ? (x.expected === 'revert' ? 'reverted ✓' : 'allowed ✓') : 'FAILED'}</td>
+            <td>{x.tx && <a href={tx(x.tx)}>tx</a>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 /** Public mode: live on-chain proof anyone can check, no booth needed. */
 export function LiveProof({ onLive }: { onLive(s: string): void }) {
@@ -37,7 +53,7 @@ export function LiveProof({ onLive }: { onLive(s: string): void }) {
             <p><b>{ENS_NAME}</b> · release <b>v{p.release.version}</b> · block {p.block}</p>
             <p style="margin-top:8px">Published SHA-256 fingerprint</p>
             <p class="mono">{p.release.sha256}</p>
-            <p style="margin-top:8px">Published exit contracts:</p>
+            <p style="margin-top:8px">Published exit contracts (the mainnet entries are tested on mainnet forks, not used in this demo):</p>
             <ul>{p.exits.map((e) => <li>{e}</li>)}</ul>
             <p class="muted" style="font-size:14px">Owned by the 2-of-3 <a href={addr(SAFE)}>release Safe</a> via its <a href={addr(RESOLVER)}>Permissioned Resolver</a>. In this demo all three Safe keys are held by one maintainer.</p>
           </>
@@ -45,17 +61,10 @@ export function LiveProof({ onLive }: { onLive(s: string): void }) {
       </article>
       <article class="card">
         <h3>What a stolen website key can change</h3>
-        <table class="perm" aria-label="Website key transaction results">
-          <tbody>
-            {(p?.permissions ?? []).map((x) => (
-              <tr key={x.check}>
-                <td>{x.check}</td>
-                <td class={x.pass ? 'ok' : 'bad'}>{x.pass ? (x.expected === 'revert' ? 'reverted ✓' : 'allowed ✓') : 'FAILED'}</td>
-                <td>{x.tx && <a href={tx(x.tx)}>tx</a>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <PermissionTable rows={p?.permissions ?? []} label="Website key transaction results" />
+        <h3 style="margin-top:20px">What a stolen watcher key can change</h3>
+        <p class="muted" style="font-size:14px">The watcher may only write the status and blocklist records, which warn about or block websites, never an exit.</p>
+        <PermissionTable rows={p?.watcherPermissions ?? []} label="Watcher key transaction results" />
       </article>
       <article class="card recorded-run">
         <h3>Last recorded attack and recovery</h3>
@@ -67,7 +76,8 @@ export function LiveProof({ onLive }: { onLive(s: string): void }) {
           <>
             <p class="muted" style="margin:0">{p.lastRun.network === 'local-fork' ? 'LOCAL FORK' : 'Sepolia'} · {new Date(p.lastRun.at).toUTCString()}</p>
             <p style="margin-top:8px">The hijacked site drained <b class="bad">{p.lastRun.drained}</b> (<a href={tx(p.lastRun.drainTx)}>drain tx</a>).</p>
-            <p style="margin-top:8px">The saved kit recovered <b class="ok">{p.lastRun.recovered}</b> while the site and its RPC were down (<a href={tx(p.lastRun.rescueTx)}>exit transaction</a>).</p>
+            <p style="margin-top:8px">With the site and its RPC down, the saved kit withdrew the victim’s liquidity position, <b class="ok">{p.lastRun.recovered}</b>, straight from the contracts (<a href={tx(p.lastRun.rescueTx)}>exit transaction</a>).</p>
+            <p class="muted" style="margin-top:8px;font-size:14px">The drained tokens stay with the attacker: the kit cannot undo an approval you already signed. It protects what is still yours and refuses to send that approval in the first place.</p>
           </>
         )}
       </article>

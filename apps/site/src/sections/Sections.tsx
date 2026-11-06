@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { EXTENSION, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL } from '../content';
+import { EXTENSION, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL, OLD_NAME_NOTE } from '../content';
 import { BrandMark, ExitIllustration } from './Icons';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
@@ -60,7 +60,7 @@ export function Extension() {
           <a class="text-link" href={EXTENSION.firefoxZip} download={EXTENSION.firefoxZip}>Firefox build (zip) <span aria-hidden="true">↓</span></a>
           <p class="checksum">sha256 of {EXTENSION.chromeZip}</p>
           <p class="mono" data-ext-sha>{chrome ?? <a href={`${EXTENSION.chromeZip}.sha256`}>Open the checksum file</a>}</p>
-          <p class="checksum">Firefox zip</p>
+          <p class="checksum">Firefox zip (checksum from this site only; ENS publishes the Chrome zip’s)</p>
           <p class="mono">{firefox ?? <a href={`${EXTENSION.firefoxZip}.sha256`}>Open the checksum file</a>}</p>
         </div>
         <div class="download-steps">
@@ -108,6 +108,11 @@ export function Problem() {
                 <p class="muted">{incident.date}{incident.unverified && ' · Unverified report'}</p>
                 <h3>{incident.name}</h3>
                 <p>{incident.what} {incident.loss === 'not collected' ? 'Loss unknown.' : `Reported loss: ${incident.loss}.`}</p>
+                {incident.sources && (
+                  <p class="case-links">
+                    {incident.sources.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer">{s.label} ↗</a>)}
+                  </p>
+                )}
               </li>
             ))}
           </ul>
@@ -220,6 +225,7 @@ export function Footer() {
         <div>
           <a class="brand" href="#top"><BrandMark />Copeybara</a>
           <p>MIT-licensed; source release coming soon. Built at ETHGlobal Mumbai.</p>
+          <p class="muted">{OLD_NAME_NOTE}</p>
         </div>
         <QrCard />
       </div>
