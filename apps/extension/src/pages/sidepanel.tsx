@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState, SiteState } from '../shared/types';
 import { ago, getState, getTab, openPage, protocolHealth, send, short, siteText, type Tone } from './api';
-import { Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
+import { Badges, Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
 import { Copey, Icon, type IconName, type Mood } from './icons';
 import { scanPositions, type Scan } from './positions';
 
@@ -228,6 +228,7 @@ function Panel() {
                       <div class="amounts">
                         {f.amounts.length > 0 ? f.amounts.map((a) => `${a.text} ${a.symbol}`).join(' + ') : (f.position.manual ?? f.protocol)}
                       </div>
+                      <Badges position={f.position} />
                     </div>
                     <button class="small-btn secondary" onClick={() => openKit(f.protocol)}>Exit safely</button>
                   </li>

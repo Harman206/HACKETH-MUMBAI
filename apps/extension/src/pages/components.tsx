@@ -25,6 +25,18 @@ export function StatusMark({ tone, size = 26, icon }: { tone: Tone; size?: numbe
   );
 }
 
+type Badge = { tone: 'info' | 'warn'; text: string };
+/** Hook / position badges an adapter may attach (e.g. Uniswap v4 hooks), as small chips. */
+export function Badges({ position }: { position: object }) {
+  const b = (position as { badges?: Badge[] }).badges;
+  if (!b || b.length === 0) return null;
+  return (
+    <div class="badges">
+      {b.map((x) => <Chip tone={x.tone === 'warn' ? 'warn' : 'grey'} icon={x.tone === 'warn' ? 'alert-triangle' : 'layers'}>{x.text}</Chip>)}
+    </div>
+  );
+}
+
 /** Overall guard status for the header chip, from the worker's public state. */
 export function guardStatus(st: PublicState): { tone: Tone; text: string; live: boolean } {
   if (st.protocols.some((p) => p.snapshot?.status?.state === 'compromised')) return { tone: 'bad', text: 'Alert', live: true };

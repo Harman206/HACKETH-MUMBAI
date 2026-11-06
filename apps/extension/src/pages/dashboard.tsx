@@ -8,7 +8,7 @@ import { useEffect, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState, Stats } from '../shared/types';
 import { ago, getState, openPage, protocolHealth, send, short, type Tone } from './api';
-import { Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
+import { Badges, Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
 import { Copey, Icon, type IconName } from './icons';
 import { scanPositions, type Scan } from './positions';
 
@@ -298,6 +298,7 @@ function Dashboard() {
                     </div>
                     {f.amounts.length > 0 && <div class="amounts">{f.amounts.map((a) => `${a.text} ${a.symbol}`).join(' + ')}</div>}
                     <div class="tiny muted">{f.protocol}{f.position.manual && ` · ${f.position.manual}`}</div>
+                    <Badges position={f.position} />
                     <button class="block" onClick={() => openKit(f.protocol)}><Icon name="log-out" size={16} />Exit safely</button>
                   </div>
                 ))}
