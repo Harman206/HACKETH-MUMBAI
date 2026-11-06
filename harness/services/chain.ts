@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPublicClient, createWalletClient, defineChain, http, nonceManager, parseAbi, parseEther, formatUnits, type Address, type Hex } from 'viem';
+import { createPublicClient, createWalletClient, defineChain, fallback, http, nonceManager, parseAbi, parseEther, formatUnits, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { erc20Abi, npmAbi } from '@blackout/core';
 import type { Quorum } from '@blackout/quorum';
@@ -22,14 +22,23 @@ export function loadEnv(file = join(REPO, 'contracts', '.env')): Record<string, 
   return { ...out, ...(process.env as Record<string, string>) };
 }
 
+const PUBLIC_SEPOLIA = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://1rpc.io/sepolia'];
+
+/** Live Sepolia: fall back across public providers (one rate-limited provider must not stall the demo). Local forks: just the fork. */
+export function transportFor(rpcUrl: string) {
+  const local = /^http:\/\/(127\.0\.0\.1|localhost)/.test(rpcUrl);
+  const urls = local ? [rpcUrl] : [...new Set([rpcUrl, ...PUBLIC_SEPOLIA])];
+  return fallback(urls.map((u) => http(u, { retryCount: 2, retryDelay: 400 })), { rank: false, retryCount: 1 });
+}
+
 export function clients(rpcUrl: string, key: Hex) {
   const chain = defineChain({ id: 11155111, name: 'Sepolia', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [rpcUrl] } } });
   // Local nonce tracking: load-balanced public RPCs can report a stale pending nonce, so back-to-back sends collided.
   const account = privateKeyToAccount(key, { nonceManager });
   return {
     account,
-    pub: createPublicClient({ chain, transport: http(rpcUrl) }),
-    wallet: createWalletClient({ chain, account, transport: http(rpcUrl) }),
+    pub: createPublicClient({ chain, transport: transportFor(rpcUrl) }),
+    wallet: createWalletClient({ chain, account, transport: transportFor(rpcUrl) }),
   };
 }
 

@@ -155,8 +155,9 @@ export async function startHarness(o: HarnessOpts) {
           const { victim } = JSON.parse(body || '{}');
           return json(res, await theater.prepare(victim));
         } catch (e) {
-          const m = (e as Error).message;
-          return json(res, { error: m }, /cap reached/.test(m) ? 429 : /address/.test(m) ? 400 : 500);
+          const err = e as Error & { shortMessage?: string; details?: string };
+          const m = err.shortMessage ? `${err.shortMessage}${err.details ? ` (${err.details})` : ''}` : err.message.split('\n')[0]!;
+          return json(res, { error: m }, /cap reached/.test(m) ? 429 : /must be an address/.test(m) ? 400 : 500);
         }
       }
       return json(res, { error: 'unknown theater route' }, 404);

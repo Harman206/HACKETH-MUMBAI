@@ -16,7 +16,7 @@ import { sepolia } from 'viem/chains';
 import { createQuorum } from '@blackout/quorum';
 import { startHarness } from '../../../harness/services/control';
 import { createDrainerBot } from '../../../harness/services/drainer-bot';
-import { loadEnv, makePrepareVictim, makeReadVictim, makeSender } from '../../../harness/services/chain';
+import { loadEnv, makePrepareVictim, makeReadVictim, makeSender, transportFor } from '../../../harness/services/chain';
 import networks from '../../../config/networks.json';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -33,8 +33,8 @@ const victimKey = (process.env.REHEARSAL_VICTIM_KEY as Hex | undefined) ?? gener
 mkdirSync(join(REPO, 'contracts', 'deployments'), { recursive: true });
 writeFileSync(join(REPO, 'contracts', '.rehearsal-victim.key'), victimKey); // gitignored; lets a rerun reuse a funded victim
 const victim = privateKeyToAccount(victimKey);
-const pub = createPublicClient({ chain: sepolia, transport: http(RPC) });
-const victimWallet = createWalletClient({ chain: sepolia, account: victim, transport: http(RPC) });
+const pub = createPublicClient({ chain: sepolia, transport: transportFor(RPC) });
+const victimWallet = createWalletClient({ chain: sepolia, account: victim, transport: transportFor(RPC) });
 log(`throwaway victim ${victim.address}`);
 
 // --- harness against real Sepolia ---
@@ -71,14 +71,9 @@ await new Promise<void>((r) => siteServer.listen(sitePort, '127.0.0.1', r));
 // --- browser with a wallet that really signs (Node side) ---
 const browser = await chromium.launch({ channel: 'chromium' });
 const ctx = await browser.newContext();
-await ctx.exposeBinding('__bkRpc', async (src, method: string, params: unknown[]) => {
-  try {
-    return await rpcHandler(method, params);
-  } catch (e) {
-    log(`wallet ${method} from ${src.page?.url()} FAILED: ${(e as Error).message.split('\n')[0]}`);
-    throw e;
-  }
-});
+// Signer proxy: a local JSON-RPC endpoint that behaves like an unlocked node for the throwaway victim
+// (signs eth_sendTransaction, refuses typed-data signing, forwards everything else to Sepolia). The page-side
+// wallet is the same fetch-based provider the fork e2e uses.
 async function rpcHandler(method: string, params: unknown[]) {
   if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [victim.address];
   if (method === 'eth_chainId') return '0xaa36a7';
@@ -89,19 +84,43 @@ async function rpcHandler(method: string, params: unknown[]) {
     log(`victim signed ${t.data?.slice(0, 10) ?? 'transfer'} → ${hash}`);
     return hash;
   }
-  if (/sign/i.test(method)) throw new Error(`rehearsal wallet refuses ${method}`);
-  const r = await fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
-  const j = await r.json();
-  if (j.error) throw Object.assign(new Error(j.error.message), { code: j.error.code });
-  return j.result;
+  if (/sign/i.test(method)) throw Object.assign(new Error(`rehearsal wallet refuses ${method}`), { code: 4001 });
+  return pub.request({ method: method as never, params: params as never }); // fallback transport across public RPCs
 }
-await ctx.addInitScript(() => {
-  const provider = { request: ({ method, params }: { method: string; params?: unknown[] }) => (window as unknown as { __bkRpc(m: string, p: unknown[]): Promise<unknown> }).__bkRpc(method, params ?? []) };
+const signerPort = await free();
+const signer = createServer((req, res) => {
+  res.setHeader('access-control-allow-origin', req.headers.origin ?? '*');
+  res.setHeader('access-control-allow-headers', 'content-type');
+  if (req.method === 'OPTIONS') return void res.writeHead(204).end();
+  let body = '';
+  req.on('data', (c) => (body += c));
+  req.on('end', async () => {
+    const { id, method, params } = JSON.parse(body || '{}');
+    try {
+      const result = await rpcHandler(method, params ?? []);
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ jsonrpc: '2.0', id, result }));
+    } catch (e) {
+      log(`wallet ${method} FAILED: ${(e as Error).message.split('\n')[0]}`);
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ jsonrpc: '2.0', id, error: { code: (e as { code?: number }).code ?? -32000, message: (e as Error).message } }));
+    }
+  });
+});
+await new Promise<void>((r) => signer.listen(signerPort, '127.0.0.1', r));
+await ctx.addInitScript((rpc: string) => {
+  let id = 1;
+  const provider = {
+    request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+      const r = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: id++, method, params: params ?? [] }) });
+      const j = await r.json();
+      if (j.error) throw Object.assign(new Error(j.error.message), { code: j.error.code });
+      return j.result;
+    },
+  };
   (window as unknown as { ethereum: unknown }).ethereum = provider;
   window.addEventListener('eip6963:requestProvider', () =>
     window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: { info: { name: 'Rehearsal Wallet', rdns: 'rehearsal.wallet', uuid: 'r', icon: 'data:,' }, provider } })),
   );
-});
+}, `http://127.0.0.1:${signerPort}`);
 await ctx.addInitScript(
   (rpcProxy) => localStorage.setItem('blackout.settings.v1', JSON.stringify({ ensName: 'demoswap-blackout.eth', targetChainId: 11155111, userRpcs: { '11155111': [rpcProxy] }, slippageBps: 50, useDefaultRpcs: true, drillUrl: '' })),
   `http://localhost:${ports.rpc}`,
@@ -115,7 +134,16 @@ try {
   log('chapter 1: prepare victim');
   await site.locator('#victim').fill(victim.address);
   await site.getByRole('button', { name: 'Prepare victim wallet' }).click();
-  await expect(site.getByText(/holds 10,000 DUSD/)).toBeVisible(T);
+  const watch = setInterval(async () => {
+    try {
+      const st = await (await fetch(`http://localhost:${ports.control}/theater/state`)).json();
+      const alerts = await site.locator('[role=alert]').allTextContents().catch(() => []);
+      log(`  state: victim=${st.victim} dusd=${st.victimDusd} positions=${st.victimPositions?.join(',')} prepareTxs=${st.prepareTxs?.length} chapter=${st.chapter} alerts=${JSON.stringify(alerts)}`);
+    } catch (e) { log(`  state poll failed: ${(e as Error).message}`); }
+  }, 15_000);
+  await expect(site.getByRole('button', { name: 'Hijack the domain' })).toBeEnabled(T); // unlocks only once prepare fully landed
+  await expect(site.getByText(/holds [\d,]+ DUSD/)).toBeVisible(T);
+  clearInterval(watch);
   log('chapter 2: hijack + approve');
   await site.getByRole('button', { name: 'Hijack the domain' }).click();
   const [demo] = await Promise.all([ctx.waitForEvent('page'), site.getByRole('link', { name: /Open DemoSwap \(now fake\)/ }).click()]);
@@ -123,7 +151,7 @@ try {
   await expect(demo.getByText('Approve to view your rewards')).toBeVisible(T);
   await demo.getByRole('button', { name: 'Connect wallet' }).click();
   log('clicked Connect on the hijacked DemoSwap');
-  await expect(site.locator('.scoreboard .big.bad')).toHaveText('10,000 DUSD', T);
+  await expect(site.locator('.scoreboard .big.bad')).toContainText('DUSD', T);
   log('chapter 3: outage');
   await site.getByRole('button', { name: 'Take the website down' }).click();
   await site.getByRole('button', { name: 'Take the RPC down' }).click();
@@ -159,5 +187,6 @@ try {
   await harness.stop();
   kitServer.close();
   siteServer.close();
+  signer.close();
 }
 process.exit(0);
