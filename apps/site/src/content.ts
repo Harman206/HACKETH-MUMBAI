@@ -1,6 +1,7 @@
 /** All website copy. Plain language first; every number traceable to the repo's evidence. */
 import deployment from '../../../contracts/deployments/sepolia.json';
-import permissions from '../../../contracts/deployments/sepolia-permissions.json';
+import permissions from '../../../contracts/deployments/sepolia-copeybara-permissions.json';
+import watcherPermissions from '../../../contracts/deployments/sepolia-watcher-permissions.json';
 import site from '../site.json';
 
 /** The public site (also encoded in dist/qr.svg at build time). */
@@ -9,7 +10,9 @@ export const SITE_URL = site.url;
 export const ENS_NAME = (deployment as { name: string }).name;
 /** Opens the hosted kit with the demo name filled in. The kit shows a "came from a link: confirm it" banner. */
 export const DEMO_KIT_URL = `copeybara-kit.html?ens=${encodeURIComponent(ENS_NAME)}`;
-export const PERMISSIONS = permissions as { check: string; tx: string; status: string; expected: string; pass: boolean }[];
+export type PermissionCheck = { check: string; tx: string; status: string; expected: string; pass: boolean };
+export const PERMISSIONS = permissions as PermissionCheck[];
+export const WATCHER_PERMISSIONS = watcherPermissions as PermissionCheck[];
 export const SAFE = (deployment as { safe: string }).safe;
 export const RESOLVER = (deployment as { resolver: string }).resolver;
 
@@ -22,15 +25,15 @@ export const EXTENSION = {
   title: 'Get the Copeybara extension',
   lede: 'The kit gets you out after something goes wrong. The extension watches while you use DeFi, so you can see it go wrong before you sign.',
   bullets: [
-    { title: 'Checks the site you are on', body: 'It compares the scripts of every protocol site you open with the fingerprints the protocol published on ENS, warns about code the protocol never published, and blocks ENS-flagged and look-alike sites before they load.' },
-    { title: 'Stops drainer requests', body: 'It stops approval and permit requests to unknown addresses, and blind signatures, before your wallet shows them.' },
+    { title: 'Checks the site you are on', body: 'It compares the scripts of every protocol site you open with the fingerprints the protocol published on ENS, and warns about code the protocol never published. Sites the protocol flags on ENS, and look-alike domains on its ENS blocklist, are blocked before they load.' },
+    { title: 'Holds drainer requests', body: 'Approval and permit requests to unknown addresses, and blind signatures, are held before your wallet shows them. You see a warning with Cancel as the default; to go ahead anyway you must confirm you understand the risk.' },
     { title: 'One click to exit', body: 'When a site is down or hijacked, it opens the verified exit kit and you withdraw straight from the contracts.' },
   ],
   chromeZip: 'copeybara-extension-chrome.zip',
   firefoxZip: 'copeybara-extension-firefox.zip',
   steps: [
     'Unzip copeybara-extension-chrome.zip into a folder you will keep.',
-    'Open chrome://extensions in Chrome, Brave or Edge.',
+    'Open chrome://extensions in Chrome. Other Chromium browsers such as Brave and Edge use the same steps but are not tested.',
     'Turn on Developer mode (top right).',
     'Click Load unpacked and choose the unzipped folder. The setup wizard opens by itself.',
   ],
@@ -38,13 +41,41 @@ export const EXTENSION = {
   note: 'Sepolia testnet preview, installed unpacked from the zip; no store listing yet. Checks inside a web page are best effort, because a hostile page can get around code running in it. The blocks you can rely on are the ones applied before a flagged site loads.',
 } as const;
 
-export interface Incident { name: string; date: string; what: string; loss: string; source?: string; unverified?: boolean }
+export interface Incident { name: string; date: string; what: string; loss: string; sources?: { label: string; url: string }[]; unverified?: boolean }
 export const INCIDENTS: Incident[] = [
-  { name: 'Curve Finance DNS hijack', date: '9 Aug 2022', what: 'A cloned site asked users to approve an unverified contract; USDC and DAI were drained.', loss: 'hundreds of thousands of dollars (CertiK)', source: 'CertiK incident write-up; replayed on chain below' },
-  { name: 'Balancer frontend hijack', date: '19–20 Sep 2023', what: 'Registrar social engineering; the fake site collected approvals for a drainer.', loss: 'hundreds of thousands of dollars (Cointelegraph)', source: 'Cointelegraph report' },
-  { name: 'Polymarket third-party script', date: '29 Oct 2026', what: 'A hijacked third-party script ran on the real site.', loss: '~$2.7M', unverified: true },
-  { name: 'Name.com DNS hijack', date: '30–31 Oct 2026', what: '12–15 DeFi sites served drainers.', loss: 'not collected', unverified: true },
+  {
+    name: 'Curve Finance DNS hijack', date: '9 Aug 2022',
+    what: 'A cloned site asked users to approve an unverified contract; USDC and DAI were drained from 7 users. Replayed on a mainnet fork above.',
+    loss: 'about $612,000 (CertiK)',
+    sources: [{ label: 'CertiK', url: 'https://www.certik.com/blog/curve-finance-hack-incident-analysis' }],
+  },
+  {
+    name: 'Balancer frontend hijack', date: '19–20 Sep 2023',
+    what: 'Social engineering at the .fi registrar (EuroDNS); the fake site collected approvals for a drainer.',
+    loss: 'about $238,000 (Cointelegraph)',
+    sources: [{ label: 'Cointelegraph', url: 'https://cointelegraph.com/news/balancer-social-engineering-attack-dns-provider-frontend-hijack' }],
+  },
+  {
+    name: 'Polymarket third-party script', date: '29 Oct 2026',
+    what: 'Attackers hijacked the DNS of DebugBear, a monitoring vendor, and replaced the script Polymarket loaded from it with a drainer. It used signed-in traders’ own signers; 726 wallets were hit.',
+    loss: 'about $2.7 million (Polymarket)',
+    sources: [
+      { label: 'The Hacker News', url: 'https://thehackernews.com/2026/11/hackers-steal-about-27-million-from.html' },
+      { label: 'SecurityWeek', url: 'https://www.securityweek.com/polymarket-returns-3-9-million-to-traders-as-debugbear-cites-dns-hijack/' },
+    ],
+  },
+  {
+    name: 'Name.com DNS hijack', date: '30–31 Oct 2026',
+    what: 'At least 12 DeFi sites registered at Name.com were redirected to copies running the Step Drainer kit; Name.com said 15 customer domains were affected.',
+    loss: 'about $138,000 to $202,000 traced so far (The Block, Bitquery)',
+    sources: [
+      { label: 'The Block', url: 'https://www.theblock.co/news/defi/2026-10-31-hackers-hijack-a-dozen-defi-websites-all-registered-with-name-com-and-steal-about-138000-432251' },
+      { label: 'Bitquery', url: 'https://bitquery.io/investigations/name-com-dns-hijack' },
+    ],
+  },
 ];
+
+export const OLD_NAME_NOTE = `Copeybara was first called Blackout, so the demo ENS name (${ENS_NAME}) and this site’s address still use the old name.`;
 
 export const REPLAY_R1 = {
   title: 'The approval that drained a wallet',
@@ -61,7 +92,7 @@ export const REPLAY_R1 = {
 export const HOW = [
   {
     title: 'Keep a local copy',
-    body: 'The kit is a single HTML file. It connects directly to the protocol’s smart contracts so you can withdraw while the site is down.',
+    body: 'The kit is a single HTML file. It reads the protocol’s smart contracts through public RPC providers and sends the withdrawal through your wallet, so you can withdraw while the site is down.',
   },
   {
     title: 'Verify the file before connecting',
