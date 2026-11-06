@@ -8,6 +8,8 @@
 
 Copeybara is one self-contained HTML file (the **exit kit**). Its fingerprint is published in the protocol's **ENSv2** name, together with the list of exit contracts. The kit finds your positions from your wallet and builds approval-free exit transactions. Every transaction passes a fail-closed **Exit Guard** before your wallet sees it. Reads go through a **3-path RPC quorum** that refuses to continue if the paths disagree.
 
+The optional **Copeybara browser extension** adds a proactive layer: it checks protocol sites against the script fingerprints the protocol published on ENS, stops drainer approvals and permits before the wallet shows them, and offers a one-click exit through the verified kit when a site is down or hijacked (see [Browser extension](#browser-extension)).
+
 **Honest claim:** if the website dies or is hijacked, you can still exit, and a hijacked site cannot trick the kit into an approval or a foreign recipient. Copeybara does **not** protect against smart-contract exploits, oracle attacks, stolen user keys, or paused or insolvent contracts (see [Honest limits](#honest-limits)).
 
 ---
@@ -43,7 +45,7 @@ The **Check a transaction** tab runs the same Exit Guard on anything a live site
 |---|---|---|
 | A real withdrawal from the saved kit, with the website and primary RPC switched off | Drill e2e: site down + RPC down + DNS hijack, then 3 Uniswap v3 exits recovered, time-to-exit < 60 s | `cd apps/kit && pnpm exec playwright test e2e/drill.spec.ts` |
 | A tampered kit is rejected by an independent fingerprint check against ENSv2 | `verify-kit.sh` → `MISMATCH` on the hijack's one-byte-tampered kit | drill report `tamperedKitDetected: true` |
-| A stolen website key cannot change the release record or swap the resolver | 9 must-revert fork tests; on-chain reverted txs from the website key (live Sepolia hashes below once the live run is done) | `cd contracts && forge test --match-contract PermissionsForkTest`; [live hashes](#deployed-addresses-and-transactions) |
+| A stolen website key cannot change the release record or swap the resolver | 9 must-revert fork tests; on-chain reverted txs from the website key (live Sepolia hashes below) | `cd contracts && forge test --match-contract PermissionsForkTest`; [live hashes](#deployed-addresses-and-transactions) |
 | The Exit Guard rejects real attacker calldata (Curve 2022) | Victim's real `approve` calldata → rejected (BANNED + TARGET) | `pnpm vitest run packages/guard/test/fixtures.test.ts` |
 | Without Copeybara the Curve 2022 victim loses 400,227.23 USDC; with it, 0 | Foundry `vm.transact` replay on a mainnet fork | `cd replay && forge test` · report: [docs/replay/R1.md](docs/replay/R1.md) |
 | A Uniswap v4 exit (not enumerable, action-list calldata) works against the real v4 contracts | Sepolia fork: mint via Permit2 → log-scan discovery → Guard → quorum simulation → send → "Recovered", preview = received to the wei | `pnpm vitest run -c vitest.fork.config.ts packages/exec/test/uniswap-v4.fork.test.ts` |
@@ -51,7 +53,7 @@ The **Check a transaction** tab runs the same Exit Guard on anything a live site
 
 ## Live demo: the Attack Theater
 
-The website (`apps/site`) explains Copeybara and embeds a four-chapter **real attack replication on Sepolia**:
+The website (`apps/site`) explains Copeybara, offers the extension zip with its sha256, and embeds a four-chapter **real attack replication on Sepolia**:
 1. **A normal day:** a victim wallet gets 10,000 DUSD and a Uniswap v3 position.
 2. **The hijack:** DemoSwap's domain is hijacked. The fake site asks for `approve(drainer, max)`, and the attacker's bot drains the wallet within seconds. This is a real transaction, labelled *Without Copeybara*.
 3. **The outage:** the website and the protocol's RPC are switched off for real.
@@ -80,8 +82,9 @@ npx serve apps/site/dist -l 4173               # then open:
 ```mermaid
 flowchart TB
   subgraph Release["Release trust (ENSv2, Sepolia)"]
-    SAFE["Release Safe (2-of-3)"] -->|"writes org.blackout.release / .manifest"| RES["PermissionedResolver (per app)"]
+    SAFE["Release Safe (2-of-3)"] -->|"writes org.copeybara.release / .manifest / .site / .extension"| RES["PermissionedResolver (per app)"]
     WEB["Website key"] -->|"may write url only"| RES
+    WAT["Watcher key"] -->|"may write org.copeybara.status / .blocklist only"| RES
     REG[".eth registry: name → resolver (owned by Safe)"] --> RES
   end
   subgraph Kit["Exit kit (one HTML file on http://localhost)"]
@@ -101,9 +104,24 @@ Trust boundaries:
 - **Verified, not trusted:** the kit file (sha256 against ENS, checked outside the kit), RPC answers (quorum), every exit call (Guard).
 - **Not trusted at all:** the website, its DNS, its third-party scripts, wherever the kit is hosted.
 
-**Two manifest records, so saved kits never break.** `org.blackout.manifest` is frozen at the protocols every published kit knows (Uniswap v3, Aave v3, Curve 3pool). New protocols (Uniswap v4) are published in `org.blackout.manifest2`, which current kits read first, falling back to `org.blackout.manifest`. A kit saved before v4 existed keeps reading the old record and keeps working. From this release on, kits also skip protocols they do not know instead of stopping.
+**Old records stay frozen, so saved kits never break.** Before the rename to Copeybara the records were `org.blackout.release`, `org.blackout.manifest` (Uniswap v3, Aave v3, Curve 3pool) and `org.blackout.manifest2` (adds Uniswap v4). They stay on chain, unchanged, so kits saved before the rename keep reading them and keep working. Current kits and the extension read the `org.copeybara.*` keys below, which the Safe writes once to migrate. Kits skip protocols they do not know instead of stopping.
 
-**Trust roots inside the kit** ([config/networks.json](config/networks.json), hashed with the kit): the ENSv2 UniversalResolver proxy `0xeEeE…EeEe` on Sepolia and the default public RPC list. Protocol addresses are **not** in the kit. They come from the `org.blackout.manifest` record.
+### ENS records
+
+All on the protocol's ENS name (here `demoswap-blackout.eth`), read through the RPC quorum at one pinned block ([`packages/ens`](packages/ens/src/records.ts), codecs in [`packages/core`](packages/core/src/records.ts)). The kit needs `release` and `manifest`; the rest are optional, and a malformed optional record is reported, never shown as fine.
+
+| Key | Written by | Holds |
+|---|---|---|
+| `org.copeybara.release` | Safe (2-of-3) | the kit's sha256 and version |
+| `org.copeybara.manifest` | Safe (2-of-3) | exit contracts and allowed functions, per chain |
+| `org.copeybara.site` | Safe (2-of-3) | the site fingerprint: the set of sha256 hashes of every script the official site may run |
+| `org.copeybara.extension` | Safe (2-of-3) | the Chrome extension zip's sha256 and version |
+| `org.copeybara.status` | Safe or watcher key | `ok` / `degraded` / `compromised`, a time and a short note |
+| `org.copeybara.blocklist` | Safe or watcher key | look-alike domains to block (each host and its subdomains) |
+
+`url` (the official site's origin) is the only record the website key can write. `status` and `blocklist` can only warn about or block *websites*; nothing in them can block an exit.
+
+**Trust roots inside the kit** ([config/networks.json](config/networks.json), hashed with the kit): the ENSv2 UniversalResolver proxy `0xeEeE…EeEe` on Sepolia and the default public RPC list. Protocol addresses are **not** in the kit. They come from the `org.copeybara.manifest` record.
 
 ### Repo map
 
@@ -112,10 +130,14 @@ Trust boundaries:
 | [`packages/core`](packages/core/src) | types, canonical signatures → selectors, minimal ABIs, manifest + release codecs |
 | [`packages/guard`](packages/guard/src/guard.ts) | the Exit Guard (pure TS) and its plain-language `explain()` |
 | [`packages/quorum`](packages/quorum/src/quorum.ts) | 3-path read quorum: 4 s timeout, 2 retries, ≥2 must answer, all must agree, pinned block |
-| [`packages/ens`](packages/ens/src/records.ts) | reads `url`, `org.blackout.release`, `org.blackout.manifest(2)`, `org.blackout.site` via UniversalResolverV2 |
+| [`packages/ens`](packages/ens/src/records.ts) | reads `url` and the six `org.copeybara.*` records via UniversalResolverV2 |
+| [`packages/sitecheck`](packages/sitecheck/src/index.ts) | site fingerprint: script hashing, set check (match / mismatch / unverifiable / unset), static script extraction |
 | [`packages/adapters`](packages/adapters/src) | Uniswap v3, Uniswap v4 (ERC-20 pairs), Aave v3 (supply-only), Curve 3pool |
 | [`packages/exec`](packages/exec/src/run-exit.ts) | Guard → simulate → send → receipt → balance check; exit report |
 | [`apps/kit`](apps/kit) | the single-file kit (Vite + Preact + viem, hashed CSP, reproducible build) |
+| [`apps/extension`](apps/extension) | the browser extension (MV3 Chrome; Firefox build best effort), reproducible zips |
+| [`apps/watcher`](apps/watcher) | the watcher agent: fingerprints the official site and look-alikes, writes `status` / `blocklist` |
+| [`apps/site`](apps/site) | the public website, extension download and the Attack Theater |
 | [`contracts`](contracts) | Foundry: ENSv2 setup via Safe, record writer, must-revert tests, Sepolia seed |
 | [`harness`](harness) | Fire Drill: DemoSwap site, hijack clone, primary RPC proxy, router, judge control page |
 | [`replay`](replay) | Incident Replay Lab: fixtures, Foundry `vm.transact` replays, kit exits at incident blocks |
@@ -151,11 +173,53 @@ Any decode failure, unknown selector or quorum disagreement means reject, and th
 
 Proven by a 39-case banned corpus (including the Curve 2022 victim's real calldata and 13 Uniswap v4 action-list attacks), 10,000-run property tests, and a 2,000-run v4 property test (accepted exactly when every action is an exit action and every payout goes to the user).
 
+## Browser extension
+
+[`apps/extension`](apps/extension) is an MV3 extension for Chrome (a Firefox build is produced, best effort), installed unpacked from `copeybara-extension-chrome.zip`. The zip is built reproducibly (`node apps/extension/scripts/build.mjs`, fixed timestamps, sorted entries) and its sha256 is what the Safe publishes as `org.copeybara.extension`. The website offers it for download with its sha256.
+
+**Architecture: one place decides.**
+- **Service worker = trust core.** The only writer of extension storage. It reads ENS through the 3-RPC quorum, computes every verdict, and checks each message's sender with Chrome's own `sender` data (extension id, tab, origin). It never trusts a verdict or data claimed by a page, and rate-limits each tab.
+- **Content script (isolated world)** observes every script a page runs from `document_start`, hashes it, and relays wallet requests to the worker. It has no storage access.
+- **MAIN-world shim** wraps `window.ethereum` and EIP-6963 providers (`eth_sendTransaction`, `eth_signTypedData*`, `personal_sign`, `eth_sign`, `wallet_sendCalls`) and waits for the worker's answer. It decides nothing; a blocked request is rejected with EIP-1193 code 4001.
+- **Trusted UI only:** the toolbar badge and popup, setup wizard, dashboard, warning page and confirm window are extension pages. Verdicts are never drawn inside the web page.
+
+**What it checks.**
+- **Site fingerprint** = the set of sha256 hashes of every script the official site may run (`org.copeybara.site`, hashing shared with the watcher in [`packages/sitecheck`](packages/sitecheck/src/index.ts)). Any script outside the set is a mismatch, and the tab is replaced by the warning page. A script that cannot be re-read is "can't verify" (amber), never green.
+- **Blocked before load:** `declarativeNetRequest` rules cancel main-frame loads of a followed protocol's site while its ENS `status` is `compromised`, and of every domain on its `blocklist`; the worker then moves the tab to the warning page. Not a byte of the site runs.
+- **Wallet request verdicts** ([`packages/guard/src/classify.ts`](packages/guard/src/classify.ts)): `exit` (passes the Exit Guard for a followed protocol), `known` (a contract in a followed manifest), `unknown` (an ordinary call to a contract no followed protocol lists), `risky` (an approval or permit to a followed protocol's contract, ETH to an unknown address, unreadable data) and `dangerous` (approve / permit / Permit2 / transfer to an address no followed protocol publishes, `eth_sign`, signing a bare 32-byte hash). Requests that move nothing (`pass`) go straight through. `risky` and `dangerous` open a confirm window; `dangerous` defaults to Cancel. On a site that failed its fingerprint check every request is blocked.
+- **Stats are local only:** sites checked, verified, mismatched, unverifiable, pages blocked, requests checked and blocked are counted by the worker in extension storage and never sent anywhere.
+
+**Honest limits of the extension.**
+- In-page interception is best effort: a hostile page can bypass code running inside it (for example, by talking to the wallet before the shim wraps it). The authoritative blocks are the worker's: `declarativeNetRequest` before load, and replacing the tab on a mismatch.
+- Chrome cannot fully prove which bytes ran. The content script re-reads each external script with `fetch(src, { cache: 'force-cache' })`, so it hashes the browser's cached copy (cache first), which is normally, but not provably, the copy that executed.
+- It protects people who installed it and follow the protocol. It is a Sepolia testnet preview, installed unpacked, not published in any store.
+
+```bash
+node apps/extension/scripts/build.mjs          # → apps/extension/dist/{chrome,firefox}/ + copeybara-extension-{chrome,firefox}.zip (+ .sha256)
+cd apps/extension && pnpm e2e                  # Playwright with the real unpacked extension
+```
+
+Install: unzip `copeybara-extension-chrome.zip` → open `chrome://extensions` → turn on **Developer mode** → **Load unpacked** and pick the folder. The setup wizard opens (wallet → protocols to follow → RPC services → done).
+
+## Watcher agent
+
+[`apps/watcher`](apps/watcher) is an always-on agent a protocol runs for its own name. Each tick it fingerprints the official site (the `url` record) against `org.copeybara.site`, and probes a configured list of look-alike domains.
+
+- **Role-scoped ENS key.** The watcher key is granted setter roles on `org.copeybara.status` and `org.copeybara.blocklist` only (`grantWatcherRoles`). Fork tests in [`contracts/test/Permissions.fork.t.sol`](contracts/test/Permissions.fork.t.sol) prove it cannot write `release`, `manifest`, `site`, `extension`, `url` or the contenthash, and cannot grant itself roles. A stolen watcher key can only raise or clear warnings; every extension still fingerprints the site itself, and no record can block an exit.
+- **2 mismatches in a row → `status=compromised`.** Every extension following the protocol then blocks the site before it loads. 3 failed fetches in a row → `degraded`; 5 clean checks in a row clear the alarm.
+- **It only clears alarms it raised itself.** A `compromised` status set by the Safe stays until the Safe changes it.
+- A look-alike domain that serves pages is added to `org.copeybara.blocklist`.
+- **Optional Claude note.** With `ANTHROPIC_API_KEY` set, Claude writes the short warning shown on the warning page, from structured facts only (protocol, kind, script URLs or labels; never page content), capped at 200 characters. Without the key, or on any error, a fixed deterministic note is used.
+
+```bash
+WATCHER_KEY=0x… WATCH_NAMES=demoswap-blackout.eth pnpm --filter @copeybara/watcher start   # optional: CANDIDATES, STATUS_PORT, ANTHROPIC_API_KEY
+```
+
 ## CROPS
 
 | | How Copeybara meets it |
 |---|---|
-| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead or lying RPC changes nothing;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works. After one visit, the page and the kit keep opening from the browser's cache when the host is down (same-origin service worker, e2e-tested by switching a copy of the site off);<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no Copeybara server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
+| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead RPC is tolerated (the other two still agree), and one lying RPC makes the kit stop safely instead of acting on a wrong answer;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works. After one visit, the page and the kit keep opening from the browser's cache when the host is down (same-origin service worker, e2e-tested by switching a copy of the site off);<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no Copeybara server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
 | **O**pen source | MIT. Anyone can build and run it from this repo alone (`pnpm install && pnpm --filter @copeybara/kit build`). Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
 | **P**rivacy | **What each third party learns:**<br>• **RPC providers** (publicnode, Tenderly, ethPandaOps, or your own): your address and the contracts you query, plus your IP;<br>• **your wallet's RPC**: the exit transaction you send;<br>• **the website host** (Vercel), only if you open the hosted copy: that the page and kit file were fetched, plus your IP. A downloaded kit contacts no host;<br>• **no Copeybara server, no analytics, no trackers**: Playwright-verified, 0 third-party requests from the kit.<br>Anon-RPC: see [docs/crops.md](docs/crops.md). |
 | **S**ecurity | Keys stay in the wallet. The only transaction methods the kit calls are `eth_estimateGas` and `eth_sendTransaction` (plus `eth_requestAccounts`, `eth_chainId`, `wallet_switchEthereumChain`, and `wallet_addEthereumChain` only when the wallet does not know the network; the network check also runs before each exit), and it never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. In this testnet demo all three Safe owner keys were generated on one machine; a real protocol must use independent signers. |
@@ -173,7 +237,7 @@ ENSv2 on Sepolia (verified on chain; see [docs/ens-notes.md](docs/ens-notes.md))
 | VerifiableFactory | `0xda70306c98e97ece36f997a21368e53298572991` |
 | PermissionedResolver implementation | `0x115eb53f0c60696633855f90b138178fb40b2b2c` |
 
-Our deployment (`demoswap-blackout.eth`: Safe, resolver, must-revert transactions, seeded positions, exits) is written by `contracts/script/live-setup.sh` to `contracts/deployments/sepolia*.json`. **Status: pending the live Sepolia run.** Every line below is filled from those files once it has run.
+Our deployment (`demoswap-blackout.eth`: Safe, resolver, must-revert transactions, seeded positions, exits) is written by `contracts/script/live-setup.sh` to `contracts/deployments/sepolia*.json`. The live Sepolia run is done; the block below is generated from those files by `node scripts/readme-live.mjs`. Entries recorded before the rename name the `org.blackout.*` keys that were live then.
 
 <!-- LIVE-DEPLOYMENT:START -->
 | What | Value |
@@ -208,6 +272,8 @@ pnpm test:fork               # anvil forks: Uniswap v3 / Aave v3 / Curve exits (
 cd contracts && SEPOLIA_RPC=… forge test     # ENSv2 setup + must-revert on a Sepolia fork
 cd replay && forge test      # R1 as it happened vs counterfactual (archive RPC: ARCHIVE_RPC, default Tenderly public)
 cd apps/kit && pnpm exec playwright test     # e2e: full exit, check-a-transaction, no trackers, fire drill, scan
+node apps/extension/scripts/build.mjs && pnpm --filter @copeybara/site build   # the site build copies the kit and the extension zips (fails if either is missing)
+cd apps/extension && pnpm e2e                # extension e2e: real unpacked extension
 
 # Fire drill by hand (process mode; Docker mode: docker compose -f harness/docker-compose.yml up --build)
 PRIMARY_RPC=https://… ENS_NAME=demoswap-blackout.eth pnpm --filter @copeybara/harness start
@@ -216,7 +282,7 @@ PRIMARY_RPC=https://… ENS_NAME=demoswap-blackout.eth pnpm --filter @copeybara/
 pnpm --filter @copeybara/replay replay R1      # writes replay/out/R1.{md,html}
 ```
 
-Wallets: the e2e uses an injected EIP-6963 test wallet. Manual checks with MetaMask and Rabby on `http://localhost`: **pending**.
+Wallets: the automated e2e (kit and extension) uses an injected EIP-6963 test wallet, not a real wallet extension. Checks with real wallet extensions (MetaMask, Rabby) on Sepolia are a manual run-through by the maintainer: not automated, and not recorded as evidence in this repo.
 
 ## Honest limits
 
@@ -227,6 +293,7 @@ Wallets: the e2e uses an injected EIP-6963 test wallet. Manual checks with MetaM
 - The website's offline copy (service worker) covers the website going **down**, not being **hijacked**: a hijacked host can replace it. Check the kit's sha256 against ENS (`scripts/verify-kit.sh`) or keep your own downloaded copy.
 - ENSv2 resolver roles are per resolver, not per name. We deploy one resolver per protocol name, so the web key's `url` grant covers exactly that one name.
 - The kit warns when it sees a lower release version than one seen before in this browser. On-chain monotonicity is not enforced. Serving an older record needs either the release Safe or a majority of the kit's RPC paths lying together (a single path reporting an old block is ignored: heads more than 16 blocks from the median are dropped).
+- The browser extension's in-page checks are best effort, and Chrome cannot prove which script bytes ran (see [Browser extension](#browser-extension)).
 - Replays are labelled **mainnet fork**, **impersonated account** and **counterfactual**. None is a live mainnet rescue.
 
 ## License and disclosures
