@@ -285,6 +285,9 @@ importers:
       '@copeybara/sitecheck':
         specifier: workspace:*
         version: link:../sitecheck
+      tsx:
+        specifier: 4.19.2
+        version: 4.19.2
 
   packages/guard:
     dependencies:
