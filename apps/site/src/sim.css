@@ -223,6 +223,9 @@
 .sk-result { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--k-line); animation: sp-in .45s ease; }
 .sk-delta { margin-top: 4px; color: var(--k-ok); font-size: 15px; font-weight: 700; white-space: pre-wrap; }
 
+.sk-foot { display: flex; gap: 7px; align-items: flex-start; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--k-line); color: var(--k-muted); font-size: 11.5px; line-height: 1.45; }
+.sk-foot .sim-ico { color: var(--k-accent); margin-top: 1px; }
+
 /* phones: the kit's own narrow layout */
 .sim-kit.compact .sk-top { padding: 8px 14px; }
 .sim-kit.compact .sk-brand-sub { display: none; }
@@ -237,9 +240,9 @@
 
 /* ---------- placements ---------- */
 .hero-sim { position: relative; margin: 0; }
-@media (min-width: 901px) { .hero-visual:has(.hero-sim) { margin-right: calc(-1 * clamp(0rem, 4.5vw, 4.5rem)); } }
+@media (min-width: 901px) { .hero-visual:has(.hero-sim) { margin-right: calc(-1 * clamp(0rem, 4.5vw - 1.5rem, 3rem)); } }
 .hero-sim figcaption, .panel-sim figcaption { margin-top: .9rem; color: var(--muted); font-size: .8rem; line-height: 1.45; }
-.hero-sim figcaption { text-align: right; padding-left: 30%; }
+.hero-sim figcaption { text-align: right; padding-left: 18%; }
 .hero-sim .sim-fit { filter: drop-shadow(8px 8px 0 var(--lime)); }
 .sim-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .sim-stack + .sr-only + figcaption { text-align: left; padding-left: 0; }

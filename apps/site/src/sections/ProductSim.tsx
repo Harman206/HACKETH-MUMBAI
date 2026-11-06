@@ -413,6 +413,9 @@ export function SimKit({ state, compact = false }: { state: KitState; compact?: 
             )}
           </div>
         </div>
+        {!compact && (
+          <p class="sk-foot"><Icon name="shield-check" size={14} /><span>Still trusted: your wallet and its RPC, Ethereum, ENS, and the protocol’s release Safe. No Copeybara server, no analytics.</span></p>
+        )}
       </div>
     </div>
   );
