@@ -36,7 +36,11 @@ export interface HarnessOpts {
     readVictim: TheaterDeps['readVictim'];
     drains: () => DrainRecord[];
     verifyKits?: TheaterDeps['verifyKits'];
+    /** token address → symbol, for the scoreboard */
+    tokens?: Record<string, string>;
   };
+  /** Public URL of the kit server (the launcher serves it). */
+  kitUrl?: string;
 }
 
 export async function startHarness(o: HarnessOpts) {
@@ -136,7 +140,13 @@ export async function startHarness(o: HarnessOpts) {
     if (path === '/failures') return json(res, failures);
     if (path.startsWith('/theater/')) {
       if (!theater) return json(res, { error: 'theater not configured' }, 404);
-      if (path === '/theater/state') return json(res, { ...(await theater.state()), failures });
+      if (path === '/theater/state')
+        return json(res, {
+          ...(await theater.state()),
+          failures,
+          tokens: o.theater?.tokens ?? {},
+          links: { demoswap: `http://demoswap.localhost:${p.router}`, kit: o.kitUrl ?? 'http://localhost:8000', control: `http://localhost:${p.control}` },
+        });
       if (path === '/theater/hijack-request') return json(res, hijackRequest(o.token, o.drainer));
       if (req.method === 'POST' && path === '/theater/verify') return json(res, await theater.verify());
       if (req.method === 'POST' && path === '/theater/prepare') {

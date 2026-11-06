@@ -63,3 +63,12 @@ describe('settings', () => {
     expect(DEFAULT_SETTINGS.ensName).toBe('');
   });
 });
+
+describe('settings from the URL (Attack Theater links)', () => {
+  test('?ens= and ?drill= (localhost only) override the stored settings', async () => {
+    const { settingsFromUrl } = await import('../src/settings');
+    expect(settingsFromUrl('http://localhost:8000/?ens=demoswap-blackout.eth&drill=http%3A%2F%2Flocalhost%3A8090')).toEqual({ ensName: 'demoswap-blackout.eth', drillUrl: 'http://localhost:8090' });
+    expect(settingsFromUrl('http://localhost:8000/?drill=https%3A%2F%2Fevil.example')).toEqual({});
+    expect(settingsFromUrl('http://localhost:8000/')).toEqual({});
+  });
+});

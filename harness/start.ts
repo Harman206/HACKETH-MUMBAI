@@ -33,6 +33,7 @@ if (attack && env.DEPLOYER_KEY && env.ATTACKER_KEY) {
     prepareVictim: makePrepareVictim({ rpcUrl: theaterRpc, deployerKey: env.DEPLOYER_KEY as Hex, dusd: attack.DUSD, deth: attack.DETH }),
     readVictim: makeReadVictim({ q, dusd: attack.DUSD }),
     drains: bot.records,
+    tokens: { [attack.DUSD]: 'DUSD', [attack.DETH]: 'DETH' },
   };
 } else {
   console.warn('Attack Theater disabled: needs contracts/deployments/sepolia-attack.json, DEPLOYER_KEY and ATTACKER_KEY.');
@@ -48,6 +49,7 @@ const h = await startHarness({
   drainer: attack?.drainer,
   chainId: 11155111,
   theater,
+  kitUrl: `http://localhost:${env.KIT_PORT ?? 8000}`,
 });
 const kitPort = Number(env.KIT_PORT ?? 8000);
 await serve(kitPort, (_req, res) => res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(readFileSync(kitFile)));

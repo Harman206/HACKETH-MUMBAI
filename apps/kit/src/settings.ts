@@ -50,3 +50,18 @@ export function rpcUrlsFor(s: Settings, chainId: number, defaults: Record<string
 export function saveSettings(s: Settings): void {
   safeSet(KEY, JSON.stringify(s));
 }
+
+/** `?ens=` and `?drill=` (localhost only) from Attack Theater links. Only these two fields can be set this way. */
+export function settingsFromUrl(href: string): Partial<Settings> {
+  const out: Partial<Settings> = {};
+  try {
+    const u = new URL(href);
+    const ens = u.searchParams.get('ens');
+    if (ens && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(ens)) out.ensName = ens;
+    const drill = u.searchParams.get('drill');
+    if (drill && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(drill)) out.drillUrl = drill.replace(/\/$/, '');
+  } catch {
+    /* ignore */
+  }
+  return out;
+}

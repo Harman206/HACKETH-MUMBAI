@@ -60,3 +60,12 @@ table.perm { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.perm td, table.perm th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); } .muted { color: var(--muted); }
 .notice { border-left: 4px solid var(--warn); }
+.rail { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 16px; flex-wrap: wrap; }
+.rail li { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; border-radius: 999px; border: 1px solid var(--line); font-weight: 700; font-size: 14px; color: var(--muted); }
+.rail .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--fg); font-size: 12px; }
+.rail li.now { border-color: var(--accent); color: var(--fg); } .rail li.now .dot { background: var(--accent); color: var(--accent-fg); }
+.rail li.done { color: var(--ok); } .rail li.done .dot { background: var(--ok); color: var(--bg); }
+.theater .chapter { margin-bottom: 16px; }
+.field { flex: 1 1 320px; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; }
+.loss-box { margin-top: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--bad); }
+.scoreboard { border: 2px solid var(--accent); }

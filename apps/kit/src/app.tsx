@@ -5,7 +5,7 @@ import { reportToHtml, reportToJson, type ExitResult } from '@blackout/exec';
 import type { Position } from '@blackout/core';
 import { createFlow, stepOf, type FlowState } from './flow';
 import { Stepper } from './screens/Stepper';
-import { loadSettings, rpcUrlsFor, saveSettings, type Settings } from './settings';
+import { loadSettings, rpcUrlsFor, saveSettings, settingsFromUrl, type Settings } from './settings';
 import { connect, discoverWallets, ensureChain, senderFrom, type Eip1193 } from './wallet';
 import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
 import { COPY } from './copy';
@@ -30,7 +30,11 @@ function useFlowState(flow: ReturnType<typeof createFlow>): FlowState {
 }
 
 export function App() {
-  const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [settings, setSettings] = useState<Settings>(() => {
+    const s = { ...loadSettings(), ...(typeof location !== 'undefined' ? settingsFromUrl(location.href) : {}) };
+    saveSettings(s);
+    return s;
+  });
   const [tab, setTab] = useState<'exit' | 'check' | 'release'>(() => (typeof location !== 'undefined' && new URL(location.href).searchParams.has('check') ? 'check' : 'exit'));
   const [provider, setProvider] = useState<Eip1193 | null>(null);
 
