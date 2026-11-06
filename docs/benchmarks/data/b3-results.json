@@ -1,0 +1,209 @@
+{
+ "checks": [
+  {
+   "incident": "Ledger Connect Kit (2023-12-14)",
+   "state": "before (published set = app + 1.1.4) [1052919 B]",
+   "evidence": "real bytes",
+   "scripts": 2,
+   "verdict": "match",
+   "unknown": [],
+   "unreadable": [],
+   "expect": "match"
+  },
+  {
+   "incident": "Ledger Connect Kit (2023-12-14)",
+   "state": "malicious 1.1.5 (legit code + stage-2 loader) [1053130 B, injects stage 2]",
+   "evidence": "real bytes; stage 2 now 403",
+   "scripts": 3,
+   "verdict": "mismatch",
+   "unknown": [
+    "https://cdn.jsdelivr.net/npm/@ledgerhq/connect-kit@1"
+   ],
+   "unreadable": [
+    "https://cdn.jsdelivr.net/npm/2e6d5f64604be31/2e6d5f64604be31.js"
+   ],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Ledger Connect Kit (2023-12-14)",
+   "state": "malicious 1.1.6 (loader only) [244 B, injects stage 2]",
+   "evidence": "real bytes; stage 2 now 403",
+   "scripts": 3,
+   "verdict": "mismatch",
+   "unknown": [
+    "https://cdn.jsdelivr.net/npm/@ledgerhq/connect-kit@1"
+   ],
+   "unreadable": [
+    "https://cdn.jsdelivr.net/npm/2e6d5f64604be31/2e6d5f64604be31.js"
+   ],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Ledger Connect Kit (2023-12-14)",
+   "state": "malicious 1.1.7 (inlined drainer) [1873234 B]",
+   "evidence": "real bytes",
+   "scripts": 2,
+   "verdict": "mismatch",
+   "unknown": [
+    "https://cdn.jsdelivr.net/npm/@ledgerhq/connect-kit@1"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Ledger Connect Kit (2023-12-14)",
+   "state": "fixed 1.1.8 (legit, not yet re-published) [1067211 B]",
+   "evidence": "real bytes",
+   "scripts": 2,
+   "verdict": "mismatch",
+   "unknown": [
+    "https://cdn.jsdelivr.net/npm/@ledgerhq/connect-kit@1"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Ledger Connect Kit (2023-12-14)",
+   "state": "legit 1.1.9 (Jan 2024) [1069104 B]",
+   "evidence": "real bytes",
+   "scripts": 2,
+   "verdict": "mismatch",
+   "unknown": [
+    "https://cdn.jsdelivr.net/npm/@ledgerhq/connect-kit@1"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Ledger Connect Kit (2023-12-14)",
+   "state": "legit 1.1.12 (Feb 2024) [892465 B]",
+   "evidence": "real bytes",
+   "scripts": 2,
+   "verdict": "mismatch",
+   "unknown": [
+    "https://cdn.jsdelivr.net/npm/@ledgerhq/connect-kit@1"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Balancer (2023-09-19/20, EuroDNS)",
+   "state": "before, 2023-09-08 capture (published set)",
+   "evidence": "real Wayback capture",
+   "scripts": 3,
+   "verdict": "match",
+   "unknown": [],
+   "unreadable": [],
+   "expect": "match"
+  },
+  {
+   "incident": "Balancer (2023-09-19/20, EuroDNS)",
+   "state": "during, 2023-09-20 04:40 UTC capture: hijacked host behind Cloudflare \"Suspected phishing\" interstitial",
+   "evidence": "real Wayback capture",
+   "scripts": 3,
+   "verdict": "mismatch",
+   "unknown": [
+    "inline script #1",
+    "inline script #2",
+    "inline script #3"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Balancer (2023-09-19/20, EuroDNS)",
+   "state": "after, 2023-09-23 capture (legit redeploy, new bundle)",
+   "evidence": "real Wayback capture",
+   "scripts": 3,
+   "verdict": "unverifiable",
+   "unknown": [],
+   "unreadable": [
+    "https://app.balancer.fi/assets/index-70a6210e.js"
+   ],
+   "expect": "mismatch until re-published"
+  },
+  {
+   "incident": "Curve (2022-08-09, iwantmyname DNS)",
+   "state": "before, 2022-08-09 11:06 UTC capture (published set)",
+   "evidence": "real Wayback capture",
+   "scripts": 2,
+   "verdict": "match",
+   "unknown": [],
+   "unreadable": [],
+   "expect": "match"
+  },
+  {
+   "incident": "Curve (2022-08-09, iwantmyname DNS)",
+   "state": "hijack window, 2022-08-09 20:51 UTC capture",
+   "evidence": "real Wayback capture (Wayback reached the legit origin: same bytes)",
+   "scripts": 2,
+   "verdict": "match",
+   "unknown": [],
+   "unreadable": [],
+   "expect": "match (capture is not the attacker’s copy)"
+  },
+  {
+   "incident": "Curve (2022-08-09, iwantmyname DNS)",
+   "state": "hijacked clone: same HTML and file names, app.9b0312df.js modified",
+   "evidence": "RECONSTRUCTED injection on real legit bytes",
+   "scripts": 2,
+   "verdict": "mismatch",
+   "unknown": [
+    "https://curve.fi/js/app.9b0312df.js"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Evasion E2 (synthetic)",
+   "state": "lazy chunk loaded with import(): only the chunk is malicious",
+   "evidence": "synthetic page, real fetchCodeItems/checkScripts",
+   "scripts": 1,
+   "verdict": "match",
+   "unknown": [],
+   "unreadable": [],
+   "expect": "should be mismatch"
+  },
+  {
+   "incident": "Evasion E1 (synthetic)",
+   "state": "server cloaks by User-Agent: browsers get the drainer, the watcher gets clean bytes",
+   "evidence": "synthetic server, real fetchCodeItems/checkScripts",
+   "scripts": 1,
+   "verdict": "match",
+   "unknown": [],
+   "unreadable": [],
+   "expect": "should be mismatch"
+  }
+ ],
+ "requests": [
+  {
+   "incident": "Curve 2022",
+   "evidence": "real calldata (replay/fixtures/R1.json, tx 0xec72bb41…)",
+   "c": {
+    "verdict": "dangerous",
+    "reason": "This lets 0x9Eb5…8881 spend part of this token in your wallet. No protocol you follow publishes that address: this is how wallet drainers work."
+   }
+  },
+  {
+   "incident": "Ledger Connect Kit 2023 (Angel Drainer)",
+   "evidence": "RECONSTRUCTED approve to the customer address ZachXBT attributed (0x6587…5c2d)",
+   "c": {
+    "verdict": "dangerous",
+    "reason": "This lets 0x6587…5c2d spend ALL of this token in your wallet, now and later. No protocol you follow publishes that address: this is how wallet drainers work."
+   }
+  },
+  {
+   "incident": "Ledger Connect Kit 2023 (Angel Drainer)",
+   "evidence": "RECONSTRUCTED Permit2 PermitBatch to the same address",
+   "c": {
+    "verdict": "dangerous",
+    "reason": "A Permit2 signature for a spender that is not Uniswap: the most common way Uniswap users are drained. It lets 0x6587…5c2d spend your tokens without another transaction."
+   }
+  },
+  {
+   "incident": "Balancer 2023 / Squarespace 2024",
+   "evidence": "no drainer request published in a primary source; see B1 for the kits (Angel/Inferno) these used",
+   "c": null
+  }
+ ]
+}

@@ -1,0 +1,476 @@
+{
+ "sources": {
+  "metamask": {
+   "url": "https://raw.githubusercontent.com/MetaMask/eth-phishing-detect/main/src/config.json",
+   "sha": "e7cd12f5874222877d96c0728e2e198855a610c4",
+   "date": "2026-11-06T15:07:53Z",
+   "blacklist": 116179
+  },
+  "scamsniffer": {
+   "url": "https://raw.githubusercontent.com/scamsniffer/scam-database/main/blacklist/domains.json",
+   "sha": "18fe8ea606ef0a300e8670f3c90e6567ece6af33",
+   "date": "2026-11-06T05:30:07Z",
+   "domains": 360066
+  }
+ },
+ "totalLookalikes": 14155,
+ "distinctLookalikes": 14130,
+ "sharedHosting": 3333,
+ "safetyViolations": [],
+ "parseRejected": {
+  "path/port/wildcard": 3
+ },
+ "perBrand": {
+  "uniswap": {
+   "real": [
+    "uniswap.org",
+    "app.uniswap.org"
+   ],
+   "lookalikes": 1820,
+   "metamask": 433,
+   "scamsniffer": 1412,
+   "inBoth": 25,
+   "scamsnifferNotInMetamask": 1387,
+   "metamaskNotInScamsniffer": 408,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 1820,
+   "blockedSubdomains": 1820,
+   "dnrRules": 1819,
+   "recordBytes": 45345,
+   "trickMatches": [],
+   "examples": [
+    "www-app-unicwap.pro",
+    "vvww-app-unicwap.pro",
+    "uniswap-lab.xyz",
+    "wwv-app-uniewap.pro",
+    "app-uniewap.pro",
+    "app-unicwap.pro",
+    "www-app-uniewap.pro",
+    "wvw-app-unicwap.pro"
+   ]
+  },
+  "aave": {
+   "real": [
+    "aave.com",
+    "app.aave.com"
+   ],
+   "lookalikes": 1289,
+   "metamask": 351,
+   "scamsniffer": 981,
+   "inBoth": 43,
+   "scamsnifferNotInMetamask": 938,
+   "metamaskNotInScamsniffer": 308,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 1289,
+   "blockedSubdomains": 1289,
+   "dnrRules": 1289,
+   "recordBytes": 25577,
+   "trickMatches": [],
+   "examples": [
+    "compensation-aave.app",
+    "aave-recovery.com",
+    "aaveapp.co.com",
+    "petition-aave.co",
+    "petition-aave.app",
+    "reimburse-aave.co",
+    "aave-petition.app",
+    "aavedocuments.com"
+   ]
+  },
+  "curve": {
+   "real": [
+    "curve.fi",
+    "curve.finance"
+   ],
+   "lookalikes": 1177,
+   "metamask": 530,
+   "scamsniffer": 676,
+   "inBoth": 29,
+   "scamsnifferNotInMetamask": 647,
+   "metamaskNotInScamsniffer": 501,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 1177,
+   "blockedSubdomains": 1177,
+   "dnrRules": 1177,
+   "recordBytes": 30705,
+   "trickMatches": [],
+   "examples": [
+    "suncurve-dex.org",
+    "uscurves.stakingreward.cloud",
+    "curvefinance.click",
+    "us-curves.stakingreward.cloud",
+    "revoke-curve.finance",
+    "us-curvefinance.stakingreward.cloud",
+    "curve-dex.com",
+    "curve-fi.click"
+   ]
+  },
+  "compound": {
+   "real": [
+    "compound.finance",
+    "app.compound.finance"
+   ],
+   "lookalikes": 188,
+   "metamask": 25,
+   "scamsniffer": 164,
+   "inBoth": 1,
+   "scamsnifferNotInMetamask": 163,
+   "metamaskNotInScamsniffer": 24,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 188,
+   "blockedSubdomains": 188,
+   "dnrRules": 188,
+   "recordBytes": 4549,
+   "trickMatches": [],
+   "examples": [
+    "compound-authority.com",
+    "compound-finances.stakingreward.cloud",
+    "compoundfinance.digital",
+    "api-bk2026.compoundx.to",
+    "compoundfinances.net",
+    "compoundfinances.com",
+    "compund.xyz",
+    "v1compound.finance"
+   ]
+  },
+  "lido": {
+   "real": [
+    "lido.fi",
+    "stake.lido.fi"
+   ],
+   "lookalikes": 1654,
+   "metamask": 148,
+   "scamsniffer": 1523,
+   "inBoth": 17,
+   "scamsnifferNotInMetamask": 1506,
+   "metamaskNotInScamsniffer": 131,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 1,
+   "rejectedExamples": [
+    "sites.google.com/geo.cha9527.com/lido0716352"
+   ],
+   "blockedExact": 1653,
+   "blockedSubdomains": 1653,
+   "dnrRules": 1653,
+   "recordBytes": 33804,
+   "trickMatches": [],
+   "examples": [
+    "lidofinance-v2.com",
+    "lido-proposal.app",
+    "vote-lido.app",
+    "claim-lido.app",
+    "lidoftfinance.gitbook.io",
+    "votes-lido.app",
+    "lido-fi.click",
+    "interest-lido.xyz"
+   ]
+  },
+  "balancer": {
+   "real": [
+    "balancer.fi",
+    "app.balancer.fi"
+   ],
+   "lookalikes": 289,
+   "metamask": 35,
+   "scamsniffer": 260,
+   "inBoth": 6,
+   "scamsnifferNotInMetamask": 254,
+   "metamaskNotInScamsniffer": 29,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 289,
+   "blockedSubdomains": 289,
+   "dnrRules": 288,
+   "recordBytes": 6120,
+   "trickMatches": [],
+   "examples": [
+    "balancer-fi.com",
+    "balancer-3.net",
+    "balancer-3.org",
+    "vwsbalancer.com",
+    "rewards-balance.one",
+    "reward-balance.one",
+    "balancerappfi.pro",
+    "balancerv3-org.xyz"
+   ]
+  },
+  "sushi": {
+   "real": [
+    "sushi.com"
+   ],
+   "lookalikes": 737,
+   "metamask": 174,
+   "scamsniffer": 567,
+   "inBoth": 4,
+   "scamsnifferNotInMetamask": 563,
+   "metamaskNotInScamsniffer": 170,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 737,
+   "blockedSubdomains": 737,
+   "dnrRules": 733,
+   "recordBytes": 13229,
+   "trickMatches": [],
+   "examples": [
+    "aztec.spksushi.lat",
+    "v2-sushi.click",
+    "eth-sushi.com",
+    "my-sushiswap.at",
+    "foxsushi.top",
+    "ohmsushi.top",
+    "sandsushi.top",
+    "rndrsushi.top"
+   ]
+  },
+  "1inch": {
+   "real": [
+    "1inch.io",
+    "app.1inch.io",
+    "1inch.com"
+   ],
+   "lookalikes": 659,
+   "metamask": 114,
+   "scamsniffer": 554,
+   "inBoth": 9,
+   "scamsnifferNotInMetamask": 545,
+   "metamaskNotInScamsniffer": 105,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 659,
+   "blockedSubdomains": 659,
+   "dnrRules": 659,
+   "recordBytes": 13698,
+   "trickMatches": [],
+   "examples": [
+    "1inch.icu",
+    "1inchdefi.com",
+    "1inchdrop.netlify.app",
+    "1inch.eu.cc",
+    "1inch-wallet.stakingreward.cloud",
+    "1inch-prod-ui-d1k.pages.dev",
+    "1inch.vip",
+    "1inchdexapp.blogspot.com"
+   ]
+  },
+  "pancakeswap": {
+   "real": [
+    "pancakeswap.finance"
+   ],
+   "lookalikes": 1071,
+   "metamask": 85,
+   "scamsniffer": 995,
+   "inBoth": 9,
+   "scamsnifferNotInMetamask": 986,
+   "metamaskNotInScamsniffer": 76,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 1071,
+   "blockedSubdomains": 1071,
+   "dnrRules": 1071,
+   "recordBytes": 30805,
+   "trickMatches": [],
+   "examples": [
+    "pancakeswap.financial",
+    "pancakeswap.tel",
+    "pancakeswap-v2.at",
+    "pancakeswap.trade",
+    "pancakeswap.eu.cc",
+    "pancakeswap-claim.finance",
+    "pancakeswap-fiinance.xyz",
+    "pabncakeswap.finance"
+   ]
+  },
+  "eigenlayer": {
+   "real": [
+    "eigenlayer.xyz",
+    "app.eigenlayer.xyz"
+   ],
+   "lookalikes": 821,
+   "metamask": 18,
+   "scamsniffer": 804,
+   "inBoth": 1,
+   "scamsnifferNotInMetamask": 803,
+   "metamaskNotInScamsniffer": 17,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 821,
+   "blockedSubdomains": 821,
+   "dnrRules": 821,
+   "recordBytes": 22223,
+   "trickMatches": [],
+   "examples": [
+    "eigenlayer.mom",
+    "eigenlayer.panelhq.xyz",
+    "eigenlayer-staking.github.io",
+    "homepage-w-eigenlayer.gitbook.io",
+    "eigenlaqer.xyz",
+    "app.eigenlayer.global",
+    "eigenlayer-restake.github.io",
+    "my-eigenlayer.co.com"
+   ]
+  },
+  "pendle": {
+   "real": [
+    "pendle.finance",
+    "app.pendle.finance"
+   ],
+   "lookalikes": 911,
+   "metamask": 206,
+   "scamsniffer": 753,
+   "inBoth": 48,
+   "scamsnifferNotInMetamask": 705,
+   "metamaskNotInScamsniffer": 158,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 911,
+   "blockedSubdomains": 911,
+   "dnrRules": 911,
+   "recordBytes": 20443,
+   "trickMatches": [],
+   "examples": [
+    "proposal-pendle.app",
+    "governance-pendle.app",
+    "dash-pendle.app",
+    "proposal-pendle.com",
+    "proposal-pendle.net",
+    "pendle-crypto.com",
+    "pendle-proposal.app",
+    "strc-pendle.com"
+   ]
+  },
+  "convex": {
+   "real": [
+    "convexfinance.com"
+   ],
+   "lookalikes": 203,
+   "metamask": 10,
+   "scamsniffer": 195,
+   "inBoth": 2,
+   "scamsnifferNotInMetamask": 193,
+   "metamaskNotInScamsniffer": 8,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 203,
+   "blockedSubdomains": 203,
+   "dnrRules": 203,
+   "recordBytes": 7471,
+   "trickMatches": [],
+   "examples": [
+    "convex-finance.mom",
+    "allocation-convexfinance.xyz",
+    "convexfinance.net",
+    "convexifinance.com",
+    "convex-finance.org",
+    "convex.lat",
+    "www.convexfi.org",
+    "convexalabs.com"
+   ]
+  },
+  "yearn": {
+   "real": [
+    "yearn.fi"
+   ],
+   "lookalikes": 101,
+   "metamask": 3,
+   "scamsniffer": 98,
+   "inBoth": 0,
+   "scamsnifferNotInMetamask": 98,
+   "metamaskNotInScamsniffer": 3,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 101,
+   "blockedSubdomains": 101,
+   "dnrRules": 101,
+   "recordBytes": 2170,
+   "trickMatches": [],
+   "examples": [
+    "yearn3.xyz",
+    "yearnfi.digital",
+    "yearnfi.sbs",
+    "yearn-finances.net",
+    "event-yearn.com",
+    "yearn.team",
+    "yearnfi.live",
+    "yearn-2026.com"
+   ]
+  },
+  "dydx": {
+   "real": [
+    "dydx.exchange",
+    "dydx.trade"
+   ],
+   "lookalikes": 353,
+   "metamask": 88,
+   "scamsniffer": 267,
+   "inBoth": 2,
+   "scamsnifferNotInMetamask": 265,
+   "metamaskNotInScamsniffer": 86,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 0,
+   "rejectedExamples": [],
+   "blockedExact": 353,
+   "blockedSubdomains": 353,
+   "dnrRules": 353,
+   "recordBytes": 7761,
+   "trickMatches": [],
+   "examples": [
+    "dydx-trade.com",
+    "trade-dydx.wixstudio.com",
+    "startio-dydxx.wixstudio.com",
+    "v2-dydx.at",
+    "suap-dydxx-io.wixstudio.com",
+    "en-dydxx-learn.wixstudio.com",
+    "user-dydxcdn.wixstudio.com",
+    "nav-dydxxcdn.wixstudio.com"
+   ]
+  },
+  "opensea": {
+   "real": [
+    "opensea.io"
+   ],
+   "lookalikes": 2882,
+   "metamask": 233,
+   "scamsniffer": 2733,
+   "inBoth": 84,
+   "scamsnifferNotInMetamask": 2649,
+   "metamaskNotInScamsniffer": 149,
+   "realSiteEntriesExcluded": [],
+   "parseRejected": 2,
+   "rejectedExamples": [
+    "sites.google.com/kryptowallets.app/opensea-nft-login",
+    "sites.google.com/kryptowallets.app/opensea-nft-login/home"
+   ],
+   "blockedExact": 2880,
+   "blockedSubdomains": 2880,
+   "dnrRules": 2880,
+   "recordBytes": 82247,
+   "trickMatches": [],
+   "examples": [
+    "openseoa.app",
+    "opencea.mom",
+    "opensea.support",
+    "openmsea.io",
+    "opnsea.top",
+    "openesea.eu",
+    "opencea.shop",
+    "oplensea.io"
+   ]
+  }
+ }
+}
