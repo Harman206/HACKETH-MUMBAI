@@ -32,3 +32,21 @@ nav { display: flex; gap: 8px; margin: 16px 0; }
 nav button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
 nav button[aria-pressed="false"] { background: transparent; color: var(--accent); }
 ul.reasons { margin: 6px 0 0; padding-left: 18px; }
+.stepper { margin: 16px 0; }
+.stepper ol { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 8px; flex-wrap: wrap; }
+.stepper li { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-weight: 600; font-size: 14px; }
+.stepper li .dot { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--fg); font-size: 12px; }
+.stepper li.now { border-color: var(--accent); color: var(--fg); }
+.stepper li.now .dot { background: var(--accent); color: var(--accent-fg); }
+.stepper li.done { color: var(--ok); }
+.stepper li.done .dot { background: var(--ok); color: var(--bg); }
+.whats { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+.whats summary { cursor: pointer; font-weight: 600; }
+.whats p { margin: 8px 0 0; color: var(--muted); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 12px 0 0; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+.big-status { font-size: 17px; display: flex; gap: 12px; align-items: center; }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin 0.9s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

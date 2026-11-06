@@ -3,7 +3,8 @@ import { ADAPTERS } from '@blackout/adapters';
 import { createQuorum, type Quorum } from '@blackout/quorum';
 import { reportToHtml, reportToJson, type ExitResult } from '@blackout/exec';
 import type { Position } from '@blackout/core';
-import { createFlow, type FlowState } from './flow';
+import { createFlow, stepOf, type FlowState } from './flow';
+import { Stepper } from './screens/Stepper';
 import { loadSettings, rpcUrlsFor, saveSettings, type Settings } from './settings';
 import { connect, discoverWallets, ensureChain, senderFrom, type Eip1193 } from './wallet';
 import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
@@ -101,10 +102,26 @@ export function App() {
 
 function ExitTab(props: { state: FlowState; settings: Settings; update(p: Partial<Settings>): void; flow: ReturnType<typeof createFlow> }) {
   const { state, settings, update, flow } = props;
-  if (state.step === 'loading') return <div class="card" role="status">{state.what}</div>;
-  if (state.step === 'positions') return <Positions state={state} flow={flow} />;
+  const stepper = <Stepper current={stepOf(state)} facts={state.step === 'positions' ? state.facts : undefined} />;
+  if (state.step === 'loading')
+    return (
+      <>
+        {stepper}
+        <div class="card big-status" role="status">
+          <span class="spinner" aria-hidden="true" /> {state.what}
+        </div>
+      </>
+    );
+  if (state.step === 'positions')
+    return (
+      <>
+        {stepper}
+        <Positions state={state} flow={flow} />
+      </>
+    );
   return (
     <>
+      {stepper}
       {state.step === 'error' && (
         <div class="card error" role="alert">
           <b class="bad">Stopped.</b> {state.message}

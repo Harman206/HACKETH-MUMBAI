@@ -10,7 +10,7 @@ import { COPY } from './copy';
 
 export type FlowState =
   | { step: 'setup' }
-  | { step: 'loading'; what: string }
+  | { step: 'loading'; what: string; stage: 1 | 2 | 3 }
   | {
       step: 'positions';
       records: BlackoutRecords;
@@ -22,8 +22,24 @@ export type FlowState =
       busy: string | null;
       /** Adapters whose discovery failed; their positions are unknown, the others stay exitable. */
       discoveryErrors: string[];
+      /** Plain-language facts the UI shows under "What's happening". */
+      facts: { label: string; value: string }[];
     }
-  | { step: 'error'; message: string };
+  | { step: 'error'; message: string; stage?: 1 | 2 | 3 };
+
+/** Stepper position: 1 Verify, 2 Connect, 3 Positions, 4 Exit. */
+export function stepOf(s: FlowState): 1 | 2 | 3 | 4 {
+  switch (s.step) {
+    case 'setup':
+      return 1;
+    case 'loading':
+      return s.stage;
+    case 'error':
+      return s.stage ?? 1;
+    case 'positions':
+      return Object.keys(s.results).length > 0 ? 4 : 3;
+  }
+}
 
 export interface FlowDeps {
   quorumFor(chainId: number): Quorum;
@@ -61,7 +77,8 @@ export function createFlow(deps: FlowDeps): Flow {
   let startedAt = 0;
   let failures: { kind: string; at: number }[] = [];
 
-  const fail = (m: string) => state.set({ step: 'error', message: m });
+  let stage: 1 | 2 | 3 = 1;
+  const fail = (m: string) => state.set({ step: 'error', message: m, stage });
 
   async function start(s: Settings) {
     startedAt = deps.now();
@@ -73,10 +90,12 @@ export function createFlow(deps: FlowDeps): Flow {
       return fail(message(e));
     }
 
-    state.set({ step: 'loading', what: COPY.loadingRecords(name) });
+    stage = 1;
+    state.set({ step: 'loading', what: COPY.loadingRecords(name), stage });
+    const ensQ = deps.quorumFor(deps.ens.chainId);
     let records: BlackoutRecords;
     try {
-      records = await readRecords(name, deps.quorumFor(deps.ens.chainId), { universalResolver: deps.ens.universalResolver });
+      records = await readRecords(name, ensQ, { universalResolver: deps.ens.universalResolver });
     } catch (e) {
       return fail(message(e));
     }
@@ -85,7 +104,8 @@ export function createFlow(deps: FlowDeps): Flow {
 
     if (!records.manifest.chains[String(s.targetChainId)]) return fail(COPY.noExitsOnChain(s.targetChainId));
 
-    state.set({ step: 'loading', what: COPY.connecting });
+    stage = 2;
+    state.set({ step: 'loading', what: COPY.connecting, stage });
     let account: Address;
     try {
       const w = await deps.wallet.connect();
@@ -95,7 +115,8 @@ export function createFlow(deps: FlowDeps): Flow {
       return fail(message(e));
     }
 
-    state.set({ step: 'loading', what: COPY.findingPositions });
+    stage = 3;
+    state.set({ step: 'loading', what: COPY.findingPositions, stage });
     try {
       const q = deps.quorumFor(s.targetChainId);
       ctx = {
@@ -111,7 +132,15 @@ export function createFlow(deps: FlowDeps): Flow {
       const positions = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
       const discoveryErrors = settled.flatMap((r, i) => (r.status === 'rejected' ? [`Could not check ${deps.adapters[i]!.id}: ${message(r.reason)}`] : []));
       if (discoveryErrors.length === deps.adapters.length && deps.adapters.length > 0) return fail(discoveryErrors.join(' '));
-      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors });
+      const st = typeof ensQ.status === 'function' ? ensQ.status() : [];
+      const facts = [
+        { label: 'Release', value: `v${records.release.version}` },
+        { label: 'Kit fingerprint (sha256)', value: records.release.sha256 },
+        { label: 'Read from ENS at block', value: records.block.toString() },
+        { label: 'RPC providers in agreement', value: `${st.filter((p) => p.up).length} of ${st.length}` },
+        { label: 'Exit contracts published for this network', value: String(Object.values(records.manifest.chains[String(s.targetChainId)] ?? {}).reduce((n, roles) => n + Object.keys(roles ?? {}).length, 0)) },
+      ];
+      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors, facts });
     } catch (e) {
       return fail(message(e));
     }

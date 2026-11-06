@@ -28,7 +28,7 @@ function deps(over: Partial<FlowDeps> = {}) {
   };
   const result: ExitResult = { positionId: '7', status: 'recovered', reasons: [], txHashes: ['0xaa'], before: {}, after: {}, gasUsed: 1n, confirmedAt: 5_000, deltas: [] };
   const d: FlowDeps = {
-    quorumFor: () => ({ pinBlock: async () => 10n }) as unknown as Quorum,
+    quorumFor: () => ({ pinBlock: async () => 10n, status: () => [{ url: 'a', up: true }, { url: 'b', up: true }, { url: 'c', up: false }] }) as unknown as Quorum,
     ens: { chainId: 11155111, universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe' },
     adapters: [adapter],
     readRecords: vi.fn(async () => records()),
@@ -57,6 +57,11 @@ describe('exit flow', () => {
     if (s.step !== 'positions') return;
     expect(s.positions).toEqual([pos]);
     expect(s.rollbackWarning).toBe(false);
+    const facts = Object.fromEntries(s.facts.map((x) => [x.label, x.value]));
+    expect(facts['Release']).toBe('v3');
+    expect(facts['Kit fingerprint (sha256)']).toBe('ab'.repeat(32));
+    expect(facts['Read from ENS at block']).toBe('9');
+    expect(facts['RPC providers in agreement']).toMatch(/^\d+ of \d+$/);
     await f.exit('7');
     const after = f.state.get();
     expect(after.step === 'positions' && after.results['7']?.status).toBe('recovered');
