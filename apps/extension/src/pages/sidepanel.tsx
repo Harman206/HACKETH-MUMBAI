@@ -7,7 +7,9 @@ import { render, type ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState, SiteState } from '../shared/types';
-import { ago, getState, getTab, ICON, openPage, protocolHealth, send, short, siteText, type Tone } from './api';
+import { ago, getState, getTab, openPage, protocolHealth, send, short, siteText, type Tone } from './api';
+import { Chip, GuardChip, shortHealth, StatusMark, TONE_ICON, TopBar } from './components';
+import { Icon, type IconName } from './icons';
 import { scanPositions, type Scan } from './positions';
 
 interface TabInfo {
@@ -24,8 +26,6 @@ declare const chrome: {
     onUpdated: Listener<[number, { url?: string; status?: string }]>;
   };
 };
-
-const MARK: Record<Tone, string> = { ok: '✓', bad: '!', warn: '?', grey: '•' };
 
 /**
  * The tab the panel describes: the active tab of the panel's window. When this page is opened as a tab itself
@@ -47,11 +47,11 @@ const hostOf = (url: string | undefined) => {
   }
 };
 
-function Section({ title, aside, children }: { title: string; aside?: ComponentChildren; children: ComponentChildren }) {
+function Section({ title, icon, aside, children }: { title: string; icon: IconName; aside?: ComponentChildren; children: ComponentChildren }) {
   return (
     <section class="panel-section">
       <div class="spread section-head">
-        <h2>{title}</h2>
+        <h2><Icon name={icon} size={14} />{title}</h2>
         {aside}
       </div>
       {children}
@@ -115,7 +115,7 @@ function Panel() {
     else setScan(null);
   }, [st]);
 
-  if (!st) return <div class="wrap muted">Loading…</div>;
+  if (!st) return <div class="wrap panel muted" style="padding-top:20px">Loading…</div>;
 
   const openKit = async (name: string) => {
     setMsg(null);
@@ -147,25 +147,19 @@ function Panel() {
 
   return (
     <div class="wrap panel">
-      <header class="panel-head">
-        <div class="brand">
-          <img src={ICON} alt="" />
-          <span>
-            Copeybara
-            <small>Your DeFi safety net</small>
-          </span>
-        </div>
-        <span class={`pill ${hasProtocol ? 'ok' : 'grey'}`} title="Copeybara checks every page and wallet request in this browser">
-          {hasProtocol ? 'On guard' : 'Not set up'}
-        </span>
-      </header>
+      <TopBar caption="Your DeFi safety net">
+        <GuardChip st={st} />
+      </TopBar>
 
       {/* (2) this site */}
       <div class={`card site-card tone-${s.tone}`} data-site={site.kind === 'protocol' ? site.verdict : site.kind}>
-        <div class="site-label">This site{host && <span class="mono"> · {host}</span>}</div>
+        <div class="site-label">
+          <span class="label"><Icon name="globe" size={14} />This site</span>
+          {host && <span class="host" title={host}>{host}</span>}
+        </div>
         <div class="site-hero">
-          <span class={`status-mark ${s.tone}`} aria-hidden="true">{MARK[s.tone]}</span>
-          <div>
+          <StatusMark tone={host ? s.tone : 'grey'} icon={host ? undefined : 'globe'} />
+          <div class="grow">
             <h3 data-site-title>{host ? s.title : 'No web page open'}</h3>
             <p class="muted">{host ? s.detail : 'Open a DeFi site in this window and Copeybara will check it here.'}</p>
           </div>
@@ -173,12 +167,13 @@ function Panel() {
         {siteProtocol && followed && (
           <>
             <button class={`block ${s.tone === 'bad' ? 'danger' : ''}`} onClick={() => openKit(siteProtocol)}>
+              <Icon name="log-out" size={17} />
               Exit safely
             </button>
             <p class="muted tiny center">Opens {siteProtocol}’s verified exit kit, independent of this site.</p>
           </>
         )}
-        {msg && <p class="small" style="color:var(--bad)" data-error>{msg}</p>}
+        {msg && <p class="err" data-error><Icon name="x-octagon" size={15} />{msg}</p>}
       </div>
 
       {/* (3) setup checklist */}
@@ -188,22 +183,31 @@ function Panel() {
           <p class="muted small">Two quick steps and Copeybara can watch your money for you.</p>
           <ul class="checklist">
             <li class={hasWallet ? 'done' : ''}>
-              <span class="tick">{hasWallet ? '✓' : '1'}</span>
-              {hasWallet ? <>Wallet <span class="mono">{short(st.settings.account!)}</span></> : 'Add the wallet you want watched'}
+              <span class="tick">{hasWallet ? <Icon name="check" size={14} /> : '1'}</span>
+              {hasWallet ? <span>Wallet <span class="mono">{short(st.settings.account!)}</span></span> : 'Add the wallet you want watched'}
             </li>
             <li class={hasProtocol ? 'done' : ''}>
-              <span class="tick">{hasProtocol ? '✓' : '2'}</span>
+              <span class="tick">{hasProtocol ? <Icon name="check" size={14} /> : '2'}</span>
               {hasProtocol ? `Following ${st.protocols.map((p) => p.name).join(', ')}` : 'Follow a protocol you use'}
             </li>
           </ul>
-          <button class="block" onClick={() => openPage('setup')}>{hasWallet || hasProtocol ? 'Continue setup' : 'Start setup'}</button>
+          <button class="block" onClick={() => openPage('setup')}>
+            {hasWallet || hasProtocol ? 'Continue setup' : 'Start setup'}
+            <Icon name="arrow-right" size={16} />
+          </button>
         </div>
       )}
 
       {/* (4) positions */}
       <Section
         title="Your positions"
-        aside={hasWallet && hasProtocol && <button class="link" disabled={scanning} onClick={() => runScan(st)}>{scanning ? 'Scanning…' : 'Scan again'}</button>}
+        icon="wallet"
+        aside={hasWallet && hasProtocol && (
+          <button class="link" disabled={scanning} onClick={() => runScan(st)}>
+            <Icon name="refresh" size={14} />
+            {scanning ? 'Scanning…' : 'Scan again'}
+          </button>
+        )}
       >
         <div class="card" data-positions>
           {!hasWallet && <p class="muted small">Add your wallet address in setup to see what you hold.</p>}
@@ -215,18 +219,24 @@ function Panel() {
               <ul class="clean positions">
                 {scan.found.map((f) => (
                   <li data-position={f.position.id}>
+                    <span class="pos-icon" aria-hidden="true"><Icon name="layers" size={17} /></span>
                     <div class="grow">
                       <b>{f.position.label}</b>
-                      <div class="small muted">
+                      <div class="amounts">
                         {f.amounts.length > 0 ? f.amounts.map((a) => `${a.text} ${a.symbol}`).join(' + ') : (f.position.manual ?? f.protocol)}
                       </div>
                     </div>
-                    <button class="small-btn" onClick={() => openKit(f.protocol)}>Exit safely</button>
+                    <button class="small-btn secondary" onClick={() => openKit(f.protocol)}>Exit safely</button>
                   </li>
                 ))}
               </ul>
-              {scan.errors.length > 0 && <p class="small" style="color:var(--warn)">{scan.errors.join(' · ')}</p>}
-              {scan.block !== null && <p class="muted tiny">Read straight from the contracts at block {scan.block.toString()}.</p>}
+              {scan.errors.length > 0 && <p class="small warn-text">{scan.errors.join(' · ')}</p>}
+              {scan.block !== null && (
+                <p class="foot-note" style="margin:12px 0 0">
+                  <Icon name="link" size={13} />
+                  <span>Read straight from the contracts at block <span class="num">{scan.block.toString()}</span>.</span>
+                </p>
+              )}
             </>
           )}
         </div>
@@ -235,7 +245,13 @@ function Panel() {
       {/* (5) protocols */}
       <Section
         title="Protocols you follow"
-        aside={hasProtocol && <button class="link" disabled={syncing} onClick={checkEns}>{syncing ? 'Checking…' : 'Check ENS now'}</button>}
+        icon="shield"
+        aside={hasProtocol && (
+          <button class="link" disabled={syncing} onClick={checkEns}>
+            <Icon name="refresh" size={14} />
+            {syncing ? 'Checking…' : 'Check ENS now'}
+          </button>
+        )}
       >
         <div class="card">
           {!hasProtocol && (
@@ -247,15 +263,18 @@ function Panel() {
             {st.protocols.map((p) => {
               const h = protocolHealth(p);
               return (
-                <li data-protocol={p.name}>
-                  <div class="spread nowrap">
-                    <b class="name">{p.name}</b>
-                    <span class={`pill ${h.tone}`} title={h.text}>{h.tone === 'ok' ? 'All clear' : h.tone === 'bad' ? 'Compromised' : 'Check'}</span>
+                <li data-protocol={p.name} class="proto-row">
+                  <span class="proto-avatar" aria-hidden="true">{p.name.slice(0, 1)}</span>
+                  <div class="grow">
+                    <div class="spread nowrap">
+                      <b class="name">{p.name}</b>
+                      <Chip tone={h.tone} icon={TONE_ICON[h.tone]} title={h.text}>{shortHealth(h.tone)}</Chip>
+                    </div>
+                    <div class="tiny muted">
+                      {p.snapshot ? <>Exit kit <span class="num">v{p.snapshot.release.version}</span> · checked {ago(p.snapshot.syncedAt)}</> : (p.error ?? 'Reading ENS…')}
+                    </div>
+                    {h.tone !== 'ok' && p.snapshot && <div class={`small tone-text ${h.tone}`}>{h.text}</div>}
                   </div>
-                  <div class="small muted">
-                    {p.snapshot ? `Exit kit v${p.snapshot.release.version} · checked ${ago(p.snapshot.syncedAt)}` : (p.error ?? 'Reading ENS…')}
-                  </div>
-                  {h.tone !== 'ok' && p.snapshot && <div class={`small tone-text ${h.tone}`}>{h.text}</div>}
                 </li>
               );
             })}
@@ -264,7 +283,7 @@ function Panel() {
       </Section>
 
       {/* (6) activity */}
-      <Section title="What Copeybara did">
+      <Section title="What Copeybara did" icon="activity">
         <div class="tiles" data-stats>
           {tiles.map((t) => (
             <div class={`tile ${t.n > 0 ? t.tone : ''}`}>
@@ -273,14 +292,14 @@ function Panel() {
             </div>
           ))}
         </div>
-        <p class="muted tiny">Counted on this device only. Last ENS check {ago(stats.lastSync)}.</p>
+        <p class="foot-note"><Icon name="lock" size={13} />Counted on this device only. Last ENS check {ago(stats.lastSync)}.</p>
       </Section>
 
       {/* (7) footer */}
       <footer class="panel-foot">
-        <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}>Setup</a>
-        <a href="#" onClick={(e) => (e.preventDefault(), openPage('dashboard'))}>Full dashboard</a>
-        <span class="muted">v{st.version}</span>
+        <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}><Icon name="settings" size={15} />Setup</a>
+        <a href="#" onClick={(e) => (e.preventDefault(), openPage('dashboard'))}><Icon name="grid" size={15} />Full dashboard</a>
+        <span class="ver">v{st.version}</span>
       </footer>
     </div>
   );

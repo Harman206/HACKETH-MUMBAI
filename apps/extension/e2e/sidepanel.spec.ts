@@ -1,4 +1,4 @@
-import { expect, follow, test } from './fixtures';
+import { expect, follow, shot, test } from './fixtures';
 
 /**
  * The side panel (what the toolbar icon opens), loaded as a page beside the protocol's real site: it shows the
@@ -10,6 +10,7 @@ test('side panel: live verdict for the site beside it, protocol health, position
   await panel.setViewportSize({ width: 400, height: 900 });
   await panel.goto(ext.url('sidepanel.html'));
   await expect(panel.locator('[data-checklist]')).toBeVisible(); // not set up yet: the beginner checklist
+  await shot(panel, 'sidepanel-new');
 
   await follow(ext, w);
   await expect(panel.locator('[data-checklist]')).toHaveCount(0, { timeout: 10_000 });
@@ -30,6 +31,7 @@ test('side panel: live verdict for the site beside it, protocol health, position
   for (const id of n ? w.positions : []) await expect(panel.locator(`[data-position="${id}"]`).getByRole('button', { name: 'Exit safely' })).toBeVisible();
   await expect(panel.locator('[data-stat="verified"]')).not.toHaveText('0');
   if (process.env.SIDEPANEL_SHOT) await panel.screenshot({ path: process.env.SIDEPANEL_SHOT, fullPage: true });
+  await shot(panel, 'sidepanel');
 
   // the site tab goes away: the panel follows to whatever is left (here: no web page)
   await site.close();

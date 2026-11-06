@@ -150,6 +150,19 @@ export const test = base.extend<{ w: World; ctx: BrowserContext; ext: Ext }>({
 
 export { expect };
 
+/** UI_SHOTS=<dir> saves full-page screenshots of the trusted pages as <dir>/ui-<name>.png (light, then dark). */
+export async function shot(page: Page, name: string) {
+  const dir = process.env.UI_SHOTS;
+  if (!dir) return;
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${dir}/ui-${name}.png`, fullPage: true });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.waitForTimeout(300); // let colour transitions settle
+  await page.screenshot({ path: `${dir}/ui-${name}-dark.png`, fullPage: true });
+  await page.emulateMedia({ colorScheme: null });
+}
+
 /** Follow the test protocol through the extension (no UI): for specs that are not about setup. */
 export async function follow(ext: Ext, w: World) {
   const s = await ext.send<PublicState>({ t: 'follow', name: w.ensName });
