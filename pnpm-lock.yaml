@@ -252,6 +252,12 @@ importers:
       '@copeybara/core':
         specifier: workspace:*
         version: link:../core
+      '@copeybara/ens':
+        specifier: workspace:*
+        version: link:../ens
+      '@copeybara/quorum':
+        specifier: workspace:*
+        version: link:../quorum
       '@copeybara/sitecheck':
         specifier: workspace:*
         version: link:../sitecheck
@@ -268,6 +274,15 @@ importers:
       fast-check:
         specifier: 3.23.2
         version: 3.23.2
+
+  packages/next-plugin:
+    dependencies:
+      '@copeybara/fingerprint':
+        specifier: workspace:*
+        version: link:../fingerprint
+      '@copeybara/webpack-plugin':
+        specifier: workspace:*
+        version: link:../webpack-plugin
 
   packages/protocol-cli:
     dependencies:
@@ -324,6 +339,25 @@ importers:
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
+
+  packages/vite-plugin:
+    dependencies:
+      '@copeybara/fingerprint':
+        specifier: workspace:*
+        version: link:../fingerprint
+    devDependencies:
+      '@copeybara/core':
+        specifier: workspace:*
+        version: link:../core
+      vite:
+        specifier: 5.4.11
+        version: 5.4.11(@types/node@22.10.2)
+
+  packages/webpack-plugin:
+    dependencies:
+      '@copeybara/fingerprint':
+        specifier: workspace:*
+        version: link:../fingerprint
 
   replay:
     dependencies:

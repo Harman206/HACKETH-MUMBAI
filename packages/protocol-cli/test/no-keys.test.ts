@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 const ROOT = join(__dirname, '..', '..', '..');
 /** Everything a protocol team runs or ships from the SDK. */
-const SDK_DIRS = ['packages/protocol-cli/src', 'packages/fingerprint/src', 'packages/build-plugins/src', 'packages/widget/src'];
+const SDK_DIRS = ['packages/protocol-cli/src', 'packages/fingerprint/src', 'packages/vite-plugin/src', 'packages/webpack-plugin/src', 'packages/next-plugin/src', 'packages/widget/src'];
 
 const files = (d: string): string[] => {
   const abs = join(ROOT, d);

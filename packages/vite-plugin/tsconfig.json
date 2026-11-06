@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../node_modules/.tsbuild/vite-plugin",
+    "types": [
+      "node"
+    ]
+  },
+  "references": [
+    {
+      "path": "../fingerprint"
+    },
+    {
+      "path": "../core"
+    }
+  ],
+  "include": [
+    "src",
+    "test"
+  ]
+}

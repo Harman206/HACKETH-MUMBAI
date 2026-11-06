@@ -1,6 +1,28 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": ".", "outDir": "../../node_modules/.tsbuild/fingerprint", "types": ["node"] },
-  "references": [{ "path": "../core" }, { "path": "../sitecheck" }],
-  "include": ["src", "test"]
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../node_modules/.tsbuild/fingerprint",
+    "types": [
+      "node"
+    ]
+  },
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../sitecheck"
+    },
+    {
+      "path": "../ens"
+    },
+    {
+      "path": "../quorum"
+    }
+  ],
+  "include": [
+    "src",
+    "test"
+  ]
 }
