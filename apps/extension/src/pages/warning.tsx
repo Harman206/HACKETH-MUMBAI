@@ -1,7 +1,9 @@
 import { render } from 'preact';
 import { useState } from 'preact/hooks';
 import './ui.css';
-import { ICON, send } from './api';
+import { send } from './api';
+import { StatusMark, TopBar } from './components';
+import { Icon } from './icons';
 
 const q = new URLSearchParams(location.search);
 const reason = q.get('reason') as 'compromised' | 'blocklist' | 'mismatch' | null;
@@ -30,36 +32,47 @@ function Warning() {
   const [msg, setMsg] = useState<string | null>(null);
   const t = TEXT[reason ?? 'mismatch'] ?? TEXT.mismatch;
   return (
-    <div class="wrap" data-reason={reason}>
-      <div class="brand"><img src={ICON} alt="" />Copeybara</div>
-      <div class="alert bad" role="alert">
-        <div class="big-icon" aria-hidden="true">⛔</div>
-        <h1 style="margin-top:8px">{t.title}</h1>
+    <div class="wrap warn-wrap" data-reason={reason}>
+      <TopBar caption="Protection">
+        <span class="pill bad"><Icon name="x-octagon" size={14} />Page blocked</span>
+      </TopBar>
+      <div class="warn-hero" role="alert">
+        <div class="warn-glyph" aria-hidden="true"><Icon name="x-octagon" size={44} /></div>
+        <p class="label" style="justify-content:center;color:var(--bad)">Copeybara stopped this page</p>
+        <h1>{t.title}</h1>
         <p>{t.body}</p>
-        {note && <p><b>Note from {name}:</b> {note}</p>}
+        {note && (
+          <div class="alert bad small with-icon note">
+            <Icon name="alert-triangle" size={18} />
+            <div><b>Note from {name}:</b> {note}</div>
+          </div>
+        )}
       </div>
-      <div class="card">
-        <h2>Your funds are not lost</h2>
-        <p>Your positions live in {name}’s contracts, not on its website. The Copeybara exit kit withdraws them straight from the contracts, checked against {name}’s ENS records.</p>
-        <div class="row" style="margin-top:10px">
+      <div class="card safe-card">
+        <div class="safe-head">
+          <StatusMark tone="ok" size={22} />
+          <h2>Your funds are not lost</h2>
+        </div>
+        <p class="muted">Your positions live in {name}’s contracts, not on its website. The Copeybara exit kit withdraws them straight from the contracts, checked against {name}’s ENS records.</p>
+        <div class="row">
           <button id="exit" onClick={async () => {
             const r = await send<{ ok: boolean; error?: string }>({ t: 'openKit', name });
             setMsg(r.ok ? 'The verified exit kit opened in a new tab.' : (r.error ?? 'Could not open the kit.'));
-          }}>Exit safely with the kit</button>
+          }}><Icon name="log-out" size={17} />Exit safely with the kit</button>
           <button class="secondary" onClick={() => (history.length > 2 ? history.go(-2) : location.replace('about:blank'))}>Leave this site</button>
         </div>
-        {msg && <p class="small" data-kit-msg>{msg}</p>}
+        {msg && <p class="small" data-kit-msg style="margin-top:12px">{msg}</p>}
       </div>
       <div class="card small">
-        <h3 style="margin-top:0">Details</h3>
-        {from && <p>Page: <span class="mono">{from}</span></p>}
+        <p class="label" style="margin-bottom:10px"><Icon name="eye" size={14} />Details</p>
+        {from && <dl class="kv" style="margin:0 0 6px"><dt>Page</dt><dd class="mono">{from}</dd></dl>}
         {unknown.length > 0 && (
           <>
             <p>Code not published by {name}:</p>
-            <ul data-unknown>{unknown.map((u) => <li class="mono">{u}</li>)}</ul>
+            <ul data-unknown class="unknown">{unknown.map((u) => <li>{u}</li>)}</ul>
           </>
         )}
-        <p class="muted">There is no “continue anyway” button on purpose: nobody, including this page, can override the check.</p>
+        <p class="muted policy"><Icon name="lock" size={15} /><span>There is no “continue anyway” button on purpose: nobody, including this page, can override the check.</span></p>
       </div>
     </div>
   );
