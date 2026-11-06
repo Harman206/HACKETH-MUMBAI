@@ -61,11 +61,13 @@
     .note{font-size:13px;color:var(--muted);margin:10px 0 0;min-height:1.2em}
     .lure{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:12px 16px;margin:20px 0 0;box-shadow:var(--shadow)}
     /* demo bar: part of the Copeybara attack lab, not of DemoSwap */
-    .demobar{--d-bg:#0d1611;--d-ink:#e7efe9;--d-muted:#9db0a3;--d-line:#22352a;--d-on:#6fbf8a;background:var(--d-bg);color:var(--d-ink);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;border-bottom:1px solid var(--d-line);transition:background .2s}
+    .demobar{--d-bg:#141615;--d-ink:#eef2ea;--d-muted:#a3ad9f;--d-line:#262a27;--d-on:#c4fa4f;background:var(--d-bg);color:var(--d-ink);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;border-bottom:1px solid var(--d-line);transition:background .2s}
     .demobar[data-tone="bad"]{--d-bg:#5a1d14;--d-line:#7a2a1e;--d-on:#ffb4a6}
     .demobar[data-tone="warn"]{--d-bg:#4a3510;--d-line:#6a4c18;--d-on:#f3cf86}
     .demobar .row{display:flex;align-items:center;gap:14px;min-height:42px}
-    .demo-tag{font:700 11px/1 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.12em;background:#e3b766;color:#1a1204;border-radius:5px;padding:4px 6px;flex:none}
+    .demo-tag{font:700 11px/1 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.12em;background:#c4fa4f;color:#141615;border-radius:5px;padding:4px 6px;flex:none}
+    .demo-mark{width:22px;height:22px;border-radius:6px;flex:none;box-shadow:0 0 0 1px #2f342f}
+    .demobar[data-tone="bad"] .demo-tag,.demobar[data-tone="warn"] .demo-tag{background:#fff}
     .demo-name{font-weight:600;white-space:nowrap;flex:none}
     .demo-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
     .demo-tabs::-webkit-scrollbar{display:none}
@@ -73,8 +75,16 @@
     .demo-tabs button:hover{color:var(--d-ink);background:rgba(255,255,255,.07)}
     .demo-tabs button.on{color:var(--d-bg);background:var(--d-on);font-weight:700}
     .demo-tabs button[disabled]{opacity:.5;cursor:progress}
-    .demo-line{display:flex;align-items:center;gap:9px;padding:0 0 10px;font-size:13.5px}
+    .demo-line{display:flex;align-items:center;gap:10px;padding:0 0 10px;font-size:13.5px}
+    @media (max-width:700px){.demo-line{flex-wrap:wrap}#demo-actions{width:100%}}
     .demo-line b{letter-spacing:.02em}
+    #demo-text{flex:1;min-width:0}
+    #demo-actions{display:flex;gap:8px;flex:none}
+    .demo-act{border:1px solid rgba(255,255,255,.28);background:transparent;color:var(--d-ink);font:inherit;font-weight:600;font-size:13px;padding:6px 12px;border-radius:8px;white-space:nowrap}
+    .demo-act:hover{background:rgba(255,255,255,.08)}
+    .demo-act.primary{background:var(--d-on);border-color:var(--d-on);color:#141615}
+    .demobar[data-tone="bad"] .demo-act.primary,.demobar[data-tone="warn"] .demo-act.primary{background:#fff;border-color:#fff;color:#141615}
+    .demo-act.primary:hover{filter:brightness(.94)}
     .demo-dot{width:8px;height:8px;border-radius:50%;background:var(--d-on);flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
     footer{border-top:1px solid var(--line);margin-top:30px}
     footer .wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:20px 24px 36px;font-size:13px;color:var(--muted)}
@@ -88,7 +98,7 @@
 <body>
   <div class="demobar" id="demobar" data-tone="ok" aria-label="Copeybara demo controls">
     <div class="wrap row">
-      <span class="demo-tag">DEMO</span><span class="demo-name">Copeybara attack lab</span>
+      <span class="demo-tag">DEMO</span><svg class="demo-mark" viewBox="0 0 104 104" aria-hidden="true"><rect width="104" height="104" fill="#141615"/><path fill="#c4fa4f" fill-rule="evenodd" transform="translate(11 17) scale(.8)" d="M10 73c2-17 10-33 19-46a7 7 0 0 1-3-6 8 8 0 0 1 15-3c6-2 13-1 20 1l27 6c4 1 6 3 6 7v17c0 7-4 10-10 11l-24 2-9 11H10Zm52-36a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg><span class="demo-name">Copeybara attack lab</span>
       <div class="demo-tabs" role="tablist">
         <button data-mode="normal">Normal</button>
         <button data-mode="hijack">DNS hijack</button>
@@ -99,7 +109,7 @@
         <button data-mode="down">Site down</button>
       </div>
     </div>
-    <div class="wrap demo-line"><span class="demo-dot"></span><span id="demo-text">Connecting to the demo controls…</span></div>
+    <div class="wrap demo-line"><span class="demo-dot"></span><span id="demo-text">Connecting to the demo controls…</span><span id="demo-actions"></span></div>
   </div>
   <header><div class="wrap">
     <a class="logo" href="#"><svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#3b4fd8"/><path d="M8 11h9l-3-3M20 17h-9l3 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>DemoSwap</a>

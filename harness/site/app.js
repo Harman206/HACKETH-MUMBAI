@@ -130,13 +130,23 @@
       nft: { switches: [], open: 'nft' },
       down: { switches: ['reset', 'site-down'], go: 'site' },
     };
-    var show = function (mode, tone, html) {
+    var notice = null; // a one-off message after opening an attack page, kept until the next mode change
+    // What is happening + the next action, for every mode. acts: [label, action, primary?]
+    var show = function (mode, tone, html, acts) {
       bar.setAttribute('data-tone', tone);
       bar.setAttribute('data-demo-mode', mode);
       bar.querySelectorAll('[data-mode]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-mode') === mode); });
+      var key = mode + '|' + html;
+      if (bar.getAttribute('data-shown') === key) return; // do not rebuild the buttons under the cursor
+      bar.setAttribute('data-shown', key);
       $('demo-text').innerHTML = html;
+      $('demo-actions').innerHTML = (acts || []).map(function (a) {
+        return '<button class="demo-act' + (a[2] ? ' primary' : '') + '" data-act="' + a[1] + '">' + a[0] + '</button>';
+      }).join('');
     };
     var getJson = function (path) { return fetch(CONTROL + path, { cache: 'no-store' }).then(function (r) { return r.json(); }); };
+    var RELOAD = ['Reload now', 'reload', true];
+    var NORMAL = ['Back to normal', 'normal'];
     var refreshBar = async function () {
       // what THIS page is, first: the bar's code is identical on the real site, the hijacked clone and the look-alike
       var injected = !!document.querySelector('script[src="/inject.js"]');
@@ -145,16 +155,41 @@
         st = await getJson('/status');
         if (!cfg) cfg = await getJson('/portal/config');
       } catch (e) { /* controls offline: still say what this page is */ }
-      if (onLookalike) return show('lookalike', 'warn', '<b>LOOK-ALIKE DOMAIN</b> · ' + location.hostname + ' is a copy on a domain DemoSwap does not own. The Copeybara watcher lists it on the ENS blocklist.');
-      if (injected) return show('hijack', 'bad', '<b>DNS HIJACKED</b> · this page now injects a drainer. Same address, same look: Connect wallet and Deposit now ask for an unlimited approval.');
-      if (st && st.hijack) return show('hijack', 'bad', '<b>DNS HIJACKED</b> · the domain now points at the attacker. Reload to get the hijacked page.');
+      if (onLookalike) {
+        return show('lookalike', 'warn', '<b>LOOK-ALIKE DOMAIN</b> · ' + location.hostname + ' is a copy on a domain DemoSwap does not own. → Once the Copeybara watcher lists it on ENS, reload: Copeybara blocks it before it loads.', [RELOAD, ['Go to the real DemoSwap', 'normal']]);
+      }
+      if (injected) {
+        return show('hijack', 'bad', '<b>DNS HIJACKED</b> · This page is now the attacker’s copy: Connect wallet and Deposit ask for an unlimited approval. → Reload the page: Copeybara replaces it with a warning before you can click anything.', [RELOAD, NORMAL]);
+      }
+      if (st && st.hijack) {
+        return show('hijack', 'bad', '<b>DNS HIJACKED</b> · The domain now points at the attacker, but this tab still shows the real page. → Reload to load the attacker’s page.', [RELOAD, NORMAL]);
+      }
+      if (st && st.site === 'down') {
+        return show('down', 'warn', '<b>SITE DOWN</b> · DemoSwap’s website is offline; this tab is an old copy. → Reload to see it fail, then press Exit safely in the Copeybara side panel.', [RELOAD, NORMAL]);
+      }
+      if (notice) return show(notice[0], 'ok', notice[1], [NORMAL]);
       if (!st) return show('normal', 'ok', 'You are on the real DemoSwap: every script matches the ENS fingerprint. <span style="opacity:.7">(Demo controls offline: start the harness.)</span>');
-      show('normal', 'ok', 'You are on the real DemoSwap: every script matches the ENS fingerprint.');
+      show('normal', 'ok', 'You are on the real DemoSwap: every script matches the ENS fingerprint. → Pick an attack above, or start with the DNS hijack.', [['Hijack DNS', 'mode:hijack', true]]);
+    };
+    var OPENED = {
+      approve: 'Opened a fake “Claim your airdrop” page in a new tab. → Click Claim: Copeybara stops the unlimited approval before your wallet sees it.',
+      permit: 'Opened a “gasless claim” page in a new tab. → Click Sign to claim: Copeybara flags the Permit2 signature for the drainer.',
+      nft: 'Opened a free NFT mint in a new tab. → Click Mint: Copeybara stops setApprovalForAll on your LP positions.',
     };
     var post = function (sw) { return fetch(CONTROL + '/switch/' + sw, { method: 'POST' }).then(function (r) { if (!r.ok) throw new Error(sw); }); };
+    $('demo-actions').addEventListener('click', async function (e) {
+      var b = e.target.closest && e.target.closest('[data-act]');
+      if (!b) return;
+      var act = b.getAttribute('data-act');
+      if (act === 'reload') return location.reload();
+      if (act.indexOf('mode:') === 0) return bar.querySelector('[data-mode="' + act.slice(5) + '"]').click();
+      if (act === 'normal') return bar.querySelector('[data-mode="normal"]').click();
+    });
     bar.querySelectorAll('[data-mode]').forEach(function (b) {
       b.addEventListener('click', async function () {
-        var m = MODES[b.getAttribute('data-mode')];
+        var mode = b.getAttribute('data-mode');
+        var m = MODES[mode];
+        notice = m.open ? [mode, OPENED[mode]] : null;
         var tab = m.open ? window.open('about:blank', '_blank') : null; // inside the click: pop-up blockers
         b.disabled = true;
         try {
@@ -162,6 +197,7 @@
           for (var i = 0; i < m.switches.length; i++) await post(m.switches[i]);
           if (m.open) {
             if (tab) { tab.opener = null; tab.location.href = cfg.links[m.open]; } else window.open(cfg.links[m.open], '_blank', 'noopener');
+            refreshBar();
           } else {
             location.href = cfg.links[m.go];
           }
