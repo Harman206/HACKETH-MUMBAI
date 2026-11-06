@@ -6,10 +6,17 @@ test('full exit: ENS manifest → three positions → exit all → recovered →
   const s = state();
   await installTestWallet(page, s);
   await presetSettings(page, s);
+  // Record every live stage the UI shows (they can flash by fast on anvil).
+  await page.addInitScript(() => {
+    const seen = new Set<string>();
+    (window as unknown as { __stages: Set<string> }).__stages = seen;
+    new MutationObserver(() => document.querySelectorAll('[data-stage]').forEach((e) => seen.add(e.getAttribute('data-stage')!))).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-stage'] });
+  });
   await page.goto(s.kitUrl);
 
   await page.getByRole('button', { name: 'Connect wallet and find my positions' }).click();
   await expect(page.getByText(`Release v2`)).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('[data-low-fees]')).toHaveCount(0); // anvil account is funded
   await expect(page.getByText(s.kitSha256).first()).toBeAttached();
   for (const id of Object.values(s.positions)) await expect(page.locator(`[data-position="${id}"]`)).toBeVisible();
 
@@ -17,6 +24,9 @@ test('full exit: ENS manifest → three positions → exit all → recovered →
   for (const id of Object.values(s.positions)) {
     await expect(page.locator(`[data-position="${id}"] [data-status]`)).toHaveAttribute('data-status', 'recovered', { timeout: 60_000 });
   }
+
+  const stages: string[] = await page.evaluate(() => [...(window as unknown as { __stages: Set<string> }).__stages]);
+  for (const st of ['checking', 'simulating', 'wallet', 'confirming', 'balances']) expect(stages, `live stage ${st} shown`).toContain(st);
 
   const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download report (JSON)' }).click()]);
   const report = JSON.parse(readFileSync((await dl.path())!, 'utf8'));

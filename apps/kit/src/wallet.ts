@@ -1,7 +1,7 @@
 import { toHex } from 'viem';
 import type { Address, Hex, TxRequest } from '@blackout/core';
 import type { Sender } from '@blackout/exec';
-import { CHAIN_NAMES } from './config';
+import { CHAIN_NAMES, DEFAULT_RPCS } from './config';
 
 const chainName = (id: number) => CHAIN_NAMES[id] ?? `chain ${id}`;
 
@@ -48,13 +48,29 @@ export async function connect(p: Eip1193): Promise<{ account: Address; chainId: 
   return { account: accounts[0], chainId };
 }
 
+/** Networks a wallet may not know yet, offered via wallet_addEthereumChain (a chain method; no signing). */
+const ADDABLE: Record<number, { chainName: string; nativeCurrency: { name: string; symbol: string; decimals: number }; blockExplorerUrls: string[] }> = {
+  11155111: { chainName: 'Sepolia', nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 }, blockExplorerUrls: ['https://sepolia.etherscan.io'] },
+};
+
+const unknownChain = (e: unknown) => {
+  const err = e as { code?: number; data?: { originalError?: { code?: number } } };
+  return err?.code === 4902 || err?.data?.originalError?.code === 4902;
+};
+
 export async function ensureChain(p: Eip1193, chainId: number): Promise<void> {
   const have = Number(await p.request({ method: 'eth_chainId' }));
   if (have === chainId) return;
   try {
     await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: toHex(chainId) }] });
-  } catch {
-    throw new WrongChainError(chainId, have);
+  } catch (e) {
+    const add = ADDABLE[chainId];
+    if (!unknownChain(e) || !add) throw new WrongChainError(chainId, have);
+    try {
+      await p.request({ method: 'wallet_addEthereumChain', params: [{ chainId: toHex(chainId), ...add, rpcUrls: DEFAULT_RPCS[String(chainId)] ?? [] }] });
+    } catch {
+      throw new WrongChainError(chainId, have);
+    }
   }
   const now = Number(await p.request({ method: 'eth_chainId' }));
   if (now !== chainId) throw new WrongChainError(chainId, now);

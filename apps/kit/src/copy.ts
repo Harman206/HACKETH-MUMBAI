@@ -24,7 +24,30 @@ export const COPY = {
   downloadHtml: 'Download report (HTML)',
   manual: 'Needs manual action',
   trusted: 'Still trusted: your wallet and its RPC, Ethereum, ENS, and the protocol’s release Safe.',
+  progress: {
+    checking: 'Checking the transaction with the Exit Guard…',
+    simulating: 'Rehearsing the withdrawal on independent RPC providers…',
+    wallet: 'Confirm in your wallet. No popup? Click the wallet’s toolbar icon.',
+    confirming: 'Sent. Waiting for a block, usually about 12 seconds…',
+    balances: 'Confirmed. Checking that your balances really went up…',
+  },
+  exitingBatch: (n: number, total: number) => `Exiting ${n} of ${total}…`,
+  lowFees: (eth: string) => `Your wallet holds ${eth} ETH. Each exit pays a small network fee in ETH, so this may not be enough.`,
+  faucet: 'Get free Sepolia ETH',
+  tryAgain: 'Try again',
+  switchAndRetry: (network: string) => `Switch to ${network} and continue`,
+  addRpc: 'Add my own RPC',
+  editName: 'Edit the name',
+  noWallet: 'No browser wallet detected yet.',
+  serveCmd: (file: string) => `cd <the folder with ${file}>\npython3 -m http.server 8000\n# then open http://localhost:8000/${file}`,
 } as const;
+
+/** A public Sepolia faucet (a link only; the kit never contacts it). */
+export const FAUCET_URL = 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia';
+export const WALLET_LINKS = [
+  { name: 'MetaMask', href: 'https://metamask.io/download/' },
+  { name: 'Rabby', href: 'https://rabby.io/' },
+] as const;
 
 export const STEPS = [
   { n: 1, title: 'Verify', what: 'The kit reads the protocol’s ENS name: the official fingerprint of this kit and the list of exit contracts. Three independent providers must agree, or it stops.' },

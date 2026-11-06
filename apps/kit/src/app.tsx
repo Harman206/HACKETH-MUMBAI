@@ -8,7 +8,10 @@ import { Stepper } from './screens/Stepper';
 import { loadSettings, mergeUrlSettings, rpcUrlsFor, saveSettings, settingsFromUrl, type Settings } from './settings';
 import { connect, discoverWallets, ensureChain, senderFrom, type Eip1193 } from './wallet';
 import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
-import { COPY } from './copy';
+import { COPY, FAUCET_URL } from './copy';
+import { humanize } from './errors';
+import { ExitStatusLine, FixHelp } from './screens/Help';
+import type { ExitProgress } from '@blackout/exec';
 import { formatAmount, type TokenMeta } from './tokens';
 import { CheckScreen } from './screens/Check';
 import { ReleaseScreen } from './screens/Release';
@@ -112,6 +115,8 @@ export function App() {
   );
 }
 
+const envFor = (chainId: number) => ({ protocol: typeof location !== 'undefined' ? location.protocol : undefined, chainId });
+
 function ExitTab(props: { state: FlowState; settings: Settings; update(p: Partial<Settings>): void; flow: ReturnType<typeof createFlow> }) {
   const { state, settings, update, flow } = props;
   const stepper = <Stepper current={stepOf(state)} facts={state.step === 'positions' ? state.facts : undefined} />;
@@ -134,20 +139,60 @@ function ExitTab(props: { state: FlowState; settings: Settings; update(p: Partia
   return (
     <>
       {stepper}
-      {state.step === 'error' && (
-        <div class="card error" role="alert">
-          <b class="bad">Stopped.</b> {state.message}
-        </div>
-      )}
-      <Setup settings={settings} update={update} onStart={() => flow.start(settings)} />
+      {state.step === 'error' && <StoppedCard message={state.message} chainId={settings.targetChainId} onRetry={() => flow.start(settings)} />}
+      <Setup settings={settings} update={update} onStart={() => flow.start(settings)} walletHint={state.step !== 'error'} />
     </>
   );
 }
 
-function Setup(props: { settings: Settings; update(p: Partial<Settings>): void; onStart(): void }) {
+function StoppedCard({ message, chainId, onRetry }: { message: string; chainId: number; onRetry(): void }) {
+  const h = humanize(message, envFor(chainId));
+  return (
+    <div class="card error" role="alert" data-error>
+      <b class="bad">Stopped.</b> {h.text}
+      {h.text !== message && (
+        <details style="margin-top:6px">
+          <summary class="muted" style="font-size:13px">Technical detail</summary>
+          <pre>{message}</pre>
+        </details>
+      )}
+      {h.fix && (
+        <div style="margin-top:10px">
+          <FixHelp h={h} chainId={chainId} onRetry={onRetry} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Before connecting: say early if no wallet is visible, and why (file:// pages get no wallet). */
+function NoWalletHint({ chainId }: { chainId: number }) {
+  const [none, setNone] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void discoverWallets(600).then((ws) => live && setNone(ws.length === 0));
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!none) return null;
+  const h = humanize('No browser wallet found', envFor(chainId));
+  return (
+    <div class="card banner warn" role="status" data-no-wallet>
+      <b>{COPY.noWallet}</b> {h.text}
+      <div style="margin-top:10px">
+        <FixHelp h={h} chainId={chainId} />
+      </div>
+    </div>
+  );
+}
+
+function Setup(props: { settings: Settings; update(p: Partial<Settings>): void; onStart(): void; walletHint: boolean }) {
   const { settings, update } = props;
   const cid = String(settings.targetChainId);
   return (
+    <>
+    {props.walletHint && <NoWalletHint chainId={settings.targetChainId} />}
     <div class="card">
       <h2>1. Which protocol?</h2>
       <label for="ens">
@@ -176,6 +221,7 @@ function Setup(props: { settings: Settings; update(p: Partial<Settings>): void; 
         <button onClick={props.onStart}>Connect wallet and find my positions</button>
       </div>
     </div>
+    </>
   );
 }
 
@@ -185,6 +231,18 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
   return (
     <>
       {state.rollbackWarning && <div class="card banner warn" role="alert">{COPY.rollback}</div>}
+      {state.fees?.low && (
+        <div class="card banner warn" role="status" data-low-fees>
+          {COPY.lowFees(formatAmount(state.fees.balance, 18))}
+          {state.chainId === 11155111 && (
+            <div style="margin-top:10px">
+              <a class="btn" href={FAUCET_URL} target="_blank" rel="noreferrer noopener">
+                {COPY.faucet}
+              </a>
+            </div>
+          )}
+        </div>
+      )}
       <div class="card">
         <h2>{records.name}</h2>
         <p class="muted">
@@ -201,7 +259,7 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
           <h2 style="margin:0">2. Your positions on {CHAIN_NAMES[state.chainId] ?? `chain ${state.chainId}`}</h2>
           {state.positions.some((p) => !p.manual) && (
             <button class="secondary" disabled={!!state.busy} onClick={() => flow.exitAll()}>
-              {COPY.exitAll}
+              {state.batch ? COPY.exitingBatch(state.batch.done + 1, state.batch.total) : COPY.exitAll}
             </button>
           )}
         </div>
@@ -210,7 +268,16 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
         ))}
         {state.positions.length === 0 && <p class="muted" style="margin-top:12px">{COPY.noPositions}</p>}
         {state.positions.map((p) => (
-          <PositionRow p={p} result={state.results[p.id]} busy={state.busy} chainId={state.chainId} preview={state.previews[p.id] ?? []} meta={state.meta} onExit={() => flow.exit(p.id)} />
+          <PositionRow
+            p={p}
+            result={state.results[p.id]}
+            busy={state.busy}
+            progress={state.progress[p.id]}
+            chainId={state.chainId}
+            preview={state.previews[p.id] ?? []}
+            meta={state.meta}
+            onExit={() => flow.exit(p.id)}
+          />
         ))}
       </div>
       {anyResult && (
@@ -231,6 +298,7 @@ function PositionRow(props: {
   p: Position;
   result?: ExitResult;
   busy: string | null;
+  progress?: ExitProgress;
   chainId: number;
   preview: { token: `0x${string}`; amount: bigint }[];
   meta: TokenMeta;
@@ -262,7 +330,8 @@ function PositionRow(props: {
           </button>
         )}
       </div>
-      {result && (
+      {props.busy === p.id && <ExitStatusLine p={props.progress} chainId={props.chainId} />}
+      {result && props.busy !== p.id && (
         <div style="margin-top:6px" data-status={result.status} class={`result result-${result.status}`}>
           {label}
           {result.deltas.length > 0 && result.status === 'recovered' && (
@@ -279,9 +348,19 @@ function PositionRow(props: {
           ))}
           {result.reasons.length > 0 && (
             <ul class="reasons">
-              {result.reasons.map((r) => (
-                <li>{r}</li>
-              ))}
+              {result.reasons.map((r) => {
+                const h = humanize(r, envFor(props.chainId));
+                return (
+                  <li>
+                    {h.text}
+                    {h.fix === 'faucet' && (
+                      <div style="margin-top:6px">
+                        <FixHelp h={h} chainId={props.chainId} />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

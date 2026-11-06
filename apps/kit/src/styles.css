@@ -28,7 +28,7 @@ pre { white-space: pre-wrap; word-break: break-all; background: var(--bg); borde
 .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
 .banner { border-left: 4px solid var(--warn); }
 .error { border-left: 4px solid var(--bad); }
-nav { display: flex; gap: 8px; margin: 16px 0; }
+nav { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
 nav button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
 nav button[aria-pressed="false"] { background: transparent; color: var(--accent); }
 ul.reasons { margin: 6px 0 0; padding-left: 18px; }
@@ -45,7 +45,7 @@ ul.reasons { margin: 6px 0 0; padding-left: 18px; }
 .whats p { margin: 8px 0 0; color: var(--muted); }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 12px 0 0; font-size: 14px; }
 .facts dt { color: var(--muted); }
-.facts dd { margin: 0; }
+.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .big-status { font-size: 17px; display: flex; gap: 12px; align-items: center; }
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin 0.9s linear infinite; flex: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -58,3 +58,14 @@ ul.reasons { margin: 6px 0 0; padding-left: 18px; }
 .verdict-blocked { border-color: var(--bad); }
 .verdict-safe-exit { border-color: var(--ok); }
 .verdict-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+a.btn { display: inline-block; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 600; text-decoration: none; }
+a.btn.secondary { background: transparent; color: var(--accent); }
+.live { display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--accent); }
+.live .spinner { margin-top: 3px; }
+@media (max-width: 480px) {
+  main { padding: 16px 12px 48px; }
+  .card { padding: 12px; }
+  .facts { grid-template-columns: 1fr; gap: 0; }
+  .facts dt { margin-top: 6px; }
+  nav button { flex: 1 1 auto; }
+}
