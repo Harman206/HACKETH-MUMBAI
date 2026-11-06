@@ -1,0 +1,51 @@
+[
+  {
+    "check": "watcher key writes org.copeybara.release",
+    "tx": "0x10a4d6b76cf8304cc4e2fde65068e311e9e3608bf4be91aa0a5196b143f62cb7",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "watcher key writes org.copeybara.manifest",
+    "tx": "0xf64d3610ead0999e7a9a4e576b7a945c61373e163aec1f0747b146675a2c4de5",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "watcher key writes org.copeybara.site",
+    "tx": "0x385db3f4d11c834efe866a7c163d4d75c7109b49de46e9d9cb237ee00151fc31",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "watcher key writes url",
+    "tx": "0xd651815505a1350f63874d5b5048a7d2c45d41a77df19cf31f036f898835d522",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "watcher key grants itself the release setter",
+    "tx": "0xf1970cca43c26c999620d25842f69287f5100490e6c2dd3eb3d0189c37eddc4e",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "watcher key writes org.copeybara.status (ok)",
+    "tx": "0xeec256caf3180629d3f94e0ffb91d40edf1a4694909c302881f8b1f3ed10f2a4",
+    "status": "success",
+    "expected": "success",
+    "pass": true
+  },
+  {
+    "check": "watcher key writes org.copeybara.blocklist",
+    "tx": "0x0316b5c69024677191932907b7b3b4f870959f0a7aee79a8a7d034b92994728f",
+    "status": "success",
+    "expected": "success",
+    "pass": true
+  }
+]

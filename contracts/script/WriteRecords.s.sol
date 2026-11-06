@@ -8,7 +8,7 @@ import {IPermissionedResolver} from "../src/interfaces/IENSv2.sol";
 /// The Safe (2-of-3) writes org.copeybara.* records. Every env var is optional; only the ones set are written.
 ///   RELEASE="sha256:<hex>;v=<n>"      → org.copeybara.release   (kit)
 ///   MANIFEST_FILE=path                → org.copeybara.manifest  (full exit list)
-///   SITE="v=2;sha256=<h>,…"           → org.copeybara.site      (tools/site/fingerprint.ts)
+///   SITE="v=2;sha256=<h>,…"           → org.copeybara.site      (apps/watcher/src/fingerprint.ts)
 ///   EXTENSION_RELEASE="sha256:…;v=<n>"→ org.copeybara.extension (extension zip)
 ///   STATUS="v=1;state=…"              → org.copeybara.status
 ///   BLOCKLIST='{"v":1,"domains":[…]}' → org.copeybara.blocklist

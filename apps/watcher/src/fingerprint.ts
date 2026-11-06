@@ -1,6 +1,6 @@
 /**
  * Print the org.copeybara.site record for a running site: every script it loads, hashed.
- *   pnpm tsx tools/site/fingerprint.ts http://demoswap.localhost:8080/
+ *   pnpm --filter @copeybara/watcher exec tsx src/fingerprint.ts http://demoswap.localhost:8080/
  * Publish the printed value with the Safe (contracts/script/WriteRecords.s.sol, SITE=…).
  */
 import { formatSiteRecord } from '@copeybara/core';

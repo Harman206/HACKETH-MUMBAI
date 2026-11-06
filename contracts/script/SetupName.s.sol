@@ -34,7 +34,7 @@ contract SetupName is CopeybaraSetup {
         owners[1] = vm.addr(vm.envUint("OWNER_KEY_2"));
         owners[2] = vm.addr(vm.envUint("OWNER_KEY_3"));
 
-        // SITE (optional): org.copeybara.site, the allowed-script fingerprint (tools/site/fingerprint.ts).
+        // SITE (optional): org.copeybara.site, the allowed-script fingerprint (apps/watcher/src/fingerprint.ts).
         string memory site = vm.envOr("SITE", string(""));
         uint256 n = bytes(site).length > 0 ? 4 : 3;
         string[] memory keys = new string[](n);

@@ -1,0 +1,44 @@
+[
+  {
+    "check": "web key writes org.copeybara.release",
+    "tx": "0x69f34dad6e5cff70259442bccf694732c09ede9c4159596cdd9bbc1e236af3a6",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key swaps resolver on registry",
+    "tx": "0x749d4e77240d54eaf58ba4f9d48c66965dffffb599c7c8cb7c634a38f91f6fbd",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key upgrades resolver proxy",
+    "tx": "0x9ec48c05ba21033c657de80efa619cb1738b712351d4a591e43c0b5c48fea958",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key grants itself the release setter",
+    "tx": "0x4cb0d46842ecc280c224b1e693984a93518da3cda7257bbe49a5bf98e46d9a56",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key grants itself root text role",
+    "tx": "0x44bc660186d23e3e686822b1048ba6c786372e610dc89782c5bd8cfd5221d114",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key writes url",
+    "tx": "0x72305d7d6cba34d93d032485024c01cf4dcea60ae1a92714bccd7438f2ff428c",
+    "status": "success",
+    "expected": "success",
+    "pass": true
+  }
+]
