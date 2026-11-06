@@ -29,7 +29,7 @@ contract R1Test is ReplayBase {
         assertEq(lost, vm.parseJsonUint(fx, ".lossObserved.amount"));
     }
 
-    /// Counterfactual: the victim used BLACKOUT, whose Guard never produces an approval. Same drain tx: nothing moves.
+    /// Counterfactual: the victim used Copeybara, whose Guard never produces an approval. Same drain tx: nothing moves.
     function test_counterfactual_noApproval_drainMovesNothing() public {
         uint256 before = usdc.balanceOf(victim);
         assertEq(usdc.allowance(victim, drainer), 0, "no allowance before the approve");

@@ -9,7 +9,7 @@ interface IEToken {
     function withdraw(uint256 subAccountId, uint256 amount) external;
 }
 
-/// C1 — CONTROL, out of scope: Euler 2023 smart-contract exploit. BLACKOUT cannot stop this.
+/// C1 — CONTROL, out of scope: Euler 2023 smart-contract exploit. Copeybara cannot stop this.
 /// It shows only why time-to-exit matters: a supplier who exited before the exploit block keeps funds.
 /// [mainnet fork] [impersonated account] [counterfactual]
 contract C1Test is ReplayBase {

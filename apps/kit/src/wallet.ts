@@ -1,6 +1,6 @@
 import { toHex } from 'viem';
-import type { Address, Hex, TxRequest } from '@blackout/core';
-import type { Sender } from '@blackout/exec';
+import type { Address, Hex, TxRequest } from '@copeybara/core';
+import type { Sender } from '@copeybara/exec';
 import { CHAIN_NAMES, DEFAULT_RPCS } from './config';
 
 const chainName = (id: number) => CHAIN_NAMES[id] ?? `chain ${id}`;

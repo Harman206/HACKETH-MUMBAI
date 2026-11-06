@@ -1,7 +1,7 @@
 import { encodeFunctionData, parseAbi, type Abi } from 'viem';
-import { SIGS, type TxRequest, type Hex, type Address } from '@blackout/core';
+import { SIGS, type TxRequest, type Hex, type Address } from '@copeybara/core';
 import { approveData, ATTACKER, aaveWithdrawData, collectData, curveRemoveData, decreaseData, multicallData, USER, v4 } from './helpers';
-import { V4_ACTIONS as A } from '@blackout/core';
+import { V4_ACTIONS as A } from '@copeybara/core';
 import { AAVE_POOL, CURVE_POOL, NPM_MAINNET, POSM_MAINNET, STATEVIEW_MAINNET, tx } from './manifest-fixture';
 import { INCIDENT_CORPUS } from './incidents';
 

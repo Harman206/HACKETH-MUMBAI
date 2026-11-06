@@ -1,5 +1,5 @@
 import { encodeFunctionData } from 'viem';
-import { curve3poolAbi, erc20Abi, type Address, type ExitPlan } from '@blackout/core';
+import { curve3poolAbi, erc20Abi, type Address, type ExitPlan } from '@copeybara/core';
 import { applySlippage, target, type Ctx, type ExitAdapter } from './types';
 
 export interface CurveRaw {

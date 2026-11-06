@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { encodeAbiParameters, encodeFunctionData, maxUint128, maxUint160, maxUint256, parseAbi, parseAbiParameters, parseEther, toHex, type Address, type Hex } from 'viem';
-import { erc20Abi, V4_ACTIONS, v4PosmAbi, v4StateViewAbi, type TxRequest } from '@blackout/core';
-import { guard } from '@blackout/guard';
-import { createQuorum } from '@blackout/quorum';
-import { ANVIL_ACCOUNTS, repoManifest, setErc20Balance, startFork, type Fork } from '@blackout/testkit';
-import { poolIdOf, uniswapV4, type Ctx, type PoolKey } from '@blackout/adapters';
+import { erc20Abi, V4_ACTIONS, v4PosmAbi, v4StateViewAbi, type TxRequest } from '@copeybara/core';
+import { guard } from '@copeybara/guard';
+import { createQuorum } from '@copeybara/quorum';
+import { ANVIL_ACCOUNTS, repoManifest, setErc20Balance, startFork, type Fork } from '@copeybara/testkit';
+import { poolIdOf, uniswapV4, type Ctx, type PoolKey } from '@copeybara/adapters';
 import { runExit } from '../src';
 
 /**

@@ -27,18 +27,18 @@ test('strict CSP meta with self-only scripts', () => {
 });
 
 test('ships the exact kit and its sha256 next to the site', () => {
-  const kit = readFileSync(join(SITE, '..', 'kit', 'dist', 'blackout-kit.html'));
-  expect(readFileSync(join(SITE, 'dist', 'blackout-kit.html')).equals(kit)).toBe(true);
-  expect(readFileSync(join(SITE, 'dist', 'blackout-kit.html.sha256'), 'utf8')).toMatch(/^[0-9a-f]{64}  blackout-kit.html\n$/);
+  const kit = readFileSync(join(SITE, '..', 'kit', 'dist', 'copeybara-kit.html'));
+  expect(readFileSync(join(SITE, 'dist', 'copeybara-kit.html')).equals(kit)).toBe(true);
+  expect(readFileSync(join(SITE, 'dist', 'copeybara-kit.html.sha256'), 'utf8')).toMatch(/^[0-9a-f]{64}  copeybara-kit.html\n$/);
 });
 
 test('service worker: precaches the page and the exact kit; CSP allows only a same-origin worker', () => {
   const sw = readFileSync(join(SITE, 'dist', 'sw.js'), 'utf8');
   const list = JSON.parse(sw.match(/const PRECACHE = (\[.*?\]);/s)![1]!) as string[];
-  expect(list).toEqual(expect.arrayContaining(['./', 'blackout-kit.html', 'blackout-kit.html.sha256']));
+  expect(list).toEqual(expect.arrayContaining(['./', 'copeybara-kit.html', 'copeybara-kit.html.sha256']));
   expect(list.some((f) => f.startsWith('assets/') && f.endsWith('.js'))).toBe(true);
   expect(list).not.toContain('sw.js');
-  expect(sw).toMatch(/const CACHE = 'blackout-[0-9a-f]{12}';/);
+  expect(sw).toMatch(/const CACHE = 'copeybara-[0-9a-f]{12}';/);
   expect(html).toMatch(/worker-src 'self'/);
 });
 

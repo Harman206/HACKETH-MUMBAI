@@ -17,7 +17,7 @@ import {
   type Chain,
 } from 'viem';
 import { mainnet, sepolia } from 'viem/chains';
-import { parseManifest, type Manifest } from '@blackout/core';
+import { parseManifest, type Manifest } from '@copeybara/core';
 
 export const ANVIL_ACCOUNTS: Address[] = [
   '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',

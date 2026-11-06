@@ -1,5 +1,5 @@
 import { encodeAbiParameters, keccak256, parseAbiParameters, type Hex } from 'viem';
-import type { Address } from '@blackout/core';
+import type { Address } from '@copeybara/core';
 
 /**
  * Uniswap v4 math, ported to bigint from v4-core (TickMath.getSqrtPriceAtTick, SqrtPriceMath.getAmount{0,1}Delta,

@@ -14,7 +14,7 @@ import {
 import {SafeExec} from "./SafeExec.sol";
 
 /// Shared setup steps used by both the live scripts and the fork tests.
-abstract contract BlackoutSetup is Script {
+abstract contract CopeybaraSetup is Script {
     struct Cfg {
         address factory;
         address resolverImpl;
@@ -105,6 +105,19 @@ abstract contract BlackoutSetup is Script {
         bytes memory setter = abi.encodeCall(IPermissionedResolver.setText, (ENSName.dnsEncodeEth(label), "url", ""));
         bytes memory call_ = abi.encodeCall(IPermissionedResolver.grantSetterRoles, (setter, webKey));
         require(SafeExec.exec(safe, address(resolver), call_, keys), "grant failed");
+    }
+
+    /// Safe grants the watcher key ROLE_SET_TEXT on org.copeybara.status and org.copeybara.blocklist only:
+    /// it can raise or clear a warning, never touch the release, manifest, site fingerprint or url.
+    function grantWatcherRoles(ISafe safe, IPermissionedResolver resolver, string memory label, address watcher, uint256[] memory keys)
+        internal
+    {
+        string[2] memory ks = ["org.copeybara.status", "org.copeybara.blocklist"];
+        for (uint256 i; i < 2; ++i) {
+            bytes memory setter = abi.encodeCall(IPermissionedResolver.setText, (ENSName.dnsEncodeEth(label), ks[i], ""));
+            bytes memory call_ = abi.encodeCall(IPermissionedResolver.grantSetterRoles, (setter, watcher));
+            require(SafeExec.exec(safe, address(resolver), call_, keys), "watcher grant failed");
+        }
     }
 
     function safeSetText(ISafe safe, IPermissionedResolver resolver, string memory label, string memory key, string memory value, uint256[] memory keys)

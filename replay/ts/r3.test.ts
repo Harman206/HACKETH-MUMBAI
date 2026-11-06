@@ -2,8 +2,8 @@ import { describe, expect, test } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { encodeFunctionData, maxUint128, maxUint256, parseAbi, type Address } from 'viem';
-import { npmAbi } from '@blackout/core';
-import { explain, guard } from '@blackout/guard';
+import { npmAbi } from '@copeybara/core';
+import { explain, guard } from '@copeybara/guard';
 import { fixtureManifest } from './exits-at-block';
 
 /**
@@ -47,7 +47,7 @@ describe('R3 synthetic third-party-script attack', () => {
     expect(explain(r).length).toBeGreaterThan(0);
   });
 
-  const kit = join(__dirname, '..', '..', 'apps', 'kit', 'dist', 'blackout-kit.html');
+  const kit = join(__dirname, '..', '..', 'apps', 'kit', 'dist', 'copeybara-kit.html');
   test.skipIf(!existsSync(kit))('the kit itself loads no third-party script (single inline script, CSP-pinned)', () => {
     const html = readFileSync(kit, 'utf8');
     expect(html.match(/<script\b/g)).toHaveLength(1);

@@ -8,14 +8,14 @@ export const SITE_URL = site.url;
 
 export const ENS_NAME = (deployment as { name: string }).name;
 /** Opens the hosted kit with the demo name filled in. The kit shows a "came from a link: confirm it" banner. */
-export const DEMO_KIT_URL = `blackout-kit.html?ens=${encodeURIComponent(ENS_NAME)}`;
+export const DEMO_KIT_URL = `copeybara-kit.html?ens=${encodeURIComponent(ENS_NAME)}`;
 export const PERMISSIONS = permissions as { check: string; tx: string; status: string; expected: string; pass: boolean }[];
 export const SAFE = (deployment as { safe: string }).safe;
 export const RESOLVER = (deployment as { resolver: string }).resolver;
 
 export const HERO = {
   title: 'If a DeFi website dies or gets hijacked, you can still get your money out.',
-  sub: 'BLACKOUT is a saved, verifiable exit for your DeFi positions. It talks to the protocol’s contracts directly. No website, no company server, and a built-in checklist that refuses to sign anything that pays someone else.',
+  sub: 'Copeybara is a saved, verifiable exit for your DeFi positions. It talks to the protocol’s contracts directly. No website, no company server, and a built-in checklist that refuses to sign anything that pays someone else.',
 };
 
 export interface Incident { name: string; date: string; what: string; loss: string; source?: string; unverified?: boolean }
@@ -35,13 +35,13 @@ export const REPLAY_R1 = {
   approveTx: '0xec72bb412a3e56519af8cf96f7de56edb80de53c1d1b656d2e5d5d8ce2477f69',
   drainTx: '0x361bfdbd76290ead53b29a78c3e6f4633e6eb11459437f3c3955f59abfae1e6a',
   labels: ['mainnet fork', 'counterfactual'],
-  body: 'The victim signed one approval on the fake site; one block later the drainer took 400,227.23 USDC. BLACKOUT’s checklist rejects that exact approval, and with no approval the same drain transaction moves nothing.',
+  body: 'The victim signed one approval on the fake site; one block later the drainer took 400,227.23 USDC. Copeybara’s checklist rejects that exact approval, and with no approval the same drain transaction moves nothing.',
 };
 
 export const HOW = [
   {
     title: 'Your own remote control',
-    body: 'Your money lives in the protocol’s smart contracts, not on its website. The website is just a remote control. BLACKOUT is a second remote control, one HTML file you keep, that talks to the contracts directly.',
+    body: 'Your money lives in the protocol’s smart contracts, not on its website. The website is just a remote control. Copeybara is a second remote control, one HTML file you keep, that talks to the contracts directly.',
   },
   {
     title: 'A fingerprint on ENS proves the file is real',
@@ -53,7 +53,7 @@ export const HOW = [
   },
   {
     title: 'Several servers must agree',
-    body: 'Your browser learns blockchain facts from servers. One could lie or be down, so BLACKOUT asks three: at least two must answer, and if any that answer disagree, it stops instead of guessing.',
+    body: 'Your browser learns blockchain facts from servers. One could lie or be down, so Copeybara asks three: at least two must answer, and if any that answer disagree, it stops instead of guessing.',
   },
 ] as const;
 
@@ -68,6 +68,6 @@ export const LIMITS = [
 
 export const PROTOCOL_STEPS = [
   { title: 'Register one ENS name', body: 'Owned by your 2-of-3 Safe, with its own Permissioned Resolver.' },
-  { title: 'Publish two records', body: '`org.blackout.release` = the kit’s sha256 and version; `org.blackout.manifest` = your exit contracts per chain.' },
+  { title: 'Publish two records', body: '`org.copeybara.release` = the kit’s sha256 and version; `org.copeybara.manifest` = your exit contracts per chain.' },
   { title: 'Give your web team only `url`', body: 'An argument-scoped role: a stolen website key can edit the website link and nothing else.' },
 ];

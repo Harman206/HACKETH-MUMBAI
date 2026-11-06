@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from 'vitest';
 import { decodeFunctionData, encodeFunctionData, encodeFunctionResult, maxUint128, type Hex } from 'viem';
-import { erc20Abi, EXIT_SELECTORS, npmAbi, type Address, type ExitPlan, type Manifest, type TxRequest } from '@blackout/core';
-import { CallRevertedError, QuorumError, type Quorum, type Receipt } from '@blackout/quorum';
-import type { Ctx } from '@blackout/adapters';
+import { erc20Abi, EXIT_SELECTORS, npmAbi, type Address, type ExitPlan, type Manifest, type TxRequest } from '@copeybara/core';
+import { CallRevertedError, QuorumError, type Quorum, type Receipt } from '@copeybara/quorum';
+import type { Ctx } from '@copeybara/adapters';
 import { buildReport, reportToHtml, reportToJson, runExit, tallyVerdicts, type ExitProgress, type Sender } from '../src';
 
 const USER: Address = '0x1111111111111111111111111111111111111111';

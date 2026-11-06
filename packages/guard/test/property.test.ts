@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import fc from 'fast-check';
 import { encodeFunctionData, getAddress, maxUint128, type Hex } from 'viem';
-import { BANNED_SELECTORS, npmAbi, SEL, type Address, type TxRequest } from '@blackout/core';
+import { BANNED_SELECTORS, npmAbi, SEL, type Address, type TxRequest } from '@copeybara/core';
 import { guard } from '../src';
 import { aaveWithdrawData, approveData, curveRemoveData, multicallData, USER, v4 } from './helpers';
-import { V4_ACTIONS } from '@blackout/core';
+import { V4_ACTIONS } from '@copeybara/core';
 import { AAVE_POOL, CURVE_POOL, ctx1, NPM_MAINNET, POSM_MAINNET, tx } from './manifest-fixture';
 
 const RUNS = 10_000;

@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { createPublicClient, createWalletClient, http, type Address, type Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
-import { createQuorum } from '@blackout/quorum';
+import { createQuorum } from '@copeybara/quorum';
 import { startHarness } from '../../../harness/services/control';
 import { createDrainerBot } from '../../../harness/services/drainer-bot';
 import { loadEnv, makePrepareVictim, makeReadVictim, makeSender, transportFor } from '../../../harness/services/chain';
@@ -38,7 +38,7 @@ const victimWallet = createWalletClient({ chain: sepolia, account: victim, trans
 log(`throwaway victim ${victim.address}`);
 
 // --- harness against real Sepolia ---
-const kitFile = join(REPO, 'apps', 'kit', 'dist', 'blackout-kit.html');
+const kitFile = join(REPO, 'apps', 'kit', 'dist', 'copeybara-kit.html');
 const q = createQuorum({ urls: PUBLIC, expectedChainId: 11155111 });
 const bot = createDrainerBot({ q, send: makeSender(RPC, env.ATTACKER_KEY as Hex), drainer: attack.drainer, tokens: [attack.DUSD], fromBlock: (await q.pinBlock()) - 2n, pollMs: 2000 });
 bot.start();
@@ -126,7 +126,7 @@ await ctx.addInitScript({
   })();`,
 });
 await ctx.addInitScript({
-  content: `localStorage.setItem('blackout.settings.v1', ${JSON.stringify(JSON.stringify({ ensName: 'demoswap-blackout.eth', targetChainId: 11155111, userRpcs: { '11155111': [`http://localhost:${ports.rpc}`] }, slippageBps: 50, useDefaultRpcs: true, drillUrl: '' }))});`,
+  content: `localStorage.setItem('copeybara.settings.v1', ${JSON.stringify(JSON.stringify({ ensName: 'demoswap-blackout.eth', targetChainId: 11155111, userRpcs: { '11155111': [`http://localhost:${ports.rpc}`] }, slippageBps: 50, useDefaultRpcs: true, drillUrl: '' }))});`,
 });
 
 ctx.on('page', (p) => p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') log(`  console[${new URL(p.url() || 'about:blank').host}] ${m.text().slice(0, 200)}`); }));

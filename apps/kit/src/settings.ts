@@ -15,7 +15,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = { ensName: '', targetChainId: 11155111, userRpcs: {}, slippageBps: 50, useDefaultRpcs: true, drillUrl: '' };
 
-const KEY = 'blackout.settings.v1';
+const KEY = 'copeybara.settings.v1';
 const isRpcUrl = (u: unknown): u is string => typeof u === 'string' && /^(https:\/\/|wss:\/\/|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$))/.test(u);
 
 export function loadSettings(): Settings {

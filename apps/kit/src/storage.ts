@@ -15,7 +15,7 @@ export function safeSet(key: string, value: string): void {
   }
 }
 
-const VKEY = (name: string) => `blackout.maxSeenRelease.${name}`;
+const VKEY = (name: string) => `copeybara.maxSeenRelease.${name}`;
 
 /** Highest release version this browser has seen for `name` (0 if none). Used to warn on rollback. */
 export function maxSeenVersion(name: string): number {

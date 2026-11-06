@@ -1,4 +1,4 @@
-import { BANNED_SELECTORS, type Address, type Hex, type Manifest, type TargetEntry, type TxRequest } from '@blackout/core';
+import { BANNED_SELECTORS, type Address, type Hex, type Manifest, type TargetEntry, type TxRequest } from '@copeybara/core';
 import { decodeCall, DecodeError, type Decoded } from './decode';
 
 export interface GuardCtx {
@@ -40,7 +40,7 @@ function findTarget(m: Manifest, chainId: number, to: Address): TargetEntry | un
 
 /**
  * Static policy check. Rejects anything that is not a known exit paying the connected account.
- * Fails closed on anything it cannot decode. Simulation and receipt checks live in @blackout/exec.
+ * Fails closed on anything it cannot decode. Simulation and receipt checks live in @copeybara/exec.
  */
 export function guard(tx: TxRequest, ctx: GuardCtx): GuardResult {
   const reasons: GuardReason[] = [];

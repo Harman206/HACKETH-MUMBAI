@@ -31,5 +31,5 @@ describe('site content', () => {
 });
 
 test('the demo link pre-fills the demo ENS name (the kit then asks the user to confirm it)', () => {
-  expect(DEMO_KIT_URL).toBe('blackout-kit.html?ens=demoswap-blackout.eth');
+  expect(DEMO_KIT_URL).toBe('copeybara-kit.html?ens=demoswap-blackout.eth');
 });

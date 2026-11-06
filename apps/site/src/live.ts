@@ -1,4 +1,4 @@
-import type { BlackoutRecords } from '@blackout/ens';
+import type { CopeybaraRecords } from '@copeybara/ens';
 import { PERMISSIONS } from './content';
 
 export interface DemoRun {
@@ -23,7 +23,7 @@ export interface LiveProof {
 const CHAIN: Record<string, string> = { '1': 'Ethereum mainnet', '11155111': 'Sepolia' };
 
 /** Public mode: everything here is read live from chain or committed evidence; nothing is mocked. */
-export async function readLiveProof(deps: { readRecords: () => Promise<BlackoutRecords>; fetchRun: () => Promise<DemoRun> }): Promise<LiveProof> {
+export async function readLiveProof(deps: { readRecords: () => Promise<CopeybaraRecords>; fetchRun: () => Promise<DemoRun> }): Promise<LiveProof> {
   const lastRun = await deps.fetchRun().catch(() => null);
   try {
     const r = await deps.readRecords();

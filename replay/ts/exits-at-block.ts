@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseAbi, type Address, type Hex } from 'viem';
-import { ADAPTERS, type Ctx } from '@blackout/adapters';
-import { erc20Abi, parseManifest, type Manifest } from '@blackout/core';
-import { runExit, type ExitResult, type Sender } from '@blackout/exec';
-import { createQuorum } from '@blackout/quorum';
-import type { Fork } from '@blackout/testkit';
+import { ADAPTERS, type Ctx } from '@copeybara/adapters';
+import { erc20Abi, parseManifest, type Manifest } from '@copeybara/core';
+import { runExit, type ExitResult, type Sender } from '@copeybara/exec';
+import { createQuorum } from '@copeybara/quorum';
+import type { Fork } from '@copeybara/testkit';
 import type { Fixture } from '../fixtures/schema';
 
 const REPO = join(__dirname, '..', '..');

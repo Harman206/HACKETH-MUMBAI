@@ -18,7 +18,7 @@ test('website public mode: explains, reads ENS live, zero third-party requests',
   page.on('request', (r) => { if (/^https?:/.test(r.url())) origins.add(new URL(r.url()).origin); });
   await page.goto(url);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('you can still get your money out');
-  for (const h of ['The contracts were fine. The websites were not.', 'How BLACKOUT works', 'Live demo', 'Download and verify', 'For protocol teams']) {
+  for (const h of ['The contracts were fine. The websites were not.', 'How Copeybara works', 'Live demo', 'Download and verify', 'For protocol teams']) {
     await expect(page.getByRole('heading', { name: h })).toBeVisible();
   }
   await expect(page.getByText('400,227.23 USDC').first()).toBeVisible();
@@ -70,17 +70,17 @@ test('after one visit, the site and the hosted kit keep opening when the website
   const url = `http://localhost:${(server.address() as { port: number }).port}/`;
 
   await page.goto(url);
-  await expect(page.getByRole('link', { name: 'Try the kit on the demo protocol' }).first()).toHaveAttribute('href', 'blackout-kit.html?ens=demoswap-blackout.eth');
+  await expect(page.getByRole('link', { name: 'Try the kit on the demo protocol' }).first()).toHaveAttribute('href', 'copeybara-kit.html?ens=demoswap-blackout.eth');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
   await expect(page.locator('[data-offline-ready]')).toBeVisible();
 
   server.closeAllConnections();
   await new Promise((r) => server.close(r));
 
-  await page.goto(`${url}blackout-kit.html?ens=demoswap-blackout.eth`);
-  await expect(page.getByRole('heading', { name: 'BLACKOUT exit kit' })).toBeVisible();
-  const served: string = await page.evaluate(() => fetch('blackout-kit.html').then((r) => r.text()));
-  const want = readFileSync(join(SITE_DIST, 'blackout-kit.html.sha256'), 'utf8').split(' ')[0];
+  await page.goto(`${url}copeybara-kit.html?ens=demoswap-blackout.eth`);
+  await expect(page.getByRole('heading', { name: 'Copeybara exit kit' })).toBeVisible();
+  const served: string = await page.evaluate(() => fetch('copeybara-kit.html').then((r) => r.text()));
+  const want = readFileSync(join(SITE_DIST, 'copeybara-kit.html.sha256'), 'utf8').split(' ')[0];
   expect(createHash('sha256').update(served).digest('hex'), 'offline copy is byte-identical to the verified kit').toBe(want);
   await page.goto(url);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('you can still get your money out');

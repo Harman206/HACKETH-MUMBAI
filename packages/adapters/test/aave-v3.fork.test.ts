@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { maxUint256, parseAbi, parseEther, type Address } from 'viem';
-import { erc20Abi, SEL } from '@blackout/core';
-import { guard } from '@blackout/guard';
-import { createQuorum } from '@blackout/quorum';
-import { ANVIL_ACCOUNTS, repoManifest, setErc20Balance, startFork, type Fork } from '@blackout/testkit';
+import { erc20Abi, SEL } from '@copeybara/core';
+import { guard } from '@copeybara/guard';
+import { createQuorum } from '@copeybara/quorum';
+import { ANVIL_ACCOUNTS, repoManifest, setErc20Balance, startFork, type Fork } from '@copeybara/testkit';
 import { aaveV3, type Ctx } from '../src';
 
 const POOL: Address = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2';

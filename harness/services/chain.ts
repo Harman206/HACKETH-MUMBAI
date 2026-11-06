@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createPublicClient, createWalletClient, defineChain, fallback, http, nonceManager, parseAbi, parseEther, formatUnits, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { erc20Abi, npmAbi } from '@blackout/core';
-import type { Quorum } from '@blackout/quorum';
+import { erc20Abi, npmAbi } from '@copeybara/core';
+import type { Quorum } from '@copeybara/quorum';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const NPM: Address = '0x1238536071E1c677A632429e3655c799b22cDA52';

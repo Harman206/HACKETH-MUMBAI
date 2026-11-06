@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import type { Quorum } from '@blackout/quorum';
+import type { Quorum } from '@copeybara/quorum';
 import { formatAmount, tokenMeta } from '../src/tokens';
 
 const A = '0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA' as const;

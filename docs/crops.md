@@ -13,7 +13,7 @@
 
 ## P: privacy
 
-- No BLACKOUT server, no analytics, no telemetry, in either the kit or the hosted page.
+- No Copeybara server, no analytics, no telemetry, in either the kit or the hosted page.
 - What each third party learns: the RPC providers you use see `eth_call` reads for your address and the contracts you hold positions in. The wallet's RPC sees the transaction you send. Nobody else is contacted (Playwright: 0 third-party origins).
 - **Anon-RPC: evaluated, not shipped in the kit.** We checked the docs at https://ethereum.github.io/anon-rpc/ (spec v0.4.0, Draft) on 2026-11-06:
   - It is not an RPC URL. It is a browser library (`@anon-rpc/browser-harness`) that runs a network "worker" in a null-origin sandbox iframe. The worker is chosen by an on-chain specifier contract that pins its code hash. Its transports are Tor (WebAssembly, through gateways), the Nym mixnet (an ~18 MB bundle) and WebRTC.

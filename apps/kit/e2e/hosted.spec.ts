@@ -22,9 +22,9 @@ test('hosted page: download + fingerprint, and the kit reads live release record
   try {
     await page.goto(`${url}/`);
     await expect(page.getByText(s.kitSha256)).toBeVisible();
-    await expect(page.getByRole('link', { name: 'blackout-kit.html' })).toHaveAttribute('href', 'blackout-kit.html');
+    await expect(page.getByRole('link', { name: 'copeybara-kit.html' })).toHaveAttribute('href', 'copeybara-kit.html');
     await presetSettings(page, s);
-    await page.goto(`${url}/blackout-kit.html`);
+    await page.goto(`${url}/copeybara-kit.html`);
     await page.getByRole('button', { name: 'Release & exits' }).click();
     await page.getByRole('button', { name: 'Read records' }).click();
     await expect(page.locator('[data-release]')).toHaveAttribute('data-release', '2', { timeout: 30_000 });

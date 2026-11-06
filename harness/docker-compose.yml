@@ -7,7 +7,7 @@ x-svc: &svc
   environment: &env
     PRIMARY_RPC: ${PRIMARY_RPC:-https://ethereum-sepolia-rpc.publicnode.com}
     ENS_NAME: ${ENS_NAME:-demoswap-blackout.eth}
-    KIT_FILE: /repo/apps/kit/dist/blackout-kit.html
+    KIT_FILE: /repo/apps/kit/dist/copeybara-kit.html
     HIJACK_TOKEN: ${HIJACK_TOKEN:-0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8}
     BIND_HOST: 0.0.0.0
 

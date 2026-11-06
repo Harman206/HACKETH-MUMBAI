@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import { decodeFunctionData, encodeAbiParameters, pad, parseAbi, type Address, type Hex } from 'viem';
-import type { Quorum, RpcLog } from '@blackout/quorum';
+import type { Quorum, RpcLog } from '@copeybara/quorum';
 import { APPROVAL_TOPIC, createDrainerBot } from '../services/drainer-bot';
 
 const DRAINER: Address = '0x00000000000000000000000000000000000d7a1e';

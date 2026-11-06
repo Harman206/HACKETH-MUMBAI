@@ -1,5 +1,5 @@
 import { decodeFunctionResult, encodeFunctionData, maxUint128, type Hex } from 'viem';
-import { npmAbi, type Address, type ExitPlan, type Position, type TxRequest } from '@blackout/core';
+import { npmAbi, type Address, type ExitPlan, type Position, type TxRequest } from '@copeybara/core';
 import { applySlippage, target, type Ctx, type ExitAdapter } from './types';
 import { symbolOf } from './symbols';
 

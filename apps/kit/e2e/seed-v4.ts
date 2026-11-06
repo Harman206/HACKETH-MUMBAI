@@ -1,7 +1,7 @@
 import { encodeAbiParameters, encodeFunctionData, maxUint128, maxUint160, maxUint256, parseAbi, parseAbiParameters, toHex, type Address, type Hex } from 'viem';
-import { V4_ACTIONS, v4PosmAbi, v4StateViewAbi } from '@blackout/core';
-import { poolIdOf, type PoolKey } from '@blackout/adapters';
-import type { Fork } from '@blackout/testkit';
+import { V4_ACTIONS, v4PosmAbi, v4StateViewAbi } from '@copeybara/core';
+import { poolIdOf, type PoolKey } from '@copeybara/adapters';
+import type { Fork } from '@copeybara/testkit';
 
 /** Uniswap v4 on Sepolia (also present on a Sepolia fork). */
 const POSM: Address = '0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4';

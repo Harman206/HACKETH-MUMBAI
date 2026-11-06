@@ -1,4 +1,4 @@
-import { erc20Abi, type Address } from '@blackout/core';
+import { erc20Abi, type Address } from '@copeybara/core';
 import type { Ctx } from './types';
 
 const short = (a: Address) => `${a.slice(0, 6)}…${a.slice(-4)}`;

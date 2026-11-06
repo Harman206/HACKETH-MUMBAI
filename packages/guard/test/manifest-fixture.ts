@@ -1,4 +1,4 @@
-import { EXIT_SELECTORS, type Address, type Manifest, type TxRequest, type Hex } from '@blackout/core';
+import { EXIT_SELECTORS, type Address, type Manifest, type TxRequest, type Hex } from '@copeybara/core';
 import { USER } from './helpers';
 
 export const NPM_SEPOLIA: Address = '0x1238536071E1c677A632429e3655c799b22cDA52';

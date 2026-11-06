@@ -1,6 +1,6 @@
 /** Every user-facing string in the kit. Plain language; no jargon in primary text. */
 export const COPY = {
-  title: 'BLACKOUT exit kit',
+  title: 'Copeybara exit kit',
   tagline: "Withdraw straight from the protocol's contracts, even when its website is down or hijacked.",
   needName: "Enter the protocol's ENS name. Get it from the protocol's docs or where you deposited, never from this file.",
   nameHint: "From the protocol's docs, never from this file",

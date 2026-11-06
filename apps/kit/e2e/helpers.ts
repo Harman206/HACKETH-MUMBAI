@@ -53,7 +53,7 @@ export async function installTestWallet(page: Page | import('@playwright/test').
 
 export async function presetSettings(page: Page | import('@playwright/test').BrowserContext, s: E2EState, over: Record<string, unknown> = {}) {
   await page.addInitScript(
-    (settings) => localStorage.setItem('blackout.settings.v1', JSON.stringify(settings)),
+    (settings) => localStorage.setItem('copeybara.settings.v1', JSON.stringify(settings)),
     { ensName: s.ensName, targetChainId: 11155111, userRpcs: { '11155111': s.rpcs }, slippageBps: 50, useDefaultRpcs: false, drillUrl: '', ...over },
   );
 }

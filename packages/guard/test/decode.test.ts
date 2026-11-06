@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { SEL } from '@blackout/core';
+import { SEL } from '@copeybara/core';
 import { decodeCall, DecodeError } from '../src/decode';
 import { approveData, ATTACKER, aaveWithdrawData, collectData, curveRemoveData, decreaseData, multicallData, USER } from './helpers';
 

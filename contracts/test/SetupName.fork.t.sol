@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {BlackoutSetup} from "../script/lib/BlackoutSetup.sol";
+import {CopeybaraSetup} from "../script/lib/CopeybaraSetup.sol";
 import {ISafe} from "../src/interfaces/ISafe.sol";
 import {
     IPermissionedRegistry,
@@ -13,7 +13,7 @@ import {
 } from "../src/interfaces/IENSv2.sol";
 
 /// Shared fixture: a fresh 2-of-3 Safe owning a fresh name with a scoped web key.
-abstract contract BlackoutForkFixture is Test, BlackoutSetup {
+abstract contract CopeybaraForkFixture is Test, CopeybaraSetup {
     Cfg internal c;
     ISafe internal safe;
     IPermissionedResolver internal resolver;
@@ -32,7 +32,7 @@ abstract contract BlackoutForkFixture is Test, BlackoutSetup {
         vm.createSelectFork(vm.envString("SEPOLIA_RPC"));
         c = loadCfg();
         webKey = vm.addr(webKeyPk);
-        label = string.concat("blackout-fork-", vm.toString(block.number));
+        label = string.concat("copeybara-fork-", vm.toString(block.number));
         node = ENSName.namehashEth(label);
 
         address[] memory owners = new address[](3);
@@ -45,8 +45,8 @@ abstract contract BlackoutForkFixture is Test, BlackoutSetup {
         string[] memory keys = new string[](3);
         string[] memory vals = new string[](3);
         (keys[0], vals[0]) = ("url", "https://demoswap.example");
-        (keys[1], vals[1]) = ("org.blackout.release", RELEASE_V1);
-        (keys[2], vals[2]) = ("org.blackout.manifest", MANIFEST);
+        (keys[1], vals[1]) = ("org.copeybara.release", RELEASE_V1);
+        (keys[2], vals[2]) = ("org.copeybara.manifest", MANIFEST);
 
         vm.startPrank(deployer);
         resolver = deployResolver(c, address(safe), label, keys, vals);
@@ -66,7 +66,7 @@ abstract contract BlackoutForkFixture is Test, BlackoutSetup {
     }
 }
 
-contract SetupNameForkTest is BlackoutForkFixture {
+contract SetupNameForkTest is CopeybaraForkFixture {
     function test_registryPointsAtOurResolver_ownedBySafe() public view {
         assertEq(IPermissionedRegistry(c.registry).getResolver(label), address(resolver));
         assertEq(IPermissionedRegistry(c.registry).getOwner(tokenId), address(safe));
@@ -79,14 +79,14 @@ contract SetupNameForkTest is BlackoutForkFixture {
 
     function test_webKeyHoldsOnlyUrlTextRole() public view {
         assertEq(resolver.roles(ENSName.textResource("url"), webKey), ENSv2Roles.ROLE_SET_TEXT);
-        assertEq(resolver.roles(ENSName.textResource("org.blackout.release"), webKey), 0);
-        assertEq(resolver.roles(ENSName.textResource("org.blackout.manifest"), webKey), 0);
+        assertEq(resolver.roles(ENSName.textResource("org.copeybara.release"), webKey), 0);
+        assertEq(resolver.roles(ENSName.textResource("org.copeybara.manifest"), webKey), 0);
         assertEq(resolver.roles(0, webKey), 0);
     }
 
     function test_universalResolverReturnsRecords() public view {
-        assertEq(_resolveText("org.blackout.release"), RELEASE_V1);
-        assertEq(_resolveText("org.blackout.manifest"), MANIFEST);
+        assertEq(_resolveText("org.copeybara.release"), RELEASE_V1);
+        assertEq(_resolveText("org.copeybara.manifest"), MANIFEST);
         assertEq(_resolveText("url"), "https://demoswap.example");
     }
 }

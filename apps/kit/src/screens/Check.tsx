@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
-import { readBlackoutRecords } from '@blackout/ens';
-import type { Quorum } from '@blackout/quorum';
+import { readCopeybaraRecords } from '@copeybara/ens';
+import type { Quorum } from '@copeybara/quorum';
 import type { Settings } from '../settings';
 import { checkPastedText, prefillFromUrl, siteHashCheck, type CheckResult, type SiteCheck } from '../check';
 import { ENS_CONFIG } from '../config';
@@ -18,7 +18,7 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
 
   async function runSite() {
     try {
-      const rec = await readBlackoutRecords(settings.ensName, props.quorumFor(ENS_CONFIG.chainId), ENS_CONFIG);
+      const rec = await readCopeybaraRecords(settings.ensName, props.quorumFor(ENS_CONFIG.chainId), ENS_CONFIG);
       setSite(await siteHashCheck(bundle, rec.site));
     } catch (e) {
       setSite({ verdict: 'unset', sha256: (e as Error).message });
@@ -29,7 +29,7 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
     setBusy(true);
     setResult(null);
     try {
-      const rec = await readBlackoutRecords(settings.ensName, props.quorumFor(ENS_CONFIG.chainId), ENS_CONFIG);
+      const rec = await readCopeybaraRecords(settings.ensName, props.quorumFor(ENS_CONFIG.chainId), ENS_CONFIG);
       setResult(checkPastedText({ text: pasted, to, account, chainId: settings.targetChainId, manifest: rec.manifest }));
     } catch (e) {
       setResult({ verdict: 'blocked', sentences: [`Could not check: ${(e as Error).message}`] });
@@ -61,7 +61,7 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
         {!settings.ensName && <span class="muted" style="margin-left:8px">Enter the ENS name on the Exit tab first.</span>}
       </div>
       <h2 style="margin-top:24px">Is this the official site?</h2>
-      <p class="muted">Paste the site's main script (view-source → main bundle). Its fingerprint is compared with the protocol's <code>org.blackout.site</code> record.</p>
+      <p class="muted">Paste the site's main script (view-source → main bundle). Its fingerprint is compared with the protocol's <code>org.copeybara.site</code> record.</p>
       <textarea id="bundle" value={bundle} onInput={(e) => setBundle((e.target as HTMLTextAreaElement).value)} />
       <div style="margin-top:8px">
         <button class="secondary" disabled={!bundle || !settings.ensName} onClick={runSite}>Compare with ENS</button>

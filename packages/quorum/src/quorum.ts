@@ -6,7 +6,7 @@ import {
   type ContractFunctionName,
   type ContractFunctionReturnType,
 } from 'viem';
-import type { Address, Hex } from '@blackout/core';
+import type { Address, Hex } from '@copeybara/core';
 import { CallRevertedError, QuorumError } from './errors';
 
 export interface QuorumOpts {

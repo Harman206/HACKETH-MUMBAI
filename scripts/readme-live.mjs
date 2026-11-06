@@ -20,7 +20,7 @@ const lines = [
   `| Release Safe (2-of-3, name owner) | ${ad(d.safe)} |`,
   `| PermissionedResolver (per app) | ${ad(d.resolver)} |`,
   `| Website key (url only) | ${ad(d.webKey)} |`,
-  ...(d.kitRelease ? [`| Published kit sha256 (\`org.blackout.release\`${d.kitReleaseVersion ? ` v${d.kitReleaseVersion}` : ''}) | \`${d.kitRelease}\` |`] : []),
+  ...(d.kitRelease ? [`| Published kit sha256 (\`org.copeybara.release\`${d.kitReleaseVersion ? ` v${d.kitReleaseVersion}` : ''}) | \`${d.kitRelease}\` |`] : []),
   '', `Must-revert checks, sent on chain from the website key:`, '',
   `| Check | Result | Tx |`, `|---|---|---|`,
   ...perms.map((p) => `| ${p.check} (must ${p.expected === 'revert' ? 'revert' : 'succeed'}) | ${p.pass ? `${p.status === 'revert' ? 'reverted' : 'succeeded'} ✓` : `FAILED (got ${p.status})`} | ${p.tx ? tx(p.tx) : '—'} |`),

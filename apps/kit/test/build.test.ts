@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 const KIT = join(__dirname, '..');
 const REPO = join(KIT, '..', '..');
-const FILE = join(KIT, 'dist', 'blackout-kit.html');
+const FILE = join(KIT, 'dist', 'copeybara-kit.html');
 const CSP_PREFIX = "default-src 'none'; script-src 'sha256-";
 const CSP_SUFFIX = "'; style-src 'unsafe-inline'; connect-src https: wss: http://127.0.0.1:* http://localhost:*; img-src data:";
 
@@ -45,7 +45,7 @@ describe('single-file kit build', () => {
   test('sha256 file matches the build', () => {
     const line = readFileSync(`${FILE}.sha256`, 'utf8');
     const hex = createHash('sha256').update(readFileSync(FILE)).digest('hex');
-    expect(line).toBe(`${hex}  blackout-kit.html\n`);
+    expect(line).toBe(`${hex}  copeybara-kit.html\n`);
   });
 
   test('two builds give the same sha256', () => {
@@ -55,12 +55,12 @@ describe('single-file kit build', () => {
 
   test('verify-kit.sh: MATCH on the real file, MISMATCH after one flipped byte', () => {
     const hex = createHash('sha256').update(readFileSync(FILE)).digest('hex');
-    const env = { ...process.env, BLACKOUT_RELEASE_OVERRIDE: `sha256:${hex};v=7` };
+    const env = { ...process.env, COPEYBARA_RELEASE_OVERRIDE: `sha256:${hex};v=7` };
     const ok = spawnSync('bash', [join(REPO, 'scripts/verify-kit.sh'), FILE, 'demoswap-blackout.eth'], { env, encoding: 'utf8' });
     expect(ok.status).toBe(0);
     expect(ok.stdout).toMatch(/MATCH v=7/);
 
-    const tampered = join(mkdtempSync(join(tmpdir(), 'kit-')), 'blackout-kit.html');
+    const tampered = join(mkdtempSync(join(tmpdir(), 'kit-')), 'copeybara-kit.html');
     const buf = readFileSync(FILE);
     const i = Math.floor(buf.length / 2);
     buf[i] = buf[i]! ^ 0x01;

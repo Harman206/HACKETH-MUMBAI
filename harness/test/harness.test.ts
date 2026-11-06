@@ -20,8 +20,8 @@ const post = (path: string) => fetch(`http://127.0.0.1:${ports.control}${path}`,
 beforeAll(async () => {
   upstream = await fakeRpc({ chainId: 11155111 });
   for (const k of Object.keys(ports) as (keyof typeof ports)[]) ports[k] = await free();
-  kitFile = join(mkdtempSync(join(tmpdir(), 'h-')), 'blackout-kit.html');
-  writeFileSync(kitFile, '<!doctype html><html><head><title>BLACKOUT exit kit</title></head><body>kit</body></html>');
+  kitFile = join(mkdtempSync(join(tmpdir(), 'h-')), 'copeybara-kit.html');
+  writeFileSync(kitFile, '<!doctype html><html><head><title>Copeybara exit kit</title></head><body>kit</body></html>');
   h = await startHarness({
     primaryRpc: upstream.url, kitFile, ensName: 'x.eth', ensRpcs: ['http://127.0.0.1:1'], chainId: 11155111,
     universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', ports, mode: 'process',
@@ -56,7 +56,7 @@ describe('fire drill harness', () => {
     expect(bad.equals(real)).toBe(false);
     expect(bad.length).toBe(real.length);
     const hex = createHash('sha256').update(real).digest('hex');
-    const r = spawnSync('bash', [join(__dirname, '../../scripts/verify-kit.sh'), h.tamperedFile, 'x.eth'], { env: { ...process.env, BLACKOUT_RELEASE_OVERRIDE: `sha256:${hex};v=1` }, encoding: 'utf8' });
+    const r = spawnSync('bash', [join(__dirname, '../../scripts/verify-kit.sh'), h.tamperedFile, 'x.eth'], { env: { ...process.env, COPEYBARA_RELEASE_OVERRIDE: `sha256:${hex};v=1` }, encoding: 'utf8' });
     expect(r.status).toBe(1);
   });
 
@@ -72,7 +72,7 @@ describe('fire drill harness', () => {
     const hijacked = await (await get(ports.router)).text();
     expect(hijacked).toContain('/inject.js');
     expect(hijacked).toContain('0x095ea7b3'); // approve selector in the injected request
-    expect(await (await get(ports.router, '/blackout-kit.html')).text()).toContain('BLACKOUT exit klt');
+    expect(await (await get(ports.router, '/copeybara-kit.html')).text()).toContain('Copeybara exit klt');
 
     const status = await (await fetch(`http://127.0.0.1:${ports.control}/status`)).json();
     expect(status).toMatchObject({ site: 'down', rpc: 'down', hijack: true });

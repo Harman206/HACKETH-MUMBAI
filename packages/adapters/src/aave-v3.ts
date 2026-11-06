@@ -1,5 +1,5 @@
 import { decodeFunctionResult, encodeFunctionData, maxUint256 } from 'viem';
-import { aavePoolAbi, erc20Abi, type Address, type ExitPlan, type Position } from '@blackout/core';
+import { aavePoolAbi, erc20Abi, type Address, type ExitPlan, type Position } from '@copeybara/core';
 import { applySlippage, target, type Ctx, type ExitAdapter } from './types';
 import { symbolOf } from './symbols';
 import { mapLimit } from './limit';

@@ -1,5 +1,5 @@
 import networks from '../../../config/networks.json';
-import type { Address } from '@blackout/core';
+import type { Address } from '@copeybara/core';
 
 /**
  * Bootstrap constants. These are the trust root: hashed into the kit with everything else.

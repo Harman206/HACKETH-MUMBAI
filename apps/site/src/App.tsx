@@ -10,13 +10,13 @@ export function App() {
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext) {
       void navigator.serviceWorker.ready.then(() => setOffline(true));
     }
-    fetch('blackout-kit.html.sha256').then((r) => (r.ok ? r.text() : null)).then((t) => t && setSha(t.split(' ')[0]!)).catch(() => {});
+    fetch('copeybara-kit.html.sha256').then((r) => (r.ok ? r.text() : null)).then((t) => t && setSha(t.split(' ')[0]!)).catch(() => {});
   }, []);
   return (
     <>
       <nav class="top" aria-label="Main">
         <div class="wrap">
-          <a class="brand" href="#top">BLACKOUT</a>
+          <a class="brand" href="#top">Copeybara</a>
           <ul>
             <li><a href="#problem">The problem</a></li>
             <li><a href="#how">How it works</a></li>

@@ -55,9 +55,9 @@ export function reportToHtml(r: ExitReport): string {
     })
     .join('');
   const fails = r.failures.map((f) => `<li>${esc(f.kind)} at ${esc(new Date(f.at).toISOString())}</li>`).join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><title>BLACKOUT exit report</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Copeybara exit report</title>
 <style>body{font:14px system-ui,sans-serif;margin:24px;color:#111;background:#fff}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px;text-align:left;vertical-align:top;word-break:break-all}</style></head><body>
-<h1>BLACKOUT exit report</h1>
+<h1>Copeybara exit report</h1>
 <p>ENS name: <b>${esc(r.ensName)}</b> · kit v${esc(r.kit.version)} · sha256 <code>${esc(r.kit.sha256)}</code></p>
 <p>Time to exit: <b>${r.timeToExitSec === null ? 'n/a' : `${esc(r.timeToExitSec)} s`}</b> · Guard: ${esc(r.guardVerdicts.accepted)} accepted, ${esc(r.guardVerdicts.rejected)} rejected, ${esc(r.guardVerdicts.unsimulated)} could not simulate</p>
 ${fails ? `<h2>Failures injected</h2><ul>${fails}</ul>` : ''}

@@ -1,5 +1,5 @@
 {
-  "name": "@blackout/guard",
+  "name": "@copeybara/guard",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@blackout/core": "workspace:*",
+    "@copeybara/core": "workspace:*",
     "viem": "2.21.55"
   },
   "devDependencies": {

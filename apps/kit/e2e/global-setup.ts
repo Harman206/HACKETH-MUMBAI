@@ -11,13 +11,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-import { FORK_RPCS, startFork, type Fork } from '@blackout/testkit';
+import { FORK_RPCS, startFork, type Fork } from '@copeybara/testkit';
 import { seedV4 } from './seed-v4';
 import { createServer as netServer } from 'node:net';
 import { startHarness } from '../../../harness/services/control';
 import { createDrainerBot } from '../../../harness/services/drainer-bot';
 import { makePrepareVictim, makeReadVictim, makeSender } from '../../../harness/services/chain';
-import { createQuorum } from '@blackout/quorum';
+import { createQuorum } from '@copeybara/quorum';
 
 const free = () => new Promise<number>((r) => { const s = netServer(); s.listen(0, () => { const p = (s.address() as { port: number }).port; s.close(() => r(p)); }); });
 
@@ -42,7 +42,7 @@ const K = [
 
 export default async function globalSetup() {
   execFileSync('pnpm', ['build'], { cwd: KIT, env: { ...process.env, SOURCE_DATE_EPOCH: '0' }, stdio: 'pipe' });
-  const kitFile = join(KIT, 'dist', 'blackout-kit.html');
+  const kitFile = join(KIT, 'dist', 'copeybara-kit.html');
   const sha = createHash('sha256').update(readFileSync(kitFile)).digest('hex');
 
   // Public fork sources flake mid-setup ("header for hash not found"): rebuild the whole world on the next source.
@@ -61,13 +61,13 @@ export default async function globalSetup() {
 }
 
 async function buildWorld(fork: Fork, kitFile: string, sha: string) {
-  const label = `blackout-e2e-${Date.now()}`;
+  const label = `copeybara-e2e-${Date.now()}`;
   const env = {
     ...process.env,
     DEPLOYER_KEY: K[0], OWNER_KEY_1: K[1], OWNER_KEY_2: K[2], OWNER_KEY_3: K[3],
     WEB_KEY_ADDR: execFileSync(CAST, ['wallet', 'address', '--private-key', K[4]!], { encoding: 'utf8' }).trim(),
     LABEL: label, SITE_URL: 'http://demoswap.localhost', RELEASE: `sha256:${sha};v=2`,
-    MANIFEST_FILE: '../config/manifest-legacy.json', MANIFEST2_FILE: '../config/manifest.json', DEPLOYMENTS_FILE: 'deployments/rehearsal-e2e.json',
+    MANIFEST_FILE: '../config/manifest.json', DEPLOYMENTS_FILE: 'deployments/rehearsal-e2e.json',
     TEST_WALLET_KEY: K[5], POSITIONS_FILE: 'deployments/rehearsal-e2e-positions.json',
   };
   const forge = (args: string[]) => execFileSync(FORGE, [...args, '--rpc-url', fork.url, '--broadcast'], { cwd: CONTRACTS, env, stdio: 'pipe' });
@@ -95,12 +95,12 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
   env.ATTACK_FILE = 'deployments/rehearsal-e2e-attack.json';
   forge(['script', 'script/DeployAttack.s.sol']);
   const attack = JSON.parse(readFileSync(join(CONTRACTS, env.ATTACK_FILE), 'utf8'));
-  execFileSync('pnpm', ['--filter', '@blackout/site', 'build'], { cwd: join(KIT, '..', '..'), stdio: 'pipe' });
+  execFileSync('pnpm', ['--filter', '@copeybara/site', 'build'], { cwd: join(KIT, '..', '..'), stdio: 'pipe' });
 
   const html = readFileSync(kitFile);
   const server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0];
-    if (path === '/' || path === '/blackout-kit.html') {
+    if (path === '/' || path === '/copeybara-kit.html') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(html);
     } else res.writeHead(404).end();
   });

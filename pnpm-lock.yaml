@@ -25,24 +25,27 @@ importers:
 
   apps/kit:
     dependencies:
-      '@blackout/adapters':
+      '@copeybara/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@blackout/ens':
+      '@copeybara/ens':
         specifier: workspace:*
         version: link:../../packages/ens
-      '@blackout/exec':
+      '@copeybara/exec':
         specifier: workspace:*
         version: link:../../packages/exec
-      '@blackout/guard':
+      '@copeybara/guard':
         specifier: workspace:*
         version: link:../../packages/guard
-      '@blackout/quorum':
+      '@copeybara/quorum':
         specifier: workspace:*
         version: link:../../packages/quorum
+      '@copeybara/sitecheck':
+        specifier: workspace:*
+        version: link:../../packages/sitecheck
       preact:
         specifier: 10.25.4
         version: 10.25.4
@@ -50,7 +53,7 @@ importers:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
     devDependencies:
-      '@blackout/testkit':
+      '@copeybara/testkit':
         specifier: workspace:*
         version: link:../../packages/testkit
       '@playwright/test':
@@ -71,13 +74,13 @@ importers:
 
   apps/site:
     dependencies:
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@blackout/ens':
+      '@copeybara/ens':
         specifier: workspace:*
         version: link:../../packages/ens
-      '@blackout/quorum':
+      '@copeybara/quorum':
         specifier: workspace:*
         version: link:../../packages/quorum
       preact:
@@ -105,16 +108,16 @@ importers:
 
   harness:
     dependencies:
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../packages/core
-      '@blackout/ens':
+      '@copeybara/ens':
         specifier: workspace:*
         version: link:../packages/ens
-      '@blackout/guard':
+      '@copeybara/guard':
         specifier: workspace:*
         version: link:../packages/guard
-      '@blackout/quorum':
+      '@copeybara/quorum':
         specifier: workspace:*
         version: link:../packages/quorum
       viem:
@@ -123,20 +126,20 @@ importers:
 
   packages/adapters:
     dependencies:
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../core
-      '@blackout/guard':
+      '@copeybara/guard':
         specifier: workspace:*
         version: link:../guard
-      '@blackout/quorum':
+      '@copeybara/quorum':
         specifier: workspace:*
         version: link:../quorum
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
     devDependencies:
-      '@blackout/testkit':
+      '@copeybara/testkit':
         specifier: workspace:*
         version: link:../testkit
 
@@ -148,10 +151,10 @@ importers:
 
   packages/ens:
     dependencies:
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../core
-      '@blackout/quorum':
+      '@copeybara/quorum':
         specifier: workspace:*
         version: link:../quorum
       viem:
@@ -160,29 +163,29 @@ importers:
 
   packages/exec:
     dependencies:
-      '@blackout/adapters':
+      '@copeybara/adapters':
         specifier: workspace:*
         version: link:../adapters
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../core
-      '@blackout/guard':
+      '@copeybara/guard':
         specifier: workspace:*
         version: link:../guard
-      '@blackout/quorum':
+      '@copeybara/quorum':
         specifier: workspace:*
         version: link:../quorum
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
     devDependencies:
-      '@blackout/testkit':
+      '@copeybara/testkit':
         specifier: workspace:*
         version: link:../testkit
 
   packages/guard:
     dependencies:
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../core
       viem:
@@ -195,16 +198,18 @@ importers:
 
   packages/quorum:
     dependencies:
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../core
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
 
+  packages/sitecheck: {}
+
   packages/testkit:
     dependencies:
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../core
       viem:
@@ -213,26 +218,26 @@ importers:
 
   replay:
     dependencies:
-      '@blackout/adapters':
+      '@copeybara/adapters':
         specifier: workspace:*
         version: link:../packages/adapters
-      '@blackout/core':
+      '@copeybara/core':
         specifier: workspace:*
         version: link:../packages/core
-      '@blackout/exec':
+      '@copeybara/exec':
         specifier: workspace:*
         version: link:../packages/exec
-      '@blackout/guard':
+      '@copeybara/guard':
         specifier: workspace:*
         version: link:../packages/guard
-      '@blackout/quorum':
+      '@copeybara/quorum':
         specifier: workspace:*
         version: link:../packages/quorum
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
     devDependencies:
-      '@blackout/testkit':
+      '@copeybara/testkit':
         specifier: workspace:*
         version: link:../packages/testkit
 

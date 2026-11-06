@@ -1,6 +1,7 @@
+import { normaliseBundle, scriptHash } from '@copeybara/sitecheck';
 import { isAddress } from 'viem';
-import type { Address, Hex, Manifest } from '@blackout/core';
-import { explain, guard, type GuardCtx } from '@blackout/guard';
+import type { Address, Hex, Manifest } from '@copeybara/core';
+import { explain, guard, type GuardCtx } from '@copeybara/guard';
 
 export interface PastedTx {
   chainId?: number;
@@ -86,18 +87,16 @@ export interface SiteCheck {
   sha256: string;
 }
 
-/** Hijack detection: sha256 of the live site's main bundle vs the Safe-published org.blackout.site record. */
-/** Line endings and trailing whitespace must not flip the verdict (copy-paste changes them). Same rule as scripts/site-hash.mjs. */
-export function normaliseBundle(text: string): string {
-  return text.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trimEnd() + '\n';
-}
+export { normaliseBundle };
 
-export async function siteHashCheck(bundleText: string, record: string | null): Promise<SiteCheck> {
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(normaliseBundle(bundleText)));
-  const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-  if (!record) return { verdict: 'unset', sha256 };
-  const want = record.trim().toLowerCase().replace(/^sha256:/, '');
-  return { verdict: want === sha256 ? 'match' : 'mismatch', sha256 };
+/**
+ * Hijack detection (manual): sha256 of a pasted site script vs the Safe-published org.copeybara.site set.
+ * The extension does this automatically for every script a page runs.
+ */
+export async function siteHashCheck(bundleText: string, allowed: string[] | null): Promise<SiteCheck> {
+  const sha256 = await scriptHash(bundleText);
+  if (!allowed) return { verdict: 'unset', sha256 };
+  return { verdict: allowed.includes(sha256) ? 'match' : 'mismatch', sha256 };
 }
 
 /** `?check=<base64url JSON>` pre-fills the Check tab (used by the Attack Theater). Returns pretty JSON or null. */

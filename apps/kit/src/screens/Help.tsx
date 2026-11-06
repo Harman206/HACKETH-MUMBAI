@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { ExitProgress } from '@blackout/exec';
+import type { ExitProgress } from '@copeybara/exec';
 import { COPY, FAUCET_URL, WALLET_LINKS } from '../copy';
 import { CHAIN_NAMES, EXPLORERS } from '../config';
 import type { Humanized } from '../errors';
@@ -10,7 +10,7 @@ const focus = (id: string) => {
   el?.focus();
 };
 
-const kitFileName = () => (typeof location !== 'undefined' ? decodeURIComponent(location.pathname.split('/').pop() || 'blackout-kit.html') : 'blackout-kit.html');
+const kitFileName = () => (typeof location !== 'undefined' ? decodeURIComponent(location.pathname.split('/').pop() || 'copeybara-kit.html') : 'copeybara-kit.html');
 
 /** The one fix that goes with a humanized error. `onRetry` is offered where retrying makes sense. */
 export function FixHelp({ h, chainId, onRetry }: { h: Humanized; chainId: number; onRetry?: () => void }) {

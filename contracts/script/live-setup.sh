@@ -11,7 +11,7 @@ export WEB_KEY_ADDR=$(cast wallet address --private-key "$WEB_KEY")
 export MANIFEST_FILE=${MANIFEST_FILE:-../config/manifest-legacy.json}
 export MANIFEST2_FILE=${MANIFEST2_FILE:-../config/manifest.json}
 # Placeholder release until the kit is built (Task 7.1 publishes v=2 with the real hash).
-export RELEASE=${RELEASE:-"sha256:$(printf 'blackout-placeholder' | shasum -a 256 | cut -d' ' -f1);v=1"}
+export RELEASE=${RELEASE:-"sha256:$(printf 'copeybara-placeholder' | shasum -a 256 | cut -d' ' -f1);v=1"}
 DEPLOYER=$(cast wallet address --private-key "$DEPLOYER_KEY")
 export DEPLOYMENTS_FILE=${DEPLOYMENTS_FILE:-deployments/sepolia.json}
 DF=$DEPLOYMENTS_FILE
@@ -47,8 +47,8 @@ else
 fi
 
 # Publish the kit fingerprint as the next release version, once per kit build.
-( cd .. && SOURCE_DATE_EPOCH=0 pnpm --filter @blackout/kit build >/dev/null )
-KIT_SHA=$(cut -d' ' -f1 ../apps/kit/dist/blackout-kit.html.sha256)
+( cd .. && SOURCE_DATE_EPOCH=0 pnpm --filter @copeybara/kit build >/dev/null )
+KIT_SHA=$(cut -d' ' -f1 ../apps/kit/dist/copeybara-kit.html.sha256)
 if [ "$(jq -r '.kitRelease // empty' "$DF")" != "$KIT_SHA" ]; then
   # Versions only go up: read the live record, publish current + 1.
   NAME_NOW=$(jq -r .name "$DF")
@@ -66,7 +66,7 @@ if [ "${IPFS_PINNED:-0}" = "1" ] && [ "$(jq -r '.contenthash // empty' "$DF")" !
   env -u RELEASE -u MANIFEST_FILE -u MANIFEST2_FILE -u SITE_HASH CONTENTHASH="$CH" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
   jq --arg s "$CH" '.contenthash=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
 elif [ "${IPFS_PINNED:-0}" != "1" ]; then
-  echo "contenthash not published: pin apps/kit/dist/blackout-kit.html on IPFS (CIDv1, raw leaves), then rerun with IPFS_PINNED=1"
+  echo "contenthash not published: pin apps/kit/dist/copeybara-kit.html on IPFS (CIDv1, raw leaves), then rerun with IPFS_PINNED=1"
 fi
 # Publish the full exit list (org.blackout.manifest2) whenever config/manifest.json changes. org.blackout.manifest is
 # never rewritten here: kits saved before a protocol was added reject unknown protocols, so it must stay as they know it.
@@ -78,8 +78,8 @@ if [ "$(jq -r '.manifest2Sha // empty' "$DF")" != "$MF_SHA" ]; then
 fi
 # Independent check through 3 public RPCs (a local fork rehearsal can only use the fork itself).
 case "$SEPOLIA_RPC" in
-  http://127.0.0.1*|http://localhost*) ../scripts/verify-kit.sh ../apps/kit/dist/blackout-kit.html "$(jq -r .name "$DF")" "$SEPOLIA_RPC" "$SEPOLIA_RPC" "$SEPOLIA_RPC" ;;
-  *) ../scripts/verify-kit.sh ../apps/kit/dist/blackout-kit.html "$(jq -r .name "$DF")" ;;
+  http://127.0.0.1*|http://localhost*) ../scripts/verify-kit.sh ../apps/kit/dist/copeybara-kit.html "$(jq -r .name "$DF")" "$SEPOLIA_RPC" "$SEPOLIA_RPC" "$SEPOLIA_RPC" ;;
+  *) ../scripts/verify-kit.sh ../apps/kit/dist/copeybara-kit.html "$(jq -r .name "$DF")" ;;
 esac
 
 # Seed three Uniswap v3 test positions into DEMO_WALLET (your MetaMask address), once.

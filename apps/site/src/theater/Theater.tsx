@@ -113,7 +113,7 @@ export function Theater({ base }: { base: string }) {
         {s.switches.hijack && board.lost.length === 0 && <p style="margin-top:12px">On the fake site, click <b>Connect wallet</b> and approve the request in MetaMask, as a hurried user would. The attacker’s bot is watching.</p>}
         {s.drains.length > 0 && (
           <div class="loss-box">
-            <p class="tag" style="background:#c0362c22;color:var(--bad)">Without BLACKOUT</p>
+            <p class="tag" style="background:#c0362c22;color:var(--bad)">Without Copeybara</p>
             {s.drains.map((d) => (
               <p>Approval <TxLink h={d.approveTx} fork={fork} label="tx" /> → {d.drainTx ? <>bot drained <b class="bad">{scoreboard({ ...s, drains: [d] }).lost[0] ?? '0'}</b> in <TxLink h={d.drainTx} fork={fork} label="tx" /></> : d.note ?? 'draining…'}</p>
             ))}
@@ -163,8 +163,8 @@ export function Theater({ base }: { base: string }) {
       <article class="card scoreboard" aria-live="polite">
         <h3>Scoreboard</h3>
         <div class="replay">
-          <div><p class="muted" style="margin:0">Without BLACKOUT (lost)</p><p class="big bad">{board.lost.join(' + ') || '—'}</p>{board.drainTxs.map((h) => <TxLink h={h} fork={fork} label="drain tx " />)}</div>
-          <div><p class="muted" style="margin:0">With BLACKOUT (recovered)</p><p class="big ok">{board.recovered.join(' + ') || '—'}</p>{board.rescueTxs.map((h) => <TxLink h={h} fork={fork} label="exit tx " />)}</div>
+          <div><p class="muted" style="margin:0">Without Copeybara (lost)</p><p class="big bad">{board.lost.join(' + ') || '—'}</p>{board.drainTxs.map((h) => <TxLink h={h} fork={fork} label="drain tx " />)}</div>
+          <div><p class="muted" style="margin:0">With Copeybara (recovered)</p><p class="big ok">{board.recovered.join(' + ') || '—'}</p>{board.rescueTxs.map((h) => <TxLink h={h} fork={fork} label="exit tx " />)}</div>
         </div>
         <p style="margin-top:12px">Time to exit (first outage → confirmed exit): <b>{board.timeToExitSec === null ? '—' : `${board.timeToExitSec} s`}</b></p>
         <p class="muted" style="font-size:14px">Real incident for scale: Curve 2022, one victim lost 400,227.23 USDC (mainnet fork replay, see above).</p>

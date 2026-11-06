@@ -1,5 +1,5 @@
 {
-  "name": "@blackout/site",
+  "name": "@copeybara/site",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,9 +8,9 @@
     "dev": "vite"
   },
   "dependencies": {
-    "@blackout/core": "workspace:*",
-    "@blackout/ens": "workspace:*",
-    "@blackout/quorum": "workspace:*",
+    "@copeybara/core": "workspace:*",
+    "@copeybara/ens": "workspace:*",
+    "@copeybara/quorum": "workspace:*",
     "preact": "10.25.4",
     "viem": "2.21.55"
   },

@@ -1,7 +1,7 @@
 /**
  * Seeds Uniswap v4 positions on Sepolia for the demo wallet (testnet only).
- *   pnpm --filter @blackout/harness exec tsx scripts/seed-v4.ts          # dry run: prints what it would do
- *   pnpm --filter @blackout/harness exec tsx scripts/seed-v4.ts --send     # sends (DEPLOYER_KEY from contracts/.env pays and supplies DUSD/DETH)
+ *   pnpm --filter @copeybara/harness exec tsx scripts/seed-v4.ts          # dry run: prints what it would do
+ *   pnpm --filter @copeybara/harness exec tsx scripts/seed-v4.ts --send     # sends (DEPLOYER_KEY from contracts/.env pays and supplies DUSD/DETH)
  * Env: DEPLOYER_KEY, DEMO_WALLET (receives the position NFTs), SEPOLIA_RPC (optional).
  * Writes contracts/deployments/sepolia-v4-positions.json.
  */

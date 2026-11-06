@@ -1,5 +1,5 @@
 // Pins the single inline script by hash in a CSP <meta>, placed as the first element of <head>,
-// and renames the output to blackout-kit.html. Fails if the build has anything but one inline script.
+// and renames the output to copeybara-kit.html. Fails if the build has anything but one inline script.
 import { createHash } from 'node:crypto';
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,5 +24,5 @@ const csp = [
 if (!/<head>/.test(html)) throw new Error('no <head>');
 html = html.replace(/<head>\s*/, `<head>\n<meta http-equiv="Content-Security-Policy" content="${csp}">\n`);
 writeFileSync(src, html);
-renameSync(src, join(dir, 'blackout-kit.html'));
+renameSync(src, join(dir, 'copeybara-kit.html'));
 console.log(`CSP pinned script sha256-${hash}`);

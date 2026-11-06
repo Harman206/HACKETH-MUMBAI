@@ -1,7 +1,7 @@
-import { erc20Abi, type Address, type ExitPlan, type Hex, type TxRequest } from '@blackout/core';
-import { explain, guard } from '@blackout/guard';
-import { CallRevertedError, QuorumError, type Quorum, type Receipt } from '@blackout/quorum';
-import type { Ctx } from '@blackout/adapters';
+import { erc20Abi, type Address, type ExitPlan, type Hex, type TxRequest } from '@copeybara/core';
+import { explain, guard } from '@copeybara/guard';
+import { CallRevertedError, QuorumError, type Quorum, type Receipt } from '@copeybara/quorum';
+import type { Ctx } from '@copeybara/adapters';
 
 /** The wallet side. The kit wraps EIP-1193 eth_sendTransaction; it never signs typed data. */
 export interface Sender {

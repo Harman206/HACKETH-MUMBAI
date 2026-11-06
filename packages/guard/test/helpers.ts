@@ -1,5 +1,5 @@
 import { encodeAbiParameters, encodeFunctionData, getAddress, maxUint128, parseAbi, parseAbiParameters, toHex } from 'viem';
-import { npmAbi, aavePoolAbi, curve3poolAbi, v4PosmAbi, V4_ACTIONS, type Address, type Hex } from '@blackout/core';
+import { npmAbi, aavePoolAbi, curve3poolAbi, v4PosmAbi, V4_ACTIONS, type Address, type Hex } from '@copeybara/core';
 
 export const USER: Address = '0x1111111111111111111111111111111111111111';
 export const ATTACKER: Address = getAddress('0xbadbadbadbadbadbadbadbadbadbadbadbadbad0');

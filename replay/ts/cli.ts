@@ -1,11 +1,11 @@
 /**
- * pnpm --filter @blackout/replay replay R1
+ * pnpm --filter @copeybara/replay replay R1
  * Foundry replay (as it happened + counterfactual) → kit exits at the incident block → replay/out/<id>.{md,html}
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { guard } from '@blackout/guard';
-import { startFork } from '@blackout/testkit';
+import { guard } from '@copeybara/guard';
+import { startFork } from '@copeybara/testkit';
 import { validateFixture, type Fixture } from '../fixtures/schema';
 import { exitsAtBlock, fixtureManifest, usdPrices } from './exits-at-block';
 import { runForgeReplay } from './forge';

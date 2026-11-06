@@ -1,5 +1,5 @@
 import { encodeAbiParameters, encodeFunctionData, pad, parseAbiParameters, toHex, type Hex } from 'viem';
-import { V4_ACTIONS, v4PosmAbi, v4StateViewAbi, type Address, type ExitPlan, type Position, type TxRequest } from '@blackout/core';
+import { V4_ACTIONS, v4PosmAbi, v4StateViewAbi, type Address, type ExitPlan, type Position, type TxRequest } from '@copeybara/core';
 import { applySlippage, target, type Ctx, type ExitAdapter } from './types';
 import { symbolOf } from './symbols';
 import { amountsForDecrease, decodePositionInfo, feesOwed, poolIdOf, type PoolKey } from './v4-math';

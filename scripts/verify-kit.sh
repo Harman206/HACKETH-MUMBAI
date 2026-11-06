@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Independent kit verification: compare the file's sha256 with the ENS release record.
 # Run this OUTSIDE the kit. The kit cannot verify itself.
-#   scripts/verify-kit.sh <blackout-kit.html> <ens-name> [rpc1 rpc2 rpc3]
-# Reads org.blackout.release through 3 RPCs and requires them to agree. Needs Foundry's `cast`.
+#   scripts/verify-kit.sh <copeybara-kit.html> <ens-name> [rpc1 rpc2 rpc3]
+# Reads org.copeybara.release through 3 RPCs and requires them to agree. Needs Foundry's `cast`.
 # Exit: 0 MATCH · 1 MISMATCH · 2 bad record · 3 RPCs disagree / unreachable
 set -euo pipefail
 
@@ -23,10 +23,10 @@ dns_encode() {
 }
 
 if [ "${1:-}" = "--dns-only" ]; then dns_encode "$2"; exit 0; fi
-# --release-only <name> <rpc>: print the raw org.blackout.release record (used by the live runbook)
+# --release-only <name> <rpc>: print the raw org.copeybara.release record (used by the live runbook)
 if [ "${1:-}" = "--release-only" ]; then
   CAST=$(command -v cast || echo "$HOME/.foundry/bin/cast"); N=$(printf '%s' "$2" | tr 'A-Z' 'a-z')
-  OUT=$("$CAST" call "$UR" "resolve(bytes,bytes)(bytes,address)" "$(dns_encode "$N")" "$("$CAST" calldata "text(bytes32,string)" "$("$CAST" namehash "$N")" org.blackout.release)" --rpc-url "$3" | head -1)
+  OUT=$("$CAST" call "$UR" "resolve(bytes,bytes)(bytes,address)" "$(dns_encode "$N")" "$("$CAST" calldata "text(bytes32,string)" "$("$CAST" namehash "$N")" org.copeybara.release)" --rpc-url "$3" | head -1)
   "$CAST" abi-decode "text()(string)" "$OUT" | tr -d '"'; exit 0
 fi
 
@@ -39,13 +39,13 @@ NAME_LC=$(python3 -c 'import sys;print(sys.argv[1].strip().lower())' "$NAME" 2>/
 if command -v sha256sum >/dev/null; then GOT=$(sha256sum "$FILE" | cut -d' ' -f1); else GOT=$(shasum -a 256 "$FILE" | cut -d' ' -f1); fi
 
 read_release() { # $1 = rpc index (1-based)
-  local i=$1 ov="BLACKOUT_RELEASE_OVERRIDE_$1"
+  local i=$1 ov="COPEYBARA_RELEASE_OVERRIDE_$1"
   if [ -n "${!ov:-}" ]; then echo "${!ov}"; return; fi
-  if [ -n "${BLACKOUT_RELEASE_OVERRIDE:-}" ]; then echo "$BLACKOUT_RELEASE_OVERRIDE"; return; fi
+  if [ -n "${COPEYBARA_RELEASE_OVERRIDE:-}" ]; then echo "$COPEYBARA_RELEASE_OVERRIDE"; return; fi
   local CAST; CAST=$(command -v cast || echo "$HOME/.foundry/bin/cast")
   local rpc=${RPCS[$((i-1))]} dns inner out
   dns=$(dns_encode "$NAME_LC")
-  inner=$("$CAST" calldata "text(bytes32,string)" "$("$CAST" namehash "$NAME_LC")" org.blackout.release)
+  inner=$("$CAST" calldata "text(bytes32,string)" "$("$CAST" namehash "$NAME_LC")" org.copeybara.release)
   out=$(ETH_RPC_TIMEOUT=8 "$CAST" call "$UR" "resolve(bytes,bytes)(bytes,address)" "$dns" "$inner" --rpc-url "$rpc" 2>/dev/null | head -1) || { echo "UNREACHABLE"; return; }
   [ -z "$out" ] && { echo "UNREACHABLE"; return; }
   "$CAST" abi-decode "text()(string)" "$out" 2>/dev/null | tr -d '"' || echo "UNREACHABLE"

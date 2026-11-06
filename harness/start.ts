@@ -1,6 +1,6 @@
 /**
  * Fire Drill + Attack Theater launcher.
- *   pnpm --filter @blackout/harness start
+ *   pnpm --filter @copeybara/harness start
  * Then open: website ?booth=http://localhost:8090 · control http://localhost:8090 · DemoSwap http://demoswap.localhost:8080 · kit http://localhost:8000
  * Env (or contracts/.env): DEPLOYER_KEY, ATTACKER_KEY, ENS_NAME, THEATER_RPC (default public Sepolia), THEATER_NETWORK=sepolia|local-fork
  */
@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Address, Hex } from 'viem';
 import networks from '../config/networks.json';
-import { createQuorum } from '@blackout/quorum';
+import { createQuorum } from '@copeybara/quorum';
 import { serve } from './services/http';
 import { startHarness } from './services/control';
 import { createDrainerBot } from './services/drainer-bot';
@@ -17,7 +17,7 @@ import { loadEnv, makePrepareVictim, makeReadVictim, makeSender } from './servic
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const env = loadEnv();
-const kitFile = env.KIT_FILE ?? join(REPO, 'apps', 'kit', 'dist', 'blackout-kit.html');
+const kitFile = env.KIT_FILE ?? join(REPO, 'apps', 'kit', 'dist', 'copeybara-kit.html');
 const theaterRpc = env.THEATER_RPC ?? networks.defaultRpcs['11155111'][0]!;
 const ensRpcs = (env.ENS_RPCS ?? (env.THEATER_NETWORK === 'local-fork' ? [theaterRpc, theaterRpc, theaterRpc] : networks.defaultRpcs['11155111']).join(',')).split(',');
 const attackFile = join(REPO, 'contracts', 'deployments', env.ATTACK_FILE ?? 'sepolia-attack.json');

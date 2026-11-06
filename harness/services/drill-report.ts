@@ -2,9 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Address, Hex } from 'viem';
-import { readBlackoutRecords } from '@blackout/ens';
-import { guard, explain, type GuardResult } from '@blackout/guard';
-import { createQuorum } from '@blackout/quorum';
+import { readCopeybaraRecords } from '@copeybara/ens';
+import { guard, explain, type GuardResult } from '@copeybara/guard';
+import { createQuorum } from '@copeybara/quorum';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -17,7 +17,7 @@ export function checkTamperedKit(tamperedFile: string, ensName: string, ensRpcs:
 
 /** Feeds the hijacked site's request into the same Exit Guard the kit uses, with the manifest from ENS. */
 export async function checkHijackRequest(req: { to: Address; data: Hex }, ensName: string, ensRpcs: string[], universalResolver: Address, chainId: number) {
-  const rec = await readBlackoutRecords(ensName, createQuorum({ urls: ensRpcs }), { universalResolver });
+  const rec = await readCopeybaraRecords(ensName, createQuorum({ urls: ensRpcs }), { universalResolver });
   const account = '0x0000000000000000000000000000000000000001' as Address;
   const g = guard({ chainId, from: account, to: req.to, data: req.data, value: 0n }, { account, chainId, manifest: rec.manifest });
   return { rejected: hijackVerdict(g), sentences: explain(g) };
@@ -68,9 +68,9 @@ const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;'
 const yes = (b: boolean) => (b ? '<b style="color:#15803d">yes</b>' : '<b style="color:#b91c1c">no</b>');
 
 export function drillReportHtml(r: DrillReport): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>BLACKOUT drill report</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Copeybara drill report</title>
 <style>body{font:14px system-ui,sans-serif;margin:24px;max-width:900px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px;text-align:left;word-break:break-all}</style></head><body>
-<h1>BLACKOUT fire drill report</h1>
+<h1>Copeybara fire drill report</h1>
 <p>Time to exit: <b>${r.timeToExitSec === null ? 'n/a' : `${esc(r.timeToExitSec)} s`}</b> (from first injected failure to the last confirmed exit receipt)</p>
 <p>Tampered kit detected: ${yes(r.tamperedKitDetected)} · Hijacked site's approval request rejected by the Guard: ${yes(r.hijackApprovalRejected)}</p>
 <h2>Failures injected</h2><ul>${r.failures.map((f) => `<li>${esc(f.kind)} at ${esc(new Date(f.at).toISOString())}</li>`).join('')}</ul>

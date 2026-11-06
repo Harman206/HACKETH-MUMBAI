@@ -1,8 +1,8 @@
-import type { Address, AdapterId, Position } from '@blackout/core';
-import type { Ctx, ExitAdapter } from '@blackout/adapters';
-import { normaliseName, readBlackoutRecords, type BlackoutRecords } from '@blackout/ens';
-import { buildReport, tallyVerdicts, runExit as defaultRunExit, type ExitProgress, type ExitReport, type ExitResult, type Sender } from '@blackout/exec';
-import type { Quorum } from '@blackout/quorum';
+import type { Address, AdapterId, Position } from '@copeybara/core';
+import type { Ctx, ExitAdapter } from '@copeybara/adapters';
+import { normaliseName, readCopeybaraRecords, type CopeybaraRecords } from '@copeybara/ens';
+import { buildReport, tallyVerdicts, runExit as defaultRunExit, type ExitProgress, type ExitReport, type ExitResult, type Sender } from '@copeybara/exec';
+import type { Quorum } from '@copeybara/quorum';
 import type { Settings } from './settings';
 import { maxSeenVersion, recordSeenVersion } from './storage';
 import { store, type Store } from './store';
@@ -14,7 +14,7 @@ export type FlowState =
   | { step: 'loading'; what: string; stage: 1 | 2 | 3 }
   | {
       step: 'positions';
-      records: BlackoutRecords;
+      records: CopeybaraRecords;
       rollbackWarning: boolean;
       account: Address;
       chainId: number;
@@ -68,7 +68,7 @@ export interface FlowDeps {
     sender(account: Address): Sender;
   };
   now(): number;
-  readRecords?: typeof readBlackoutRecords;
+  readRecords?: typeof readCopeybaraRecords;
   runExit?: typeof defaultRunExit;
   /** Drill mode only: failure timestamps from the Fire Drill control page. */
   drillFailures?: () => Promise<{ kind: string; at: number }[]>;
@@ -92,7 +92,7 @@ const message = (e: unknown) =>
 
 export function createFlow(deps: FlowDeps): Flow {
   const state = store<FlowState>({ step: 'setup' });
-  const readRecords = deps.readRecords ?? readBlackoutRecords;
+  const readRecords = deps.readRecords ?? readCopeybaraRecords;
   const run = deps.runExit ?? defaultRunExit;
   let ctx: Ctx | null = null;
   let startedAt = 0;
@@ -114,7 +114,7 @@ export function createFlow(deps: FlowDeps): Flow {
     stage = 1;
     state.set({ step: 'loading', what: COPY.loadingRecords(name), stage });
     const ensQ = deps.quorumFor(deps.ens.chainId);
-    let records: BlackoutRecords;
+    let records: CopeybaraRecords;
     try {
       records = await readRecords(name, ensQ, { universalResolver: deps.ens.universalResolver });
     } catch (e) {

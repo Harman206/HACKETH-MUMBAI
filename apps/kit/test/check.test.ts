@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { encodeFunctionData, maxUint128, maxUint256, parseAbi } from 'viem';
-import { EXIT_SELECTORS, npmAbi, type Address, type Manifest } from '@blackout/core';
+import { EXIT_SELECTORS, npmAbi, type Address, type Manifest } from '@copeybara/core';
 import { checkPasted, checkPastedText, parsePasted } from '../src/check';
 
 const USER: Address = '0x1111111111111111111111111111111111111111';

@@ -10,7 +10,7 @@ const CHAIN_RE = /^[1-9][0-9]*$/;
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 
-/** Parse the compact wire form of org.blackout.manifest. Throws ManifestError with a plain message. */
+/** Parse the compact wire form of org.copeybara.manifest. Throws ManifestError with a plain message. */
 export function parseManifest(text: string): Manifest {
   if (!text || !text.trim()) throw new ManifestError('The exit manifest record is empty.');
   let raw: unknown;

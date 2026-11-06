@@ -1,5 +1,5 @@
 /**
- * Builds the org.blackout.manifest record from the core codec, so selectors are exact.
+ * Builds the org.copeybara.manifest record from the core codec, so selectors are exact.
  *   pnpm tsx tools/manifest/build.ts > config/manifest.json
  * Addresses: Uniswap v3 NPM and Uniswap v4 PositionManager + StateView (Sepolia + mainnet), Aave v3 Pool, Curve 3pool + 3CRV (mainnet).
  * v4 addresses checked on chain 2026-11-06: PositionManager.name() = "Uniswap v4 Positions NFT", and

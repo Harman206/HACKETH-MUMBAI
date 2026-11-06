@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { ADAPTERS } from '@blackout/adapters';
-import { createQuorum, type Quorum } from '@blackout/quorum';
-import { reportToHtml, reportToJson, type ExitResult } from '@blackout/exec';
-import type { Position } from '@blackout/core';
+import { ADAPTERS } from '@copeybara/adapters';
+import { createQuorum, type Quorum } from '@copeybara/quorum';
+import { reportToHtml, reportToJson, type ExitResult } from '@copeybara/exec';
+import type { Position } from '@copeybara/core';
 import { createFlow, stepOf, type FlowState } from './flow';
 import { Stepper } from './screens/Stepper';
 import { loadSettings, mergeUrlSettings, rpcUrlsFor, saveSettings, settingsFromUrl, type Settings } from './settings';
@@ -11,7 +11,7 @@ import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
 import { COPY, FAUCET_URL } from './copy';
 import { humanize } from './errors';
 import { ExitStatusLine, FixHelp } from './screens/Help';
-import type { ExitProgress } from '@blackout/exec';
+import type { ExitProgress } from '@copeybara/exec';
 import { formatAmount, type TokenMeta } from './tokens';
 import { CheckScreen } from './screens/Check';
 import { ReleaseScreen } from './screens/Release';
@@ -62,11 +62,11 @@ export function App() {
             p = ws[0].provider;
             setProvider(p);
           }
-          (window as { __blackoutProvider?: Eip1193 }).__blackoutProvider = p;
+          (window as { __copeybaraProvider?: Eip1193 }).__copeybaraProvider = p;
           return connect(p);
         },
-        ensureChain: (id) => ensureChain((window as { __blackoutProvider?: Eip1193 }).__blackoutProvider!, id),
-        sender: (account) => senderFrom((window as { __blackoutProvider?: Eip1193 }).__blackoutProvider!, account),
+        ensureChain: (id) => ensureChain((window as { __copeybaraProvider?: Eip1193 }).__copeybaraProvider!, id),
+        sender: (account) => senderFrom((window as { __copeybaraProvider?: Eip1193 }).__copeybaraProvider!, account),
       },
       now: () => Date.now(),
       // Fire Drill mode (localhost control page only): pull failure timestamps, push the exit report.
@@ -110,7 +110,7 @@ export function App() {
       ) : (
         <ExitTab state={state} settings={settings} update={update} flow={flow} />
       )}
-      <p class="muted" style="font-size:13px;margin-top:32px">{COPY.trusted} No BLACKOUT server, no analytics.</p>
+      <p class="muted" style="font-size:13px;margin-top:32px">{COPY.trusted} No Copeybara server, no analytics.</p>
     </main>
   );
 }
@@ -251,7 +251,7 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
         <details>
           <summary>{COPY.verifyTitle}</summary>
           <p style="margin-top:8px">{COPY.verifyBody}</p>
-          <pre>{`sha256sum blackout-kit.html\n# must equal: ${records.release.sha256}\n\nscripts/verify-kit.sh blackout-kit.html ${records.name}`}</pre>
+          <pre>{`sha256sum copeybara-kit.html\n# must equal: ${records.release.sha256}\n\nscripts/verify-kit.sh copeybara-kit.html ${records.name}`}</pre>
         </details>
       </div>
       <div class="card">
@@ -288,10 +288,10 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
       ))}
       {anyResult && (
         <div class="card row">
-          <button class="secondary" onClick={() => download('blackout-exit-report.json', reportToJson(flow.report()), 'application/json')}>
+          <button class="secondary" onClick={() => download('copeybara-exit-report.json', reportToJson(flow.report()), 'application/json')}>
             {COPY.downloadJson}
           </button>
-          <button class="secondary" onClick={() => download('blackout-exit-report.html', reportToHtml(flow.report()), 'text/html')}>
+          <button class="secondary" onClick={() => download('copeybara-exit-report.html', reportToHtml(flow.report()), 'text/html')}>
             {COPY.downloadHtml}
           </button>
         </div>
@@ -303,7 +303,7 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
 const ADAPTER_NAMES: Record<string, string> = { 'uniswap-v3': 'Uniswap v3', 'uniswap-v4': 'Uniswap v4', 'aave-v3': 'Aave v3', 'curve-3pool': 'Curve 3pool' };
 
 /** For positions discovery cannot list exhaustively (Uniswap v4 NFTs): the user types the ID, the kit checks ownership. */
-function AddById({ adapter, flow, busy }: { adapter: import('@blackout/core').AdapterId; flow: ReturnType<typeof createFlow>; busy: boolean }) {
+function AddById({ adapter, flow, busy }: { adapter: import('@copeybara/core').AdapterId; flow: ReturnType<typeof createFlow>; busy: boolean }) {
   const [id, setId] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [working, setWorking] = useState(false);

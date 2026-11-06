@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import type { Address, ExitPlan, Manifest, Position } from '@blackout/core';
-import type { ExitAdapter } from '@blackout/adapters';
-import type { BlackoutRecords } from '@blackout/ens';
-import { RecordsError } from '@blackout/ens';
-import type { Quorum } from '@blackout/quorum';
-import type { ExitResult } from '@blackout/exec';
+import type { Address, ExitPlan, Manifest, Position } from '@copeybara/core';
+import type { ExitAdapter } from '@copeybara/adapters';
+import type { CopeybaraRecords } from '@copeybara/ens';
+import { RecordsError } from '@copeybara/ens';
+import type { Quorum } from '@copeybara/quorum';
+import type { ExitResult } from '@copeybara/exec';
 import { createFlow, type FlowDeps } from '../src/flow';
 import { WrongChainError } from '../src/wallet';
 import { recordSeenVersion } from '../src/storage';
@@ -14,8 +14,8 @@ import { DEFAULT_SETTINGS } from '../src/settings';
 const ACC: Address = '0x1111111111111111111111111111111111111111';
 const NPM: Address = '0x1238536071E1c677A632429e3655c799b22cDA52';
 const manifest: Manifest = { v: 1, chains: { '11155111': { 'uniswap-v3': { positionManager: { address: NPM, selectors: ['0xac9650d8'] } } } } };
-const records = (over: Partial<BlackoutRecords> = {}): BlackoutRecords => ({
-  name: 'demoswap-blackout.eth', url: null, release: { sha256: 'ab'.repeat(32), version: 3 }, manifest, site: null, block: 9n,
+const records = (over: Partial<CopeybaraRecords> = {}): CopeybaraRecords => ({
+  name: 'demoswap-blackout.eth', url: null, release: { sha256: 'ab'.repeat(32), version: 3 }, manifest, site: null, extension: null, status: { state: 'ok' }, blocklist: [], problems: [], block: 9n,
   resolver: '0x2222222222222222222222222222222222222222', ...over,
 });
 const pos: Position = { adapter: 'uniswap-v3', id: '7', label: 'Uniswap v3 #7', tokens: [], raw: {} };
@@ -95,7 +95,7 @@ describe('exit flow', () => {
   });
 
   test('malformed manifest → error carries the plain message', async () => {
-    const { d } = deps({ readRecords: async () => { throw new RecordsError('org.blackout.manifest', 'The exit manifest on x.eth is unusable: not valid JSON.'); } });
+    const { d } = deps({ readRecords: async () => { throw new RecordsError('org.copeybara.manifest', 'The exit manifest on x.eth is unusable: not valid JSON.'); } });
     const f = createFlow(d);
     await f.start(settings);
     expect(f.state.get()).toMatchObject({ step: 'error', message: expect.stringMatching(/unusable: not valid JSON/) });

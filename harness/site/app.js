@@ -1,4 +1,4 @@
-// DemoSwap main bundle (its sha256 can be published as org.blackout.site).
+// DemoSwap main bundle (its sha256 can be published as org.copeybara.site).
 document.getElementById('connect')?.addEventListener('click', async () => {
   const eth = window.ethereum;
   if (!eth) return (document.getElementById('status').textContent = 'No wallet found.');

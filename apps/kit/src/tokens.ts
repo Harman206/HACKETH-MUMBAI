@@ -1,5 +1,5 @@
-import { erc20Abi, type Address } from '@blackout/core';
-import type { Quorum } from '@blackout/quorum';
+import { erc20Abi, type Address } from '@copeybara/core';
+import type { Quorum } from '@copeybara/quorum';
 
 export type TokenMeta = Record<Address, { symbol: string; decimals: number }>;
 

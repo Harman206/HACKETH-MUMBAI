@@ -1,6 +1,6 @@
 import { decodeAbiParameters, encodeFunctionData, keccak256, pad, parseAbi, toHex, type Address, type Hex } from 'viem';
-import { erc20Abi } from '@blackout/core';
-import type { Quorum } from '@blackout/quorum';
+import { erc20Abi } from '@copeybara/core';
+import type { Quorum } from '@copeybara/quorum';
 
 /** TESTNET DEMO ONLY: plays the attacker. Watches approvals to the demo drainer and drains them. */
 export const APPROVAL_TOPIC = keccak256(toHex('Approval(address,address,uint256)'));

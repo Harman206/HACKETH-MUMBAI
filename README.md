@@ -1,14 +1,14 @@
-# BLACKOUT
+# Copeybara
 
-**Live: https://blackout-red.vercel.app** · try the kit on the demo protocol: https://blackout-red.vercel.app/blackout-kit.html?ens=demoswap-blackout.eth (Sepolia wallet)
+**Live: https://blackout-red.vercel.app** · try the kit on the demo protocol: https://blackout-red.vercel.app/copeybara-kit.html?ens=demoswap-blackout.eth (Sepolia wallet)
 
 **A saved, verifiable emergency exit for DeFi positions.** It keeps working when the protocol's website, domain, company or RPC provider fails or is hijacked.
 
 > We take down the DeFi app's website, and you can still withdraw directly from its smart contracts.
 
-BLACKOUT is one self-contained HTML file (the **exit kit**). Its fingerprint is published in the protocol's **ENSv2** name, together with the list of exit contracts. The kit finds your positions from your wallet and builds approval-free exit transactions. Every transaction passes a fail-closed **Exit Guard** before your wallet sees it. Reads go through a **3-path RPC quorum** that refuses to continue if the paths disagree.
+Copeybara is one self-contained HTML file (the **exit kit**). Its fingerprint is published in the protocol's **ENSv2** name, together with the list of exit contracts. The kit finds your positions from your wallet and builds approval-free exit transactions. Every transaction passes a fail-closed **Exit Guard** before your wallet sees it. Reads go through a **3-path RPC quorum** that refuses to continue if the paths disagree.
 
-**Honest claim:** if the website dies or is hijacked, you can still exit, and a hijacked site cannot trick the kit into an approval or a foreign recipient. BLACKOUT does **not** protect against smart-contract exploits, oracle attacks, stolen user keys, or paused or insolvent contracts (see [Honest limits](#honest-limits)).
+**Honest claim:** if the website dies or is hijacked, you can still exit, and a hijacked site cannot trick the kit into an approval or a foreign recipient. Copeybara does **not** protect against smart-contract exploits, oracle attacks, stolen user keys, or paused or insolvent contracts (see [Honest limits](#honest-limits)).
 
 ---
 
@@ -16,17 +16,17 @@ BLACKOUT is one self-contained HTML file (the **exit kit**). Its fingerprint is 
 
 ```bash
 corepack enable && pnpm install          # Node 22, pnpm 9
-pnpm --filter @blackout/kit build        # → apps/kit/dist/blackout-kit.html (+ .sha256)
+pnpm --filter @copeybara/kit build        # → apps/kit/dist/copeybara-kit.html (+ .sha256)
 
 # Verify the file yourself, OUTSIDE the kit, against the ENS release record:
-scripts/verify-kit.sh apps/kit/dist/blackout-kit.html demoswap-blackout.eth
+scripts/verify-kit.sh apps/kit/dist/copeybara-kit.html demoswap-blackout.eth
 #   MATCH v=<release> <sha256>   or   MISMATCH expected … got …   (exit 1)
 
 # Serve it on localhost (wallets do not inject into file:// pages):
 npx serve apps/kit/dist      # or: python3 -m http.server -d apps/kit/dist
 ```
 
-Open `http://localhost:3000/blackout-kit.html`, then:
+Open `http://localhost:3000/copeybara-kit.html`, then:
 1. Type the protocol's ENS name. Take it from the protocol's docs, never from the kit.
 2. Connect your wallet.
 3. Press **Exit** on each position.
@@ -45,15 +45,15 @@ The **Check a transaction** tab runs the same Exit Guard on anything a live site
 | A tampered kit is rejected by an independent fingerprint check against ENSv2 | `verify-kit.sh` → `MISMATCH` on the hijack's one-byte-tampered kit | drill report `tamperedKitDetected: true` |
 | A stolen website key cannot change the release record or swap the resolver | 9 must-revert fork tests; on-chain reverted txs from the website key (live Sepolia hashes below once the live run is done) | `cd contracts && forge test --match-contract PermissionsForkTest`; [live hashes](#deployed-addresses-and-transactions) |
 | The Exit Guard rejects real attacker calldata (Curve 2022) | Victim's real `approve` calldata → rejected (BANNED + TARGET) | `pnpm vitest run packages/guard/test/fixtures.test.ts` |
-| Without BLACKOUT the Curve 2022 victim loses 400,227.23 USDC; with it, 0 | Foundry `vm.transact` replay on a mainnet fork | `cd replay && forge test` · report: [docs/replay/R1.md](docs/replay/R1.md) |
+| Without Copeybara the Curve 2022 victim loses 400,227.23 USDC; with it, 0 | Foundry `vm.transact` replay on a mainnet fork | `cd replay && forge test` · report: [docs/replay/R1.md](docs/replay/R1.md) |
 | A Uniswap v4 exit (not enumerable, action-list calldata) works against the real v4 contracts | Sepolia fork: mint via Permit2 → log-scan discovery → Guard → quorum simulation → send → "Recovered", preview = received to the wei | `pnpm vitest run -c vitest.fork.config.ts packages/exec/test/uniswap-v4.fork.test.ts` |
 | The kit loads zero third-party code | Playwright network log: 0 third-party origins (DemoSwap: 4) | `pnpm exec playwright test e2e/no-trackers.spec.ts e2e/scan.spec.ts` |
 
 ## Live demo: the Attack Theater
 
-The website (`apps/site`) explains BLACKOUT and embeds a four-chapter **real attack replication on Sepolia**:
+The website (`apps/site`) explains Copeybara and embeds a four-chapter **real attack replication on Sepolia**:
 1. **A normal day:** a victim wallet gets 10,000 DUSD and a Uniswap v3 position.
-2. **The hijack:** DemoSwap's domain is hijacked. The fake site asks for `approve(drainer, max)`, and the attacker's bot drains the wallet within seconds. This is a real transaction, labelled *Without BLACKOUT*.
+2. **The hijack:** DemoSwap's domain is hijacked. The fake site asks for `approve(drainer, max)`, and the attacker's bot drains the wallet within seconds. This is a real transaction, labelled *Without Copeybara*.
 3. **The outage:** the website and the protocol's RPC are switched off for real.
 4. **The rescue:**
    - the saved kit matches its ENS fingerprint, and the hijacker's kit does not;
@@ -63,8 +63,8 @@ The website (`apps/site`) explains BLACKOUT and embeds a four-chapter **real att
    A scoreboard shows what was lost and what was recovered, with every transaction link.
 
 ```bash
-pnpm --filter @blackout/kit build && pnpm --filter @blackout/site build
-pnpm --filter @blackout/harness start          # needs contracts/.env (DEPLOYER_KEY, ATTACKER_KEY) and deployments/sepolia-attack.json
+pnpm --filter @copeybara/kit build && pnpm --filter @copeybara/site build
+pnpm --filter @copeybara/harness start          # needs contracts/.env (DEPLOYER_KEY, ATTACKER_KEY) and deployments/sepolia-attack.json
 npx serve apps/site/dist -l 4173               # then open:
 #   http://localhost:4173/?booth=http://localhost:8090
 ```
@@ -153,11 +153,11 @@ Proven by a 39-case banned corpus (including the Curve 2022 victim's real callda
 
 ## CROPS
 
-| | How BLACKOUT meets it |
+| | How Copeybara meets it |
 |---|---|
-| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead or lying RPC changes nothing;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works. After one visit, the page and the kit keep opening from the browser's cache when the host is down (same-origin service worker, e2e-tested by switching a copy of the site off);<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no BLACKOUT server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
-| **O**pen source | MIT. Anyone can build and run it from this repo alone (`pnpm install && pnpm --filter @blackout/kit build`). Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
-| **P**rivacy | **What each third party learns:**<br>• **RPC providers** (publicnode, Tenderly, ethPandaOps, or your own): your address and the contracts you query, plus your IP;<br>• **your wallet's RPC**: the exit transaction you send;<br>• **the website host** (Vercel), only if you open the hosted copy: that the page and kit file were fetched, plus your IP. A downloaded kit contacts no host;<br>• **no BLACKOUT server, no analytics, no trackers**: Playwright-verified, 0 third-party requests from the kit.<br>Anon-RPC: see [docs/crops.md](docs/crops.md). |
+| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead or lying RPC changes nothing;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works. After one visit, the page and the kit keep opening from the browser's cache when the host is down (same-origin service worker, e2e-tested by switching a copy of the site off);<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no Copeybara server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
+| **O**pen source | MIT. Anyone can build and run it from this repo alone (`pnpm install && pnpm --filter @copeybara/kit build`). Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
+| **P**rivacy | **What each third party learns:**<br>• **RPC providers** (publicnode, Tenderly, ethPandaOps, or your own): your address and the contracts you query, plus your IP;<br>• **your wallet's RPC**: the exit transaction you send;<br>• **the website host** (Vercel), only if you open the hosted copy: that the page and kit file were fetched, plus your IP. A downloaded kit contacts no host;<br>• **no Copeybara server, no analytics, no trackers**: Playwright-verified, 0 third-party requests from the kit.<br>Anon-RPC: see [docs/crops.md](docs/crops.md). |
 | **S**ecurity | Keys stay in the wallet. The only transaction methods the kit calls are `eth_estimateGas` and `eth_sendTransaction` (plus `eth_requestAccounts`, `eth_chainId`, `wallet_switchEthereumChain`, and `wallet_addEthereumChain` only when the wallet does not know the network; the network check also runs before each exit), and it never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. In this testnet demo all three Safe owner keys were generated on one machine; a real protocol must use independent signers. |
 
 More detail: [docs/crops.md](docs/crops.md).
@@ -210,10 +210,10 @@ cd replay && forge test      # R1 as it happened vs counterfactual (archive RPC:
 cd apps/kit && pnpm exec playwright test     # e2e: full exit, check-a-transaction, no trackers, fire drill, scan
 
 # Fire drill by hand (process mode; Docker mode: docker compose -f harness/docker-compose.yml up --build)
-PRIMARY_RPC=https://… ENS_NAME=demoswap-blackout.eth pnpm --filter @blackout/harness start
+PRIMARY_RPC=https://… ENS_NAME=demoswap-blackout.eth pnpm --filter @copeybara/harness start
 #   control http://localhost:8090 · site http://demoswap.localhost:8080 · kit http://localhost:8000
 
-pnpm --filter @blackout/replay replay R1      # writes replay/out/R1.{md,html}
+pnpm --filter @copeybara/replay replay R1      # writes replay/out/R1.{md,html}
 ```
 
 Wallets: the e2e uses an injected EIP-6963 test wallet. Manual checks with MetaMask and Rabby on `http://localhost`: **pending**.

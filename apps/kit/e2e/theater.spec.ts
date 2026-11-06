@@ -3,7 +3,7 @@ import { installTestWallet, presetSettings, state } from './helpers';
 
 /**
  * The whole Attack Theater story on a Sepolia fork: a real approval on the hijacked DemoSwap, a real drain by the
- * attacker's bot, a real outage, then the BLACKOUT rescue — driven from the website exactly as at the booth.
+ * attacker's bot, a real outage, then the Copeybara rescue — driven from the website exactly as at the booth.
  */
 test('attack theater: prepare → hijack (real drain) → outage → verify + rescue → scoreboard', async ({ context }) => {
   test.setTimeout(300_000);
@@ -32,7 +32,7 @@ test('attack theater: prepare → hijack (real drain) → outage → verify + re
   const [demo] = await Promise.all([context.waitForEvent('page'), fakeLink.click()]);
   await expect(demo.getByText('Approve to view your rewards')).toBeVisible({ timeout: 15_000 }); // page load goes through the hijack router
   await demo.getByRole('button', { name: 'Connect wallet' }).click();
-  await expect(site.getByText('Without BLACKOUT', { exact: false }).first()).toBeVisible({ timeout: 60_000 });
+  await expect(site.getByText('Without Copeybara', { exact: false }).first()).toBeVisible({ timeout: 60_000 });
   await expect(site.locator('.scoreboard .big.bad')).toHaveText('10,000 DUSD', { timeout: 60_000 });
   await expect(next).toHaveAttribute('data-next', '3', { timeout: 30_000 });
 

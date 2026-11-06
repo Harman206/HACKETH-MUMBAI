@@ -21,7 +21,7 @@ export interface TargetEntry {
 
 export type ChainManifest = Partial<Record<AdapterId, Record<string, TargetEntry>>>;
 
-/** Decoded org.blackout.manifest record. `chains` is keyed by decimal chain ID. */
+/** Decoded org.copeybara.manifest record. `chains` is keyed by decimal chain ID. */
 export interface Manifest {
   v: 1;
   chains: Record<string, ChainManifest>;
@@ -29,7 +29,7 @@ export interface Manifest {
   unknown?: string[];
 }
 
-/** Decoded org.blackout.release record. */
+/** Decoded org.copeybara.release record. */
 export interface ReleaseRecord {
   sha256: string;
   version: number;

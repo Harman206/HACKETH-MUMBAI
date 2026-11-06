@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { decodeAbiParameters, decodeFunctionData, getAddress, pad, parseAbiParameters, toHex, type Hex } from 'viem';
-import { EXIT_SELECTORS, V4_ACTIONS, v4PosmAbi, type Address, type Manifest } from '@blackout/core';
-import { guard } from '@blackout/guard';
-import { QuorumError, type Quorum } from '@blackout/quorum';
+import { EXIT_SELECTORS, V4_ACTIONS, v4PosmAbi, type Address, type Manifest } from '@copeybara/core';
+import { guard } from '@copeybara/guard';
+import { QuorumError, type Quorum } from '@copeybara/quorum';
 import { uniswapV4 } from '../src/uniswap-v4';
 import { amountsForDecrease, sqrtPriceAtTick } from '../src/v4-math';
 import type { Ctx } from '../src/types';

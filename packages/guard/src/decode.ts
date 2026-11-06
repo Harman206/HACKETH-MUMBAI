@@ -1,5 +1,5 @@
 import { decodeAbiParameters, decodeFunctionData, getAddress, parseAbi, parseAbiParameters, type Abi } from 'viem';
-import { aavePoolAbi, curve3poolAbi, npmAbi, SEL, SIGS, V4_ACTIONS, v4PosmAbi, type Address, type Hex } from '@blackout/core';
+import { aavePoolAbi, curve3poolAbi, npmAbi, SEL, SIGS, V4_ACTIONS, v4PosmAbi, type Address, type Hex } from '@copeybara/core';
 
 export interface Decoded {
   selector: Hex;

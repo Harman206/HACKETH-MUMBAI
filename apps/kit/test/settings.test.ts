@@ -25,7 +25,7 @@ describe('storage', () => {
 describe('settings', () => {
   test('defaults on empty or corrupt storage', () => {
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
-    localStorage.setItem('blackout.settings.v1', '{nope');
+    localStorage.setItem('copeybara.settings.v1', '{nope');
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
   });
 
@@ -33,7 +33,7 @@ describe('settings', () => {
     saveSettings({ ...DEFAULT_SETTINGS, ensName: 'demoswap-blackout.eth', userRpcs: { '11155111': ['https://my.rpc'] } });
     expect(loadSettings().ensName).toBe('demoswap-blackout.eth');
     expect(loadSettings().userRpcs['11155111']).toEqual(['https://my.rpc']);
-    localStorage.setItem('blackout.settings.v1', JSON.stringify({ slippageBps: 99999, userRpcs: { '1': ['javascript:alert(1)'] } }));
+    localStorage.setItem('copeybara.settings.v1', JSON.stringify({ slippageBps: 99999, userRpcs: { '1': ['javascript:alert(1)'] } }));
     expect(loadSettings().slippageBps).toBe(DEFAULT_SETTINGS.slippageBps);
     expect(loadSettings().userRpcs['1']).toEqual([]);
   });
@@ -42,7 +42,7 @@ describe('settings', () => {
     expect(DEFAULT_SETTINGS.useDefaultRpcs).toBe(true);
     saveSettings({ ...DEFAULT_SETTINGS, useDefaultRpcs: false });
     expect(loadSettings().useDefaultRpcs).toBe(false);
-    localStorage.setItem('blackout.settings.v1', JSON.stringify({ useDefaultRpcs: 'no' }));
+    localStorage.setItem('copeybara.settings.v1', JSON.stringify({ useDefaultRpcs: 'no' }));
     expect(loadSettings().useDefaultRpcs).toBe(true);
   });
 
@@ -55,7 +55,7 @@ describe('settings', () => {
   test('drillUrl accepts only localhost http URLs', () => {
     saveSettings({ ...DEFAULT_SETTINGS, drillUrl: 'http://localhost:8090' });
     expect(loadSettings().drillUrl).toBe('http://localhost:8090');
-    localStorage.setItem('blackout.settings.v1', JSON.stringify({ drillUrl: 'https://evil.example' }));
+    localStorage.setItem('copeybara.settings.v1', JSON.stringify({ drillUrl: 'https://evil.example' }));
     expect(loadSettings().drillUrl).toBe('');
   });
 

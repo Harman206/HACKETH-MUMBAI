@@ -29,7 +29,7 @@ test('scan: DemoSwap loads N third-party origins, the kit loads 0', async ({ bro
     await expect(kit.getByText(/Release v2/)).toBeVisible({ timeout: 30_000 });
   });
 
-  const table = `| Page | Third-party origins |\n|---|---|\n| DemoSwap (normal app frontend) | ${siteThird.length}: ${siteThird.join(', ')} |\n| BLACKOUT kit | ${kitThird.length} |\n`;
+  const table = `| Page | Third-party origins |\n|---|---|\n| DemoSwap (normal app frontend) | ${siteThird.length}: ${siteThird.join(', ')} |\n| Copeybara kit | ${kitThird.length} |\n`;
   writeFileSync('test-results/scan.md', table);
   console.log(table);
   expect(siteThird.length).toBeGreaterThanOrEqual(4);

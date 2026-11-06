@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Address, Hex, TxRequest } from '@blackout/core';
+import type { Address, Hex, TxRequest } from '@copeybara/core';
 import { USER } from './helpers';
 
 const DIR = join(__dirname, '..', '..', '..', 'replay', 'fixtures');

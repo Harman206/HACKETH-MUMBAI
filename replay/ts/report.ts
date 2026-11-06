@@ -1,5 +1,5 @@
-import type { GuardResult } from '@blackout/guard';
-import { explain } from '@blackout/guard';
+import type { GuardResult } from '@copeybara/guard';
+import { explain } from '@copeybara/guard';
 import type { Fixture } from '../fixtures/schema';
 import type { LpExit } from './exits-at-block';
 
@@ -23,12 +23,12 @@ const usdOf = (amount: bigint, decimals: number, price: number | null | undefine
   price == null ? 'n/a' : `$${((Number(amount) / 10 ** decimals) * price).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
 export function buildReplayReport(results: ReplayResult[]): { md: string; html: string } {
-  const md: string[] = ['# BLACKOUT Incident Replay Lab', '', `Every result here is labelled **${LABELS.join('**, **')}**. Nothing is a live mainnet rescue.`, ''];
+  const md: string[] = ['# Copeybara Incident Replay Lab', '', `Every result here is labelled **${LABELS.join('**, **')}**. Nothing is a live mainnet rescue.`, ''];
   for (const r of results) {
     const loss = r.fixture.lossObserved!;
     md.push(`## ${r.fixture.id}: ${r.fixture.incident}`, '');
     md.push(`Fork block ${r.fixture.forkBlock} (just before the victim's approval at ${r.fixture.approveBlock}).`, '');
-    md.push('| | Without BLACKOUT | With BLACKOUT |', '|---|---|---|');
+    md.push('| | Without Copeybara | With Copeybara |', '|---|---|---|');
     md.push(
       `| Victim loss (USDC) [mainnet fork] | ${fmt(r.lossWithout, loss.decimals)} (${usdOf(r.lossWithout, loss.decimals, r.usd[loss.token.toLowerCase()])}) | ${fmt(r.lossWith, loss.decimals)} [counterfactual] |`,
     );
@@ -46,6 +46,6 @@ export function buildReplayReport(results: ReplayResult[]): { md: string; html: 
   }
   const body = md.join('\n');
   const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>BLACKOUT replay report</title><style>body{font:14px system-ui,sans-serif;margin:24px;max-width:1000px}pre{white-space:pre-wrap}</style></head><body><pre>${esc(body)}</pre></body></html>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Copeybara replay report</title><style>body{font:14px system-ui,sans-serif;margin:24px;max-width:1000px}pre{white-space:pre-wrap}</style></head><body><pre>${esc(body)}</pre></body></html>`;
   return { md: body, html };
 }

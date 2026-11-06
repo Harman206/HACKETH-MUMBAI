@@ -1,5 +1,5 @@
-import type { Address, AdapterId, ExitPlan, Manifest, Position, TargetEntry } from '@blackout/core';
-import type { Quorum } from '@blackout/quorum';
+import type { Address, AdapterId, ExitPlan, Manifest, Position, TargetEntry } from '@copeybara/core';
+import type { Quorum } from '@copeybara/quorum';
 
 /** Everything an adapter may use. Addresses come only from `manifest`; reads only through `q` at `block`. */
 export interface Ctx {

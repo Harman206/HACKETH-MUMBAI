@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { explain, guard, type GuardReason } from '../src';
 import { approveData, ATTACKER, aaveWithdrawData, collectData, curveRemoveData, decreaseData, multicallData, USER, v4 } from './helpers';
-import { V4_ACTIONS as A } from '@blackout/core';
+import { V4_ACTIONS as A } from '@copeybara/core';
 import { AAVE_POOL, CURVE_LP, CURVE_POOL, ctx1, ctxSepolia, NPM_MAINNET, NPM_SEPOLIA, POSM_MAINNET, POSM_SEPOLIA, tx } from './manifest-fixture';
 
 const codes = (r: { reasons: GuardReason[] }) => r.reasons.map((x) => x.code);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
-import { createQuorum } from '@blackout/quorum';
-import { readBlackoutRecords } from '@blackout/ens';
+import { createQuorum } from '@copeybara/quorum';
+import { readCopeybaraRecords } from '@copeybara/ens';
 import networks from '../../../../config/networks.json';
 import { ENS_NAME, RESOLVER, SAFE } from '../content';
 import { readLiveProof, type DemoRun, type LiveProof as Proof } from '../live';
@@ -14,7 +14,7 @@ export function LiveProof({ onLive }: { onLive(s: string): void }) {
   useEffect(() => {
     const q = createQuorum({ urls: networks.defaultRpcs['11155111'], expectedChainId: 11155111 });
     readLiveProof({
-      readRecords: () => readBlackoutRecords(ENS_NAME, q, { universalResolver: networks.ens.universalResolver as `0x${string}` }),
+      readRecords: () => readCopeybaraRecords(ENS_NAME, q, { universalResolver: networks.ens.universalResolver as `0x${string}` }),
       fetchRun: async () => {
         const r = await fetch('demo-runs/latest.json');
         if (!r.ok) throw new Error(String(r.status));
@@ -64,8 +64,8 @@ export function LiveProof({ onLive }: { onLive(s: string): void }) {
         ) : (
           <>
             <p class="muted" style="margin:0">{p.lastRun.network === 'local-fork' ? 'LOCAL FORK' : 'Sepolia'} · {new Date(p.lastRun.at).toUTCString()}</p>
-            <p style="margin-top:8px">Without BLACKOUT, the hijacked site drained <b class="bad">{p.lastRun.drained}</b> (<a href={tx(p.lastRun.drainTx)}>drain tx</a>).</p>
-            <p style="margin-top:8px">With BLACKOUT, with the website and RPC down, the kit recovered <b class="ok">{p.lastRun.recovered}</b> (<a href={tx(p.lastRun.rescueTx)}>exit tx</a>).</p>
+            <p style="margin-top:8px">Without Copeybara, the hijacked site drained <b class="bad">{p.lastRun.drained}</b> (<a href={tx(p.lastRun.drainTx)}>drain tx</a>).</p>
+            <p style="margin-top:8px">With Copeybara, with the website and RPC down, the kit recovered <b class="ok">{p.lastRun.recovered}</b> (<a href={tx(p.lastRun.rescueTx)}>exit tx</a>).</p>
           </>
         )}
       </article>

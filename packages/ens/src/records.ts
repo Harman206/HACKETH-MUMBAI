@@ -1,29 +1,53 @@
 import { decodeAbiParameters, decodeFunctionResult, encodeFunctionData, namehash, toHex, type Hex } from 'viem';
 import { normalize, packetToBytes } from 'viem/ens';
 import {
+  COPEYBARA_KEYS,
+  parseBlocklist,
   parseManifest,
   parseRelease,
+  parseSiteRecord,
+  parseStatus,
   textResolverAbi,
   universalResolverAbi,
   type Address,
   type Manifest,
   type ReleaseRecord,
-} from '@blackout/core';
-import { CallRevertedError, type Quorum } from '@blackout/quorum';
+  type StatusRecord,
+} from '@copeybara/core';
+import { CallRevertedError, type Quorum } from '@copeybara/quorum';
 
-/**
- * org.blackout.manifest2 carries the full exit list. org.blackout.manifest stays readable by kits saved before
- * protocols were added (their parser rejects unknown protocol ids), so adding a protocol never breaks a saved kit.
- */
-export const ENS_KEYS = ['url', 'org.blackout.release', 'org.blackout.manifest', 'org.blackout.site', 'org.blackout.manifest2'] as const;
+/** Every record Copeybara reads from a protocol's name. `url` is written by the website key, the rest by the Safe
+ * (status / blocklist also by the watcher key). org.blackout.* records stay on chain, frozen, for kits saved before the rename. */
+export const ENS_KEYS = [
+  'url',
+  COPEYBARA_KEYS.release,
+  COPEYBARA_KEYS.manifest,
+  COPEYBARA_KEYS.site,
+  COPEYBARA_KEYS.extension,
+  COPEYBARA_KEYS.status,
+  COPEYBARA_KEYS.blocklist,
+] as const;
 export type EnsKey = (typeof ENS_KEYS)[number];
 
-export interface BlackoutRecords {
+export interface RecordProblem {
+  key: EnsKey;
+  message: string;
+}
+
+export interface CopeybaraRecords {
   name: string;
   url: string | null;
   release: ReleaseRecord;
   manifest: Manifest;
-  site: string | null;
+  /** allowed script hashes; null = no fingerprint published (or unreadable: see problems) */
+  site: string[] | null;
+  /** extension zip release; null when not published */
+  extension: ReleaseRecord | null;
+  /** null only when the record is malformed (see problems); an empty record is { state: 'ok' } */
+  status: StatusRecord | null;
+  blocklist: string[];
+  /** optional records that were present but unreadable: they never stop an exit, but callers must not show them as fine */
+  problems: RecordProblem[];
   block: bigint;
   resolver: Address;
 }
@@ -67,44 +91,55 @@ async function readText(name: string, key: EnsKey, q: Quorum, ur: Address, block
 }
 
 /**
- * Read every BLACKOUT record for `name` through the quorum, all at one pinned block.
- * The name must come from the protocol's docs, never from the kit.
+ * Read every Copeybara record for `name` through the quorum, all at one pinned block.
+ * The name must come from the protocol's docs, never from the kit. release + manifest are required;
+ * the optional records are reported in `problems` when malformed instead of stopping the read.
  */
-export async function readBlackoutRecords(
+export async function readCopeybaraRecords(
   rawName: string,
   q: Quorum,
   cfg: { universalResolver: Address },
-): Promise<BlackoutRecords> {
+): Promise<CopeybaraRecords> {
   const name = normaliseName(rawName);
   const block = await q.pinBlock();
   const got = await Promise.all(ENS_KEYS.map((k) => readText(name, k, q, cfg.universalResolver, block)));
   const t = Object.fromEntries(ENS_KEYS.map((k, i) => [k, got[i]!.text])) as Record<EnsKey, string>;
+  const K = COPEYBARA_KEYS;
 
-  if (!t['org.blackout.release']) {
-    throw new RecordsError('org.blackout.release', `${name} has no release record, so this kit cannot be checked against it.`);
-  }
+  if (!t[K.release]) throw new RecordsError(K.release, `${name} has no release record, so this kit cannot be checked against it.`);
   let release: ReleaseRecord;
   try {
-    release = parseRelease(t['org.blackout.release']);
+    release = parseRelease(t[K.release]);
   } catch (e) {
-    throw new RecordsError('org.blackout.release', `The release record on ${name} is malformed: ${(e as Error).message}`, { cause: e });
+    throw new RecordsError(K.release, `The release record on ${name} is malformed: ${(e as Error).message}`, { cause: e });
   }
-  const mkey: EnsKey = t['org.blackout.manifest2'] ? 'org.blackout.manifest2' : 'org.blackout.manifest';
-  if (!t[mkey]) {
-    throw new RecordsError('org.blackout.manifest', `${name} has no exit manifest record.`);
-  }
+  if (!t[K.manifest]) throw new RecordsError(K.manifest, `${name} has no exit manifest record.`);
   let manifest: Manifest;
   try {
-    manifest = parseManifest(t[mkey]);
+    manifest = parseManifest(t[K.manifest]);
   } catch (e) {
-    throw new RecordsError(mkey, `The exit manifest on ${name} is unusable: ${(e as Error).message}`, { cause: e });
+    throw new RecordsError(K.manifest, `The exit manifest on ${name} is unusable: ${(e as Error).message}`, { cause: e });
   }
+
+  const problems: RecordProblem[] = [];
+  const optional = <T>(key: EnsKey, parse: (s: string) => T, fallback: T): T => {
+    try {
+      return parse(t[key]);
+    } catch (e) {
+      problems.push({ key, message: (e as Error).message });
+      return fallback;
+    }
+  };
   return {
     name,
     url: t.url || null,
     release,
     manifest,
-    site: t['org.blackout.site'] || null,
+    site: optional(K.site, parseSiteRecord, null),
+    extension: t[K.extension] ? optional<ReleaseRecord | null>(K.extension, parseRelease, null) : null,
+    status: optional<StatusRecord | null>(K.status, parseStatus, null),
+    blocklist: optional(K.blocklist, parseBlocklist, []),
+    problems,
     block,
     resolver: got[0]!.resolver,
   };

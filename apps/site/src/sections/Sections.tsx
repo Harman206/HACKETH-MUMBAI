@@ -41,8 +41,8 @@ export function Problem() {
           <h3>{REPLAY_R1.title}</h3>
           <p>{REPLAY_R1.body}</p>
           <div class="replay">
-            <div><p class="muted" style="margin:0">Without BLACKOUT</p><p class="big bad">{REPLAY_R1.lostWithout} {REPLAY_R1.token}</p><p class="muted" style="margin:0">lost by one victim (<a href={etherscan(REPLAY_R1.approveTx)}>approve</a> → <a href={etherscan(REPLAY_R1.drainTx)}>drain</a>)</p></div>
-            <div><p class="muted" style="margin:0">With BLACKOUT</p><p class="big ok">{REPLAY_R1.lostWith} {REPLAY_R1.token}</p><p class="muted" style="margin:0">the Guard rejects the approval; the drain moves nothing</p></div>
+            <div><p class="muted" style="margin:0">Without Copeybara</p><p class="big bad">{REPLAY_R1.lostWithout} {REPLAY_R1.token}</p><p class="muted" style="margin:0">lost by one victim (<a href={etherscan(REPLAY_R1.approveTx)}>approve</a> → <a href={etherscan(REPLAY_R1.drainTx)}>drain</a>)</p></div>
+            <div><p class="muted" style="margin:0">With Copeybara</p><p class="big ok">{REPLAY_R1.lostWith} {REPLAY_R1.token}</p><p class="muted" style="margin:0">the Guard rejects the approval; the drain moves nothing</p></div>
           </div>
         </div>
       </div>
@@ -54,7 +54,7 @@ export function How() {
   return (
     <section id="how">
       <div class="wrap">
-        <h2>How BLACKOUT works</h2>
+        <h2>How Copeybara works</h2>
         <p class="lede">Four simple ideas. Together they mean a dead or fake website can neither block your exit nor trick it.</p>
         <div class="grid">
           {HOW.map((h, i) => (
@@ -95,7 +95,7 @@ export function Download({ sha, offline }: { sha: string | null; offline: boolea
         <div class="cols">
           <div class="card">
             <h3>1. Use it now, or keep a copy</h3>
-            <p class="cta"><a class="btn" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol</a><a class="btn ghost" href="blackout-kit.html" target="_blank" rel="noopener">Open the kit</a><a class="btn ghost" href="blackout-kit.html" download>Download blackout-kit.html</a></p>
+            <p class="cta"><a class="btn" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol</a><a class="btn ghost" href="copeybara-kit.html" target="_blank" rel="noopener">Open the kit</a><a class="btn ghost" href="copeybara-kit.html" download>Download copeybara-kit.html</a></p>
             <p class="muted" style="margin-top:8px;font-size:14px">The demo link fills in <b>{ENS_NAME}</b> for you; connect a Sepolia wallet. For a real protocol, type its name from its official docs.</p>
             {offline ? (
               <p class="ok" style="margin-top:8px;font-size:14px" data-offline-ready>✓ Saved in this browser: this page and the kit keep opening even if this website goes down. Your own downloaded copy is still the strongest backup.</p>
@@ -103,14 +103,14 @@ export function Download({ sha, offline }: { sha: string | null; offline: boolea
               <p class="muted" style="margin-top:8px;font-size:14px">Opening it here works while this site is up. Keep a downloaded copy for the day it isn’t.</p>
             )}
             <p style="margin-top:12px">sha256 of this copy:</p>
-            <p class="mono">{sha ?? 'see blackout-kit.html.sha256'}</p>
+            <p class="mono">{sha ?? 'see copeybara-kit.html.sha256'}</p>
           </div>
           <div class="card">
             <h3>2. Verify it yourself</h3>
             <p>Compare the fingerprint with the release record on <b>{ENS_NAME}</b> (read live in the demo section above):</p>
-            <pre>{`sha256sum blackout-kit.html\n# or: shasum -a 256 blackout-kit.html`}</pre>
+            <pre>{`sha256sum copeybara-kit.html\n# or: shasum -a 256 copeybara-kit.html`}</pre>
             <h3 style="margin-top:12px">3. Run it</h3>
-            <pre>{`python3 -m http.server   # then open\nhttp://localhost:8000/blackout-kit.html`}</pre>
+            <pre>{`python3 -m http.server   # then open\nhttp://localhost:8000/copeybara-kit.html`}</pre>
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@ export function Footer() {
   return (
     <footer>
       <div class="wrap foot">
-        <p>BLACKOUT · open source (MIT) · no analytics, no trackers, no server · built at ETHGlobal with ENSv2, Uniswap v3 and the CROPS principles.</p>
+        <p>Copeybara · open source (MIT) · no analytics, no trackers, no server · built at ETHGlobal with ENSv2, Uniswap v3 and the CROPS principles.</p>
         <QrCard />
       </div>
     </footer>
