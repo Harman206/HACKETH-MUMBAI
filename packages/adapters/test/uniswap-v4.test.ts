@@ -81,11 +81,11 @@ describe('Uniswap v4 adapter', () => {
     expect(ps[1]).toMatchObject({ id: 'uniswap-v4:not-found', manual: expect.stringMatching(/2 more Uniswap v4 positions.*Enter the position ID/) });
   });
 
-  test('discover: scans backwards in 10k-block chunks and stops (keeping results) where RPCs no longer have history', async () => {
+  test('discover: scans backwards in 10k-block chunks; one failed chunk is skipped, two in a row end the scan (results kept)', async () => {
     const { ctx, calls } = stub({ balance: 1n, logIds: [7n], logsFailBefore: 980_000n, positions: { '7': { owner: USER, liquidity: 1n } } });
     const ps = await uniswapV4.discover(USER, ctx);
     expect(ps.map((p) => p.id)).toEqual(['v4:7']);
-    expect(calls.filter((c) => c.startsWith('getLogs'))).toEqual(['getLogs 990001-1000000', 'getLogs 980001-990000', 'getLogs 970001-980000']);
+    expect(calls.filter((c) => c.startsWith('getLogs'))).toEqual(['getLogs 990001-1000000', 'getLogs 980001-990000', 'getLogs 970001-980000', 'getLogs 960001-970000']);
   });
 
   test('discover: a wallet with no v4 NFTs does no log scan', async () => {
@@ -146,4 +146,17 @@ describe('Uniswap v4 adapter', () => {
     const plan = await uniswapV4.buildExit(pos!, ctx);
     expect(plan.expected.map((e) => e.token)).toEqual([T0]);
   });
+
+  test('review M9: a dynamic-fee pool is labelled as such, not as 838.8608%', async () => {
+    const { ctx } = stub({ balance: 1n, logIds: [7n], positions: { '7': { owner: USER, liquidity: 1n } } });
+    const q = ctx.q as unknown as { read: (p: { functionName: string; args?: readonly unknown[] }) => Promise<unknown> };
+    const orig = q.read;
+    q.read = async (p) => {
+      const r = await orig(p);
+      return p.functionName === 'getPoolAndPositionInfo' ? [{ ...(r as [Record<string, unknown>])[0], fee: 0x800000 }, (r as unknown[])[1]] : r;
+    };
+    const [p] = await uniswapV4.discover(USER, ctx);
+    expect(p!.label).toBe('Uniswap v4 #7 TKN/TKN dynamic fee');
+  });
 });
+

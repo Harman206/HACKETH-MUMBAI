@@ -37,6 +37,7 @@ export const v4 = {
   decrease: (tokenId = 7n, liquidity = 1000n, min0 = 0n, min1 = 0n, hookData: Hex = '0x'): Hex =>
     encodeAbiParameters(parseAbiParameters('uint256, uint256, uint128, uint128, bytes'), [tokenId, liquidity, min0, min1, hookData]),
   burn: (tokenId = 7n): Hex => encodeAbiParameters(parseAbiParameters('uint256, uint128, uint128, bytes'), [tokenId, 0n, 0n, '0x']),
+  burnWithHook: (hookData: Hex): Hex => encodeAbiParameters(parseAbiParameters('uint256, uint128, uint128, bytes'), [7n, 0n, 0n, hookData]),
   takePair: (recipient: Address = USER, c0: Address = T0, c1: Address = T1): Hex =>
     encodeAbiParameters(parseAbiParameters('address, address, address'), [c0, c1, recipient]),
   settlePair: (c0: Address = T0, c1: Address = T1): Hex => encodeAbiParameters(parseAbiParameters('address, address'), [c0, c1]),

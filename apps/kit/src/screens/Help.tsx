@@ -33,11 +33,10 @@ export function FixHelp({ h, chainId, onRetry }: { h: Humanized; chainId: number
       return (
         <span class="row" style="justify-content:flex-start">
           {onRetry && <button onClick={onRetry} data-fix="retry">{COPY.tryAgain}</button>}
-          {typeof document !== 'undefined' && document.getElementById('rpcs') && (
-            <button class="secondary" onClick={() => focus('rpcs')} data-fix="add-rpc">
-              {COPY.addRpc}
-            </button>
-          )}
+          {/* Always offered: the RPC box (#rpcs) may mount after this card in the same render. */}
+          <button class="secondary" onClick={() => focus('rpcs')} data-fix="add-rpc">
+            {COPY.addRpc}
+          </button>
         </span>
       );
     case 'check-name':

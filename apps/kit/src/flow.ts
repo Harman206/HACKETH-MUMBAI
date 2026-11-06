@@ -215,7 +215,9 @@ export function createFlow(deps: FlowDeps): Flow {
   async function exitAll() {
     const s = state.get();
     if (s.step !== 'positions' || s.busy) return;
-    const todo = s.positions.filter((p) => !p.manual && s.results[p.id]?.status !== 'recovered');
+    // Skip anything recovered, and anything whose transaction was already sent: re-sending would ask the wallet
+    // again for a tx that may still be pending. The user follows the explorer link instead.
+    const todo = s.positions.filter((p) => !p.manual && s.results[p.id]?.status !== 'recovered' && !(s.results[p.id]?.txHashes.length));
     const setBatch = (batch: { done: number; total: number } | null) => {
       const cur = state.get();
       if (cur.step === 'positions') state.set({ ...cur, batch });

@@ -93,11 +93,14 @@ function decodeV4(data: Hex, selector: Hex): Decoded {
     const p = params[i]!;
     switch (code) {
       case V4_ACTIONS.DECREASE_LIQUIDITY:
-        v4Param('uint256, uint256, uint128, uint128, bytes', p, name);
+      case V4_ACTIONS.BURN_POSITION: {
+        const decoded = v4Param(code === V4_ACTIONS.BURN_POSITION ? 'uint256, uint128, uint128, bytes' : 'uint256, uint256, uint128, uint128, bytes', p, name);
+        // hookData is passed to the pool's hook, which may take part of the withdrawal based on it. Exits send none.
+        if (decoded[decoded.length - 1] !== '0x') {
+          nested.push({ selector, name: `v4 ${name}`, recipients: [], paysCaller: false, nested: [], forbidden: `Uniswap v4 action ${name} carries hook data, which the pool's hook could use to take part of your withdrawal. Exits send no hook data.` });
+        }
         return;
-      case V4_ACTIONS.BURN_POSITION:
-        v4Param('uint256, uint128, uint128, bytes', p, name);
-        return;
+      }
       case V4_ACTIONS.TAKE_PAIR: {
         const [, , recipient] = v4Param('address, address, address', p, name);
         recipients.push(getAddress(recipient as Address));

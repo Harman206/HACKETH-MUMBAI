@@ -290,3 +290,13 @@ describe('exit flow: add a position by ID (Uniswap v4 NFTs are not enumerable)',
   });
 });
 
+test('review I3: Exit all never re-sends a position whose earlier transaction was already sent', async () => {
+  const sent: ExitResult = { positionId: '7', status: 'not-recovered', reasons: ['no confirmed receipt for 0xaa yet'], txHashes: ['0xaa'], before: {}, after: {}, gasUsed: 0n, deltas: [] };
+  const { d } = deps({ runExit: vi.fn(async () => sent) });
+  const f = createFlow(d);
+  await f.start(settings);
+  await f.exit('7');
+  await f.exitAll();
+  expect(d.runExit).toHaveBeenCalledTimes(1);
+});
+

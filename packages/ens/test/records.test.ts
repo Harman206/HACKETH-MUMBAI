@@ -88,4 +88,26 @@ describe('readBlackoutRecords', () => {
     await expect(readBlackoutRecords('no-tld', q, { universalResolver: UR })).rejects.toBeInstanceOf(RecordsError);
     expect(blocks).toHaveLength(0);
   });
+
+  describe('org.blackout.manifest2 (review C1: new protocols go in a new record so saved kits keep working)', () => {
+    const V4 = '{"v":1,"c":{"11155111":{"uniswap-v4":{"positionManager":{"a":"0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4","s":["0xdd46508f"]}}}}}';
+    test('manifest2 present → it is used', async () => {
+      const { q } = stubQuorum({ ...GOOD, 'org.blackout.manifest2': V4 });
+      const r = await readBlackoutRecords(NAME, q, { universalResolver: UR });
+      expect(Object.keys(r.manifest.chains['11155111']!)).toEqual(['uniswap-v4']);
+    });
+    test('manifest2 absent → falls back to org.blackout.manifest', async () => {
+      const { q } = stubQuorum(GOOD);
+      expect((await readBlackoutRecords(NAME, q, { universalResolver: UR })).manifest).toEqual({ v: 1, chains: {} });
+    });
+    test('malformed manifest2 stops (never silently falls back)', async () => {
+      const { q } = stubQuorum({ ...GOOD, 'org.blackout.manifest2': '{' });
+      await expect(readBlackoutRecords(NAME, q, { universalResolver: UR })).rejects.toMatchObject({ key: 'org.blackout.manifest2' });
+    });
+    test('neither record → no exit manifest', async () => {
+      const { q } = stubQuorum({ ...GOOD, 'org.blackout.manifest': '' });
+      await expect(readBlackoutRecords(NAME, q, { universalResolver: UR })).rejects.toThrow(/no exit manifest/);
+    });
+  });
 });
+

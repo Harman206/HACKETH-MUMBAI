@@ -125,5 +125,11 @@ describe('Uniswap v4 (modifyLiquidities action list)', () => {
     expect(codes(guard(tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, 0x30], [v4.decrease(), '0x'])), ctx1))).toEqual(['DECODE']);
     expect(codes(guard(tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, A.TAKE_PAIR], [v4.decrease()])), ctx1))).toEqual(['DECODE']);
   });
+
+  test('review I1: non-empty hookData → BANNED (the kit always sends 0x; a hook could read a payee from it)', () => {
+    const r = guard(tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, A.TAKE_PAIR], [v4.decrease(7n, 1000n, 0n, 0n, '0xbadbad'), v4.takePair()])), ctx1);
+    expect(codes(r)).toEqual(['BANNED']);
+    expect(explain(r).join(' ')).toMatch(/hook data/);
+  });
 });
 

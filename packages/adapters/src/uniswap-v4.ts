@@ -30,13 +30,18 @@ const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 async function recentlyReceived(address: Address, user: Address, ctx: Ctx): Promise<bigint[]> {
   const ids: bigint[] = [];
   const floor = ctx.block > WINDOW ? ctx.block - WINDOW : 0n;
+  let failures = 0;
   for (let to = ctx.block; to > floor; to -= CHUNK) {
     const from = to - CHUNK + 1n > floor ? to - CHUNK + 1n : floor + 1n;
     let logs;
     try {
       logs = await ctx.q.getLogs({ address, topics: [TRANSFER, null, pad(user)] }, from, to);
+      failures = 0;
     } catch {
-      break; // older history unavailable through the quorum; positions beyond this point can be added by ID
+      // One failed chunk (a provider briefly behind, a 429) is skipped; two in a row means the RPCs no longer have
+      // that history. Positions beyond this point can be added by ID.
+      if (++failures >= 2) break;
+      continue;
     }
     for (const l of [...logs].reverse()) if (l.topics[3]) ids.push(BigInt(l.topics[3]));
   }
@@ -58,7 +63,7 @@ async function load(address: Address, tokenId: bigint, ctx: Ctx): Promise<Positi
     adapter: 'uniswap-v4',
     // v3 and v4 NFT ids are independent counters: a wallet can hold v3 #N and v4 #N, so keep the kit's keys distinct.
     id: `v4:${tokenId}`,
-    label: `Uniswap v4 #${tokenId} ${s0}/${s1} ${pk.fee / 10_000}%${hook}`,
+    label: `Uniswap v4 #${tokenId} ${s0}/${s1} ${pk.fee & 0x800000 ? 'dynamic fee' : `${pk.fee / 10_000}%`}${hook}`,
     tokens: native ? [pk.currency1] : [pk.currency0, pk.currency1],
     ...(native
       ? { manual: 'This pool pays out native ETH. This kit version exits ERC-20 pairs only; withdraw it from the Uniswap app or a block explorer.' }

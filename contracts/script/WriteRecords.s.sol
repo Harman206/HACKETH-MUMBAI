@@ -7,7 +7,7 @@ import {IPermissionedResolver} from "../src/interfaces/IENSv2.sol";
 
 /// Safe (2-of-3) updates the release and/or manifest records.
 ///   RELEASE="sha256:<hex>;v=<n>" MANIFEST_FILE=path forge script script/WriteRecords.s.sol --rpc-url sepolia --broadcast
-/// Either env var may be omitted. SITE_HASH (optional) writes org.blackout.site; CONTENTHASH (optional, 0x…) the ENSIP-7 contenthash.
+/// Either env var may be omitted. MANIFEST2_FILE writes org.blackout.manifest2 (full list for current kits). SITE_HASH (optional) writes org.blackout.site; CONTENTHASH (optional, 0x…) the ENSIP-7 contenthash.
 contract WriteRecords is BlackoutSetup {
     function run() external {
         string memory j = vm.readFile(vm.envOr("DEPLOYMENTS_FILE", string("deployments/sepolia.json")));
@@ -23,6 +23,8 @@ contract WriteRecords is BlackoutSetup {
         if (bytes(release).length > 0) safeSetText(safe, resolver, label, "org.blackout.release", release, keys);
         string memory mf = vm.envOr("MANIFEST_FILE", string(""));
         if (bytes(mf).length > 0) safeSetText(safe, resolver, label, "org.blackout.manifest", vm.readFile(mf), keys);
+        string memory mf2 = vm.envOr("MANIFEST2_FILE", string(""));
+        if (bytes(mf2).length > 0) safeSetText(safe, resolver, label, "org.blackout.manifest2", vm.readFile(mf2), keys);
         string memory site = vm.envOr("SITE_HASH", string(""));
         if (bytes(site).length > 0) safeSetText(safe, resolver, label, "org.blackout.site", site, keys);
         bytes memory ch = vm.envOr("CONTENTHASH", bytes(""));

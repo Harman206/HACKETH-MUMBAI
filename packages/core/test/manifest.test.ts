@@ -62,4 +62,14 @@ describe('manifest codec', () => {
     expect(EXIT_SELECTORS['uniswap-v4']).toEqual({ positionManager: ['0xdd46508f'], stateView: [] });
     expect(V4_ACTIONS).toMatchObject({ DECREASE_LIQUIDITY: 0x01, BURN_POSITION: 0x03, SETTLE_PAIR: 0x0d, TAKE: 0x0e, TAKE_PAIR: 0x11, SWEEP: 0x14 });
   });
+
+  test('review C1: config/manifest-legacy.json (org.blackout.manifest) lists only protocols every saved kit knows', async () => {
+    const { readFileSync } = await import('node:fs');
+    const text = readFileSync(new URL('../../../config/manifest-legacy.json', import.meta.url), 'utf8');
+    const m = parseManifest(text);
+    expect(m.unknown).toBeUndefined();
+    const ids = new Set(Object.values(m.chains).flatMap((c) => Object.keys(c)));
+    expect([...ids].sort()).toEqual(['aave-v3', 'curve-3pool', 'uniswap-v3']);
+  });
 });
+

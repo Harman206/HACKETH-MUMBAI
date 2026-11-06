@@ -7,7 +7,9 @@ cd "$(dirname "$0")/.."
 set -a; . "${ENV_FILE:-./.env}"; set +a
 export PATH=$HOME/.foundry/bin:$PATH
 export WEB_KEY_ADDR=$(cast wallet address --private-key "$WEB_KEY")
-export MANIFEST_FILE=${MANIFEST_FILE:-../config/manifest.json}
+# org.blackout.manifest stays readable by older saved kits (frozen legacy list); manifest2 carries the full list.
+export MANIFEST_FILE=${MANIFEST_FILE:-../config/manifest-legacy.json}
+export MANIFEST2_FILE=${MANIFEST2_FILE:-../config/manifest.json}
 # Placeholder release until the kit is built (Task 7.1 publishes v=2 with the real hash).
 export RELEASE=${RELEASE:-"sha256:$(printf 'blackout-placeholder' | shasum -a 256 | cut -d' ' -f1);v=1"}
 DEPLOYER=$(cast wallet address --private-key "$DEPLOYER_KEY")
@@ -32,7 +34,7 @@ jq . "$DF"
 
 # Publish the DemoSwap main-bundle fingerprint for hijack detection (org.blackout.site), once.
 if [ ! -f "$DF.site-published" ]; then
-  env -u RELEASE -u MANIFEST_FILE SITE_HASH="$(node ../scripts/site-hash.mjs ../harness/site/app.js)" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow && touch "$DF.site-published"
+  env -u RELEASE -u MANIFEST_FILE -u MANIFEST2_FILE SITE_HASH="$(node ../scripts/site-hash.mjs ../harness/site/app.js)" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow && touch "$DF.site-published"
 fi
 if [ -f "$PERMISSIONS_FILE" ] && [ "$(jq '[.[] | select(.pass | not)] | length' "$PERMISSIONS_FILE")" = "0" ] && [ -z "${FORCE_PERMISSION_CHECKS:-}" ]; then
   echo "permission checks already recorded and passing ($PERMISSIONS_FILE); set FORCE_PERMISSION_CHECKS=1 to resend"
@@ -53,7 +55,7 @@ if [ "$(jq -r '.kitRelease // empty' "$DF")" != "$KIT_SHA" ]; then
   CUR=$(../scripts/verify-kit.sh --release-only "$NAME_NOW" "$SEPOLIA_RPC" | sed -n 's/.*;v=\([0-9]*\).*/\1/p')
   KIT_VERSION=${KIT_VERSION:-$(( ${CUR:-1} + 1 ))}
   echo "publishing release v=$KIT_VERSION (was v=${CUR:-none})"
-  env -u MANIFEST_FILE RELEASE="sha256:$KIT_SHA;v=$KIT_VERSION" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  env -u MANIFEST_FILE -u MANIFEST2_FILE RELEASE="sha256:$KIT_SHA;v=$KIT_VERSION" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
   jq --arg s "$KIT_SHA" --argjson v "$KIT_VERSION" '.kitRelease=$s | .kitReleaseVersion=$v' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
 fi
 # ENS-hosted kit: its IPFS CIDv1 (raw) is multihash(sha256), so contenthash = 0xe30101551220<sha256>.
@@ -61,17 +63,18 @@ fi
 CH="0xe30101551220$KIT_SHA"
 if [ "${IPFS_PINNED:-0}" = "1" ] && [ "$(jq -r '.contenthash // empty' "$DF")" != "$CH" ]; then
   echo "publishing contenthash $CH"
-  env -u RELEASE -u MANIFEST_FILE -u SITE_HASH CONTENTHASH="$CH" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  env -u RELEASE -u MANIFEST_FILE -u MANIFEST2_FILE -u SITE_HASH CONTENTHASH="$CH" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
   jq --arg s "$CH" '.contenthash=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
 elif [ "${IPFS_PINNED:-0}" != "1" ]; then
   echo "contenthash not published: pin apps/kit/dist/blackout-kit.html on IPFS (CIDv1, raw leaves), then rerun with IPFS_PINNED=1"
 fi
-# Publish the exit manifest whenever config/manifest.json changed since the last publish (same Safe 2-of-3 path).
-MF_SHA=$(shasum -a 256 "$MANIFEST_FILE" | cut -d' ' -f1)
-if [ "$(jq -r '.manifestSha // empty' "$DF")" != "$MF_SHA" ]; then
-  echo "publishing exit manifest (sha256 $MF_SHA)"
-  env -u RELEASE -u SITE_HASH forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
-  jq --arg s "$MF_SHA" '.manifestSha=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
+# Publish the full exit list (org.blackout.manifest2) whenever config/manifest.json changes. org.blackout.manifest is
+# never rewritten here: kits saved before a protocol was added reject unknown protocols, so it must stay as they know it.
+MF_SHA=$(shasum -a 256 "$MANIFEST2_FILE" | cut -d' ' -f1)
+if [ "$(jq -r '.manifest2Sha // empty' "$DF")" != "$MF_SHA" ]; then
+  echo "publishing org.blackout.manifest2 (sha256 $MF_SHA)"
+  env -u RELEASE -u MANIFEST_FILE -u SITE_HASH forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  jq --arg s "$MF_SHA" '.manifest2Sha=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
 fi
 # Independent check through 3 public RPCs (a local fork rehearsal can only use the fork itself).
 case "$SEPOLIA_RPC" in

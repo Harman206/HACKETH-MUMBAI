@@ -34,11 +34,16 @@ contract SetupName is BlackoutSetup {
         owners[1] = vm.addr(vm.envUint("OWNER_KEY_2"));
         owners[2] = vm.addr(vm.envUint("OWNER_KEY_3"));
 
-        string[] memory keys = new string[](3);
-        string[] memory vals = new string[](3);
+        // MANIFEST2_FILE (optional): the full exit list in org.blackout.manifest2; org.blackout.manifest stays
+        // readable by older kits (see packages/ens/src/records.ts).
+        string memory m2 = vm.envOr("MANIFEST2_FILE", string(""));
+        uint256 n = bytes(m2).length > 0 ? 4 : 3;
+        string[] memory keys = new string[](n);
+        string[] memory vals = new string[](n);
         (keys[0], vals[0]) = ("url", vm.envString("SITE_URL"));
         (keys[1], vals[1]) = ("org.blackout.release", vm.envString("RELEASE"));
         (keys[2], vals[2]) = ("org.blackout.manifest", vm.readFile(vm.envString("MANIFEST_FILE")));
+        if (n == 4) (keys[3], vals[3]) = ("org.blackout.manifest2", vm.readFile(m2));
         bytes32 secret = keccak256(abi.encodePacked(deployerKey, label, block.timestamp));
 
         vm.startBroadcast(deployerKey);

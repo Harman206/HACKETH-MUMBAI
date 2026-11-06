@@ -11,7 +11,11 @@ import {
 } from '@blackout/core';
 import { CallRevertedError, type Quorum } from '@blackout/quorum';
 
-export const ENS_KEYS = ['url', 'org.blackout.release', 'org.blackout.manifest', 'org.blackout.site'] as const;
+/**
+ * org.blackout.manifest2 carries the full exit list. org.blackout.manifest stays readable by kits saved before
+ * protocols were added (their parser rejects unknown protocol ids), so adding a protocol never breaks a saved kit.
+ */
+export const ENS_KEYS = ['url', 'org.blackout.release', 'org.blackout.manifest', 'org.blackout.site', 'org.blackout.manifest2'] as const;
 export type EnsKey = (typeof ENS_KEYS)[number];
 
 export interface BlackoutRecords {
@@ -85,14 +89,15 @@ export async function readBlackoutRecords(
   } catch (e) {
     throw new RecordsError('org.blackout.release', `The release record on ${name} is malformed: ${(e as Error).message}`, { cause: e });
   }
-  if (!t['org.blackout.manifest']) {
+  const mkey: EnsKey = t['org.blackout.manifest2'] ? 'org.blackout.manifest2' : 'org.blackout.manifest';
+  if (!t[mkey]) {
     throw new RecordsError('org.blackout.manifest', `${name} has no exit manifest record.`);
   }
   let manifest: Manifest;
   try {
-    manifest = parseManifest(t['org.blackout.manifest']);
+    manifest = parseManifest(t[mkey]);
   } catch (e) {
-    throw new RecordsError('org.blackout.manifest', `The exit manifest on ${name} is unusable: ${(e as Error).message}`, { cause: e });
+    throw new RecordsError(mkey, `The exit manifest on ${name} is unusable: ${(e as Error).message}`, { cause: e });
   }
   return {
     name,

@@ -77,6 +77,8 @@ export const BANNED_CORPUS: CorpusCase[] = [
   { name: 'v4: truncated DECREASE params', tx: tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, A.TAKE_PAIR], ['0x1234', v4.takePair()])) },
   { name: 'v4: exit wrapped in multicall with a Permit2 permit', tx: tx(POSM_MAINNET, multicallData([enc(SIGS.banned[11], [USER, [[USDC, 1n, 1, 0], ATTACKER, 1n], '0x']), v4.exit()])) },
   { name: 'v4: valid exit sent to the read-only StateView', tx: tx(STATEVIEW_MAINNET, v4.exit()) },
+  { name: 'v4: DECREASE with attacker-chosen hookData (a hook could take a cut)', tx: tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, A.TAKE_PAIR], [v4.decrease(7n, 1000n, 0n, 0n, '0xbadbad'), v4.takePair()])) },
+  { name: 'v4: BURN with hookData', tx: tx(POSM_MAINNET, v4.call([A.BURN_POSITION, A.TAKE_PAIR], [v4.burnWithHook('0x01'), v4.takePair()])) },
   { name: 'v4: valid exit with value', tx: tx(POSM_MAINNET, v4.exit(), { value: 1n }) },
   ...INCIDENT_CORPUS,
 ];

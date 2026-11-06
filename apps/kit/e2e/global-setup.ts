@@ -67,7 +67,7 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
     DEPLOYER_KEY: K[0], OWNER_KEY_1: K[1], OWNER_KEY_2: K[2], OWNER_KEY_3: K[3],
     WEB_KEY_ADDR: execFileSync(CAST, ['wallet', 'address', '--private-key', K[4]!], { encoding: 'utf8' }).trim(),
     LABEL: label, SITE_URL: 'http://demoswap.localhost', RELEASE: `sha256:${sha};v=2`,
-    MANIFEST_FILE: '../config/manifest.json', DEPLOYMENTS_FILE: 'deployments/rehearsal-e2e.json',
+    MANIFEST_FILE: '../config/manifest-legacy.json', MANIFEST2_FILE: '../config/manifest.json', DEPLOYMENTS_FILE: 'deployments/rehearsal-e2e.json',
     TEST_WALLET_KEY: K[5], POSITIONS_FILE: 'deployments/rehearsal-e2e-positions.json',
   };
   const forge = (args: string[]) => execFileSync(FORGE, [...args, '--rpc-url', fork.url, '--broadcast'], { cwd: CONTRACTS, env, stdio: 'pipe' });
