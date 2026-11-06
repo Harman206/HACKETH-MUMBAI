@@ -30,3 +30,4 @@ deploy/
 apps/extension/dist/
 apps/extension/e2e/.state.json
 contracts/deployments/rehearsal-ext*
+.demo/
