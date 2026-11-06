@@ -15,7 +15,8 @@ function Confirm() {
     void send<PendingConfirm | null>({ t: 'getConfirm', id }).then(setP);
   }, []);
   const decide = async (allow: boolean) => {
-    await send({ t: 'confirmDecision', id, allow });
+    // the worker closes this window when the decision arrives; window.close() is the fallback
+    await send({ t: 'confirmDecision', id, allow }).catch(() => undefined);
     window.close();
   };
   if (p === undefined) return <div class="wrap confirm muted" style="padding-top:20px">Loading…</div>;

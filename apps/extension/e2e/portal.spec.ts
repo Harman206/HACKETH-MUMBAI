@@ -117,7 +117,7 @@ test('demo portal: scenarios 1, 2, 4, 5, 6 open the right targets and the extens
   await expect(portal.locator('#st-dns')).toContainText('Normal');
 });
 
-test('a look-alike scam page (demoswap-airdrop.localhost): the connect attempt opens Copeybara first; the wallet never sees it', async ({ ctx, ext, w }) => {
+test('a look-alike scam page (demoswap-airdrop.localhost): the connect attempt opens Copeybara first; Cancel closes the window; the wallet never sees it', async ({ ctx, ext, w }) => {
   await follow(ext, w);
   const scam = await ctx.newPage();
   await scam.goto(`http://demoswap-airdrop.localhost:${new URL(w.portal).port}/drainer`);
@@ -126,6 +126,7 @@ test('a look-alike scam page (demoswap-airdrop.localhost): the connect attempt o
   await shot(win, 'confirm-lookalike');
   await win.locator('#cancel').click();
   await expect(scam.locator('#result')).toHaveText('error 4001');
+  await expect.poll(() => win.isClosed(), { timeout: 15_000 }).toBe(true); // the worker closes it (real Chrome ignored window.close())
   const calls = await scam.evaluate(() => (window as any).__walletCalls as string[]);
   expect(calls.filter((m) => m === 'eth_requestAccounts' || m === 'eth_sendTransaction')).toEqual([]);
 });

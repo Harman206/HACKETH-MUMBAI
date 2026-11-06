@@ -72,7 +72,7 @@ async function setup(opts: { extension?: Record<string, ReleaseRecord | null>; f
     runtime: { id: 'abc', getURL: (p) => EXT + p.replace(/^\//, ''), getManifest: () => ({ version: '0.1.0' }) },
     storage: { local: { get: async (keys) => Object.fromEntries(keys.filter((k) => k in store).map((k) => [k, structuredClone(store[k])])), set: async (o) => void Object.assign(store, structuredClone(o)) } },
     tabs: { update: async () => undefined, create: async () => undefined, sendMessage: async () => undefined },
-    windows: { create: async () => ({ id: 1 }) },
+    windows: { create: async () => ({ id: 1 }), remove: async () => {} },
     action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {}, setTitle: async () => {} },
     declarativeNetRequest: { getDynamicRules: async () => [], updateDynamicRules: async () => {} },
   };

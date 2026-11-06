@@ -31,7 +31,11 @@ export interface ChromeLike {
     create(props: { url: string }): Promise<unknown>;
     sendMessage(tabId: number, msg: unknown): Promise<unknown>;
   };
-  windows: { create(o: { url: string; type: 'popup'; width: number; height: number; focused?: boolean }): Promise<{ id?: number }> };
+  windows: {
+    create(o: { url: string; type: 'popup'; width: number; height: number; focused?: boolean }): Promise<{ id?: number }>;
+    /** the worker closes the confirm window itself: window.close() from the page is not reliable in every Chrome */
+    remove(windowId: number): Promise<void>;
+  };
   action: {
     setBadgeText(o: { tabId?: number; text: string }): Promise<void>;
     setBadgeBackgroundColor(o: { tabId?: number; color: string }): Promise<void>;
@@ -373,16 +377,25 @@ export function createCore(deps: CoreDeps) {
     recent.push(now);
     const id = `c${now.toString(36)}${(seq++).toString(36)}`;
     const pending: PendingConfirm = { id, tabId, origin, classification: { ...c, verdict }, context, createdAt: now };
+    const entry: { pending: PendingConfirm; resolve: (a: boolean) => void; windowId?: number; done?: boolean } = { pending, resolve: () => {} };
+    const close = () => {
+      entry.done = true;
+      if (entry.windowId !== undefined) void chrome.windows.remove(entry.windowId).catch(() => {});
+    };
     const allow = await new Promise<boolean>((resolve) => {
-      const entry: { pending: PendingConfirm; resolve: (a: boolean) => void; windowId?: number } = { pending, resolve };
+      entry.resolve = resolve;
       confirms.set(id, entry);
       chrome.windows
         .create({ url: chrome.runtime.getURL(`/src/pages/confirm.html?id=${id}`), type: 'popup', width: 440, height: 640, focused: true })
-        .then((w) => (entry.windowId = w.id))
+        .then((w) => {
+          entry.windowId = w.id;
+          if (entry.done) close(); // decided (or timed out) before the window existed
+        })
         .catch(() => resolve(false));
       setTimeout(() => resolve(false), deps.confirmTimeoutMs ?? 180_000);
     });
     confirms.delete(id);
+    close();
     if (allow && CONNECT_METHODS.has(msg.method)) connectOk.add(connectKey);
     if (allow) stats.requestsAllowedAfterWarning++;
     else stats.requestsBlocked++;

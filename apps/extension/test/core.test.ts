@@ -15,7 +15,7 @@ const APP = 'console.log("demoswap app")';
 
 function fakeChrome() {
   const store: Record<string, unknown> = {};
-  const calls = { tabsUpdate: [] as { tabId: number; url: string }[], tabsCreate: [] as string[], windows: [] as string[], rules: [] as unknown[], badge: new Map<number, string>() };
+  const calls = { tabsUpdate: [] as { tabId: number; url: string }[], tabsCreate: [] as string[], windows: [] as string[], removed: [] as number[], rules: [] as unknown[], badge: new Map<number, string>() };
   const chrome: ChromeLike = {
     runtime: { id: 'abc', getURL: (p) => EXT + p.replace(/^\//, '') },
     storage: {
@@ -29,7 +29,7 @@ function fakeChrome() {
       create: async (p) => void calls.tabsCreate.push(p.url),
       sendMessage: async () => undefined,
     },
-    windows: { create: async (o) => (calls.windows.push(o.url), { id: calls.windows.length }) },
+    windows: { create: async (o) => (calls.windows.push(o.url), { id: calls.windows.length }), remove: async (id) => void calls.removed.push(id) },
     action: {
       setBadgeText: async (o) => void calls.badge.set(o.tabId ?? -1, o.text),
       setBadgeBackgroundColor: async () => {},
@@ -254,6 +254,29 @@ describe('wallet requests', () => {
     await core.handleMessage({ t: 'confirmDecision', id, allow: true }, page);
     expect(await p).toMatchObject({ decision: 'allow' });
     expect(core.publicState().stats.requestsAllowedAfterWarning).toBe(1);
+  });
+  test('Cancel: the worker closes the confirm window itself (window.close() in the page is only a fallback)', async () => {
+    const { core, calls, page } = await setup();
+    const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(15, 'https://x.example/'));
+    await new Promise((r) => setTimeout(r, 5));
+    const id = new URL(calls.windows[0]!).searchParams.get('id')!;
+    await core.handleMessage({ t: 'confirmDecision', id, allow: false }, page);
+    expect(await p).toMatchObject({ decision: 'block' });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(calls.removed).toEqual([1]);
+  });
+  test('Continue: the window is closed at once', async () => {
+    const { core, calls, page } = await setup();
+    const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(16, 'https://x.example/'));
+    await new Promise((r) => setTimeout(r, 5));
+    await core.handleMessage({ t: 'confirmDecision', id: new URL(calls.windows[0]!).searchParams.get('id')!, allow: true }, page);
+    expect(await p).toMatchObject({ decision: 'allow' });
+    expect(calls.removed).toEqual([1]);
+  });
+  test('no answer before the timeout: blocked and the window is closed', async () => {
+    const { core, calls } = await setup();
+    expect(await core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(17, 'https://x.example/'))).toMatchObject({ decision: 'block' });
+    expect(calls.removed).toEqual([1]);
   });
   test('closing the confirm window blocks', async () => {
     const { core } = await setup();
