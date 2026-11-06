@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Address, Hex } from 'viem';
 import { readBlackoutRecords } from '@blackout/ens';
-import { guard, explain } from '@blackout/guard';
+import { guard, explain, type GuardResult } from '@blackout/guard';
 import { createQuorum } from '@blackout/quorum';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -19,7 +19,12 @@ export async function checkHijackRequest(req: { to: Address; data: Hex }, ensNam
   const rec = await readBlackoutRecords(ensName, createQuorum({ urls: ensRpcs }), { universalResolver });
   const account = '0x0000000000000000000000000000000000000001' as Address;
   const g = guard({ chainId, from: account, to: req.to, data: req.data, value: 0n }, { account, chainId, manifest: rec.manifest });
-  return { rejected: !g.ok, sentences: explain(g) };
+  return { rejected: hijackVerdict(g), sentences: explain(g) };
+}
+
+/** The hijack request counts as caught only if the Guard rejects it *as a banned approval*. */
+export function hijackVerdict(g: GuardResult): boolean {
+  return !g.ok && g.reasons.some((r) => r.code === 'BANNED');
 }
 
 export interface DrillReport {
