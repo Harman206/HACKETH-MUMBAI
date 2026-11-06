@@ -1,5 +1,7 @@
 # BLACKOUT
 
+**Live: https://blackout-red.vercel.app** · open the kit: https://blackout-red.vercel.app/blackout-kit.html
+
 **A saved, verifiable emergency exit for DeFi positions.** It keeps working when the protocol's website, domain, company or RPC provider fails or is hijacked.
 
 > We take down the DeFi app's website, and you can still withdraw directly from its smart contracts.
