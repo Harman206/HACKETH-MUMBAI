@@ -8,6 +8,8 @@ import { normaliseName, type CopeybaraRecords } from '@copeybara/ens';
 import { classifyRequest, type Classification } from '@copeybara/guard';
 import { checkScripts, sha256Hex, type CodeItem } from '@copeybara/sitecheck';
 import { BUILD_FILES, parseBuildFiles, sha256Bytes, treeHash, treeWithoutAudio, type BuildProof } from '../shared/buildproof';
+import type { CertifiedEntry, CertifiedVerdict } from '../shared/certified';
+import { findCertified } from '../shared/certified';
 import { classifySender, parseContentMsg, parsePageMsg, type SenderLike } from '../shared/messages';
 import {
   emptyStats,
@@ -57,6 +59,8 @@ export interface CoreDeps {
   defaultRpcs: string[];
   defaultKitUrl: string;
   version: string;
+  /** re-run the on-chain Copeybara certified checks for a bundled entry, through the quorum on these RPCs */
+  checkCertified?(e: CertifiedEntry, rpcs: string[]): Promise<CertifiedVerdict>;
   /** how long a page waits for the user in the confirm window */
   confirmTimeoutMs?: number;
   /** after Cancel, the confirm window shows "Saved by Copey!"; the worker closes it after this long at the latest */
@@ -550,6 +554,15 @@ export function createCore(deps: CoreDeps) {
           return publicState();
         case 'buildProof':
           return buildProof();
+        case 'checkCertified': {
+          const e = findCertified(m.name);
+          if (!e || !deps.checkCertified) return { error: 'not available' };
+          try {
+            return await deps.checkCertified(e, rpcs());
+          } catch (x) {
+            return { error: (x as Error).message };
+          }
+        }
       }
     }
 

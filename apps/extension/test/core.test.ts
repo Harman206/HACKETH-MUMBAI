@@ -3,6 +3,9 @@ import { encodeFunctionData, parseAbi } from 'viem';
 import type { CopeybaraRecords } from '@copeybara/ens';
 import { scriptHash } from '@copeybara/sitecheck';
 import { createCore, type ChromeLike } from '../src/background/core';
+import { CERTIFIED, findCertified, validEntries } from '../src/shared/certified';
+import { parsePageMsg } from '../src/shared/messages';
+import registry from '../../../config/certified.json';
 
 const EXT = 'chrome-extension://abc/';
 const USER = '0x1111111111111111111111111111111111111111';
@@ -411,3 +414,36 @@ describe('setup & kit', () => {
 });
 
 const FRESH = 61_000;
+
+describe('Copeybara certified picker (bundled list, tick re-checked on chain by the worker)', () => {
+  const page = { id: 'abc', url: `${EXT}src/pages/setup.html` };
+  const mk = (checkCertified?: Parameters<typeof createCore>[0]['checkCertified']) =>
+    createCore({ chrome: fakeChrome().chrome, readRecords: async () => records as CopeybaraRecords, fetchBytes: async () => kitBytes, rpcChainId: async () => 1, now: () => now, defaultRpcs: ['https://a', 'https://b', 'https://c'], defaultKitUrl: 'x', version: 't', checkCertified });
+
+  test('the bundled list is the website’s directory, well formed', () => {
+    expect(CERTIFIED.map((e) => e.name)).toEqual(registry.map((e) => e.name));
+    expect(findCertified('DemoSwap-Blackout.eth')?.protocol).toBe('DemoSwap');
+    expect(Object.isFrozen(CERTIFIED)).toBe(true);
+  });
+  test('malformed entries are dropped, never half-trusted', () => {
+    const good = registry[0]!;
+    expect(validEntries([good, { ...good, name: 'Evil Name.eth' }, { ...good, name: 'b.eth', safe: '0x123' }, { ...good, name: 'c.eth', since: 'soon' }, null, 'x', good])).toEqual([good]);
+    expect(validEntries({})).toEqual([]);
+  });
+  test('checkCertified is accepted only for a name in the bundled list', () => {
+    expect(parsePageMsg({ t: 'checkCertified', name: 'DEMOSWAP-blackout.eth' })).toEqual({ t: 'checkCertified', name: 'demoswap-blackout.eth' });
+    for (const name of ['evil-swap.eth', '', 1, 'x'.repeat(300)]) expect(parsePageMsg({ t: 'checkCertified', name })).toBeNull();
+  });
+  test('the worker re-checks through the current RPCs and returns the live verdict', async () => {
+    const seen: { name: string; rpcs: string[] }[] = [];
+    const core = mk(async (e, rpcs) => (seen.push({ name: e.name, rpcs }), { certified: true, block: '42', failed: [] }));
+    expect(await core.handleMessage({ t: 'checkCertified', name: NAME }, page)).toEqual({ certified: true, block: '42', failed: [] });
+    expect(seen).toEqual([{ name: NAME, rpcs: ['https://a', 'https://b', 'https://c'] }]);
+  });
+  test('an RPC failure is an error, never a tick; a content script cannot ask', async () => {
+    const core = mk(async () => { throw new Error('RPCs disagree'); });
+    expect(await core.handleMessage({ t: 'checkCertified', name: NAME }, page)).toEqual({ error: 'RPCs disagree' });
+    expect(await mk().handleMessage({ t: 'checkCertified', name: NAME }, page)).toEqual({ error: 'not available' });
+    expect(await core.handleMessage({ t: 'checkCertified', name: NAME }, tab())).toEqual({ error: 'bad message' });
+  });
+});

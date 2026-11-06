@@ -33,6 +33,13 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   await expect(setup.locator(`[data-account="${w.wallet}"]`)).toBeVisible();
   await setup.getByRole('button', { name: 'Next' }).click();
 
+  // the Copeybara certified picker (bundled directory): each tick is re-checked on chain by the worker, never taken from the list
+  const pick = setup.locator('[data-certified="demoswap-blackout.eth"]');
+  await expect(pick).toBeVisible();
+  await expect(pick.getByRole('button', { name: 'Follow DemoSwap' })).toBeVisible();
+  await expect(pick).not.toHaveAttribute('data-live', 'checking', { timeout: 60_000 });
+  await shot(setup, 'setup-certified');
+
   // follow the protocol by its ENS name: records read through the quorum, contracts and fingerprints shown
   await setup.locator('#ens').fill(w.ensName);
   await setup.locator('#follow').click();

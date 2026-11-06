@@ -12,6 +12,7 @@
     "@copeybara/core": "workspace:*",
     "@copeybara/ens": "workspace:*",
     "@copeybara/guard": "workspace:*",
+    "@copeybara/protocol-cli": "workspace:*",
     "@copeybara/quorum": "workspace:*",
     "@copeybara/sitecheck": "workspace:*",
     "preact": "10.25.4",

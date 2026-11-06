@@ -797,3 +797,31 @@ ul.more-list b { color: var(--ink); }
 .celebrate.still, .celebrate.still * { animation: none !important; }
 .celebrate.still .celebrate-copey { transform: translate(-50%, 0) rotate(calc(var(--r) / 24)); top: auto; bottom: 8px; opacity: 0.9; }
 @media (prefers-reduced-motion: reduce) { .celebrate, .celebrate * { animation: none !important; } }
+
+/* ---------- setup: pick from Copeybara certified ---------- */
+.cert-pick {
+  margin-top: 18px; padding: 16px 16px 6px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  background: linear-gradient(180deg, var(--tint-2), color-mix(in srgb, var(--tint-2) 35%, var(--card)) 70%);
+}
+.cert-pick-head { display: flex; gap: 14px; align-items: flex-start; }
+.cert-pick-head h3 { margin: 4px 0 2px; font: 600 17px/1.25 var(--display); letter-spacing: -0.015em; }
+.cert-pick-head p.small { margin: 0; }
+.cert-pick-head .label .ico { color: var(--accent); }
+.cert-pick-copey { flex: none; margin-top: 2px; }
+.cert-list { margin: 10px 0 0; }
+.cert-list li.cert-row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line-soft)); border-bottom: 0; }
+.cert-avatar {
+  flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  font: 700 15px/1 var(--display); text-transform: uppercase; background: var(--night); color: var(--lime);
+}
+.cert-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; }
+.cert-ens { color: var(--muted); margin-top: 2px; }
+.cert-note { margin: 3px 0 0; }
+.cert-row .small-btn { white-space: nowrap; }
+.manual-head { margin: 20px 0 2px; }
+@media (max-width: 560px) { .cert-list li.cert-row { flex-wrap: wrap; } .cert-row .small-btn { margin-left: 48px; } }
+@media (prefers-color-scheme: dark) {
+  .cert-pick { background: linear-gradient(180deg, var(--tint-2), var(--card) 75%); border-color: color-mix(in srgb, var(--lime) 18%, var(--line)); }
+  .cert-avatar { background: color-mix(in srgb, var(--lime) 14%, var(--card)); border: 1px solid color-mix(in srgb, var(--lime) 30%, transparent); }
+}

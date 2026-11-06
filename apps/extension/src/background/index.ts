@@ -3,6 +3,7 @@ import networks from '../../../../config/networks.json';
 import { createQuorum } from '@copeybara/quorum';
 import { readCopeybaraRecords } from '@copeybara/ens';
 import type { Address } from '@copeybara/core';
+import { certifyLive, readOnChain } from '@copeybara/protocol-cli/onchain';
 import { createCore, type ChromeLike } from './core';
 
 declare const chrome: ChromeLike & {
@@ -22,12 +23,22 @@ declare const chrome: ChromeLike & {
 const RPCS = (networks.defaultRpcs as Record<string, string[]>)['11155111']!;
 export const DEFAULT_KIT_URL = 'https://blackout-red.vercel.app/copeybara-kit.html';
 
+const UR = networks.ens.universalResolver as Address;
+const quorum = (rpcs: string[]) => createQuorum({ urls: rpcs, expectedChainId: 11155111, timeoutMs: 8000 });
+
 const core = createCore({
   chrome,
-  readRecords: (name, rpcs) =>
-    readCopeybaraRecords(name, createQuorum({ urls: rpcs, expectedChainId: 11155111, timeoutMs: 8000 }), {
-      universalResolver: networks.ens.universalResolver as Address,
-    }),
+  readRecords: (name, rpcs) => readCopeybaraRecords(name, quorum(rpcs), { universalResolver: UR }),
+  // The same on-chain checks as the website's certified page (apps/site/src/certified.ts), read through the quorum.
+  checkCertified: async (e, rpcs) => {
+    const q = quorum(rpcs);
+    const [s, r] = await Promise.all([
+      readOnChain({ q, name: e.name, universalResolver: UR, ethRegistry: networks.ens.ethRegistry as Address, resolver: e.resolver, safe: e.safe, accounts: [e.websiteKey, e.watcher] }),
+      readCopeybaraRecords(e.name, q, { universalResolver: UR }).catch((x: Error) => x),
+    ]);
+    const checks = certifyLive(e, s, r);
+    return { certified: checks.every((c) => c.level !== 'fail'), block: s.block.toString(), failed: checks.filter((c) => c.level === 'fail').map((c) => c.name) };
+  },
   fetchBytes: async (url) => {
     const r = await fetch(url, { cache: 'no-store', credentials: 'omit' });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);

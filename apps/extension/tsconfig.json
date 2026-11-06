@@ -13,7 +13,8 @@
     { "path": "../../packages/quorum" },
     { "path": "../../packages/ens" },
     { "path": "../../packages/adapters" },
-    { "path": "../../packages/sitecheck" }
+    { "path": "../../packages/sitecheck" },
+    { "path": "../../packages/protocol-cli" }
   ],
   "include": ["src", "test"]
 }

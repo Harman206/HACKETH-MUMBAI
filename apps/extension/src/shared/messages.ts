@@ -6,6 +6,7 @@ import { isAddress } from 'viem';
 import type { Address } from '@copeybara/core';
 import type { CodeItem } from '@copeybara/sitecheck';
 import type { Settings } from './types';
+import { findCertified } from './certified';
 
 export const MAX_ITEMS = 500;
 const HASH = /^[0-9a-f]{64}$/;
@@ -34,7 +35,9 @@ export type PageMsg =
   | { t: 'resetStats' }
   | { t: 'getTab'; tabId: number }
   /** hash the installed files and compare with the followed protocols' org.copeybara.extension record */
-  | { t: 'buildProof' };
+  | { t: 'buildProof' }
+  /** re-check one bundled Copeybara certified entry on chain (the name must be in the bundled list) */
+  | { t: 'checkCertified'; name: string };
 
 const obj = (m: unknown): m is Record<string, unknown> => typeof m === 'object' && m !== null && !Array.isArray(m);
 const str = (v: unknown, max = 200): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -138,6 +141,10 @@ export function parsePageMsg(m: unknown): PageMsg | null {
       return typeof m.tabId === 'number' && Number.isSafeInteger(m.tabId) ? { t: 'getTab', tabId: m.tabId } : null;
     case 'testRpc':
       return typeof m.url === 'string' && isHttpUrl(m.url) ? { t: 'testRpc', url: m.url } : null;
+    case 'checkCertified': {
+      const e = str(m.name, 255) ? findCertified(m.name) : null;
+      return e ? { t: 'checkCertified', name: e.name } : null;
+    }
     default:
       return null;
   }

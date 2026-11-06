@@ -3,7 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState } from '../shared/types';
 import { getState, openPage, send, short } from './api';
-import { Chip, GuardChip, ProtocolCard, TopBar } from './components';
+import { CertifiedPicker, Chip, GuardChip, ProtocolCard, TopBar } from './components';
 import { CardFan, EnsGraph, Hero, RpcQuorum, ShieldBurst } from './art';
 import { Copey, Icon, type IconName } from './icons';
 
@@ -154,7 +154,10 @@ function Setup() {
               sub="Its ENS name holds the exit contracts and fingerprints. Only its 2-of-3 Safe can change them."
               art={<EnsGraph />}
             />
-            <div class="row" style="margin-top:4px">
+            <CertifiedPicker st={st} busy={busy} onFollow={(x) => act(() => send({ t: 'follow', name: x }))} />
+            <h3 class="manual-head">Or type any ENS name</h3>
+            <p class="small muted" style="margin-top:0">Copy it from the protocol’s docs, never from a link someone sent you.</p>
+            <div class="row" style="margin-top:8px">
               <input id="ens" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} placeholder="protocol.eth" style="flex:1;min-width:220px" />
               <button id="follow" disabled={busy || !name.trim()} onClick={() => act(() => send({ t: 'follow', name }))}>{busy ? 'Reading ENS…' : 'Follow'}</button>
             </div>

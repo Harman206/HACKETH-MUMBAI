@@ -2,8 +2,9 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { formatBuildProof, getBuildProof, type BuildProofView } from './build-proof';
 import type { ProtocolState, PublicState } from '../shared/types';
-import { ago, protocolHealth, short, type Tone } from './api';
-import { Brand, Icon, type IconName } from './icons';
+import { ago, protocolHealth, send, short, type Tone } from './api';
+import { Brand, Copey, Icon, type IconName } from './icons';
+import { CERTIFIED, type CertifiedEntry, type CertifiedVerdict } from '../shared/certified';
 
 export const TONE_ICON: Record<Tone, IconName> = { ok: 'shield-check', bad: 'x-octagon', warn: 'alert-triangle', grey: 'help-circle' };
 
@@ -155,5 +156,65 @@ export function BuildProofCard({ compact }: { compact?: boolean }) {
         </details>
       )}
     </div>
+  );
+}
+
+type Live = { state: 'checking' } | { state: 'done'; certified: boolean; block: string; failed: string[] } | { state: 'error'; error: string };
+
+/** One bundled certified entry, its tick re-checked on chain by the worker right now (never taken from the list). */
+function CertifiedRow({ e, followed, busy, onFollow }: { e: CertifiedEntry; followed: boolean; busy: boolean; onFollow: (name: string) => void }) {
+  const [live, setLive] = useState<Live>({ state: 'checking' });
+  useEffect(() => {
+    let on = true;
+    send<CertifiedVerdict | { error: string }>({ t: 'checkCertified', name: e.name })
+      .then((r) => on && setLive(r && 'certified' in r ? { state: 'done', ...r } : { state: 'error', error: (r as { error?: string })?.error ?? 'no answer' }))
+      .catch((x) => on && setLive({ state: 'error', error: String((x as Error)?.message ?? x) }));
+    return () => void (on = false);
+  }, [e.name]);
+  const chip =
+    live.state === 'checking' ? (
+      <Chip tone="grey" pulse={false}>Checking on chain…</Chip>
+    ) : live.state === 'error' ? (
+      <Chip tone="warn" icon="alert-triangle" title={live.error}>Couldn’t check now</Chip>
+    ) : live.certified ? (
+      <Chip tone="ok" icon="shield-check" title={`Re-checked at Sepolia block ${live.block}`}>Certified · block {live.block}</Chip>
+    ) : (
+      <Chip tone="bad" icon="x-octagon" title={`Failing: ${live.failed.join(', ')}`}>Suspended</Chip>
+    );
+  return (
+    <li class="cert-row" data-certified={e.name} data-live={live.state === 'done' ? (live.certified ? 'certified' : 'suspended') : live.state}>
+      <span class="cert-avatar" aria-hidden="true">{e.protocol.slice(0, 1)}</span>
+      <div class="grow">
+        <div class="cert-name"><b>{e.protocol}</b>{chip}</div>
+        <div class="mono cert-ens">{e.name}</div>
+        {e.note && <p class="tiny muted cert-note">{e.note}</p>}
+        {live.state === 'done' && !live.certified && <p class="tiny tone-text bad cert-note">Failing now: {live.failed.join(', ')}. You can still follow it; Copeybara keeps checking its records.</p>}
+      </div>
+      {followed ? (
+        <Chip tone="ok" icon="check">Following</Chip>
+      ) : (
+        <button class="small-btn" disabled={busy} onClick={() => onFollow(e.name)}>Follow {e.protocol}</button>
+      )}
+    </li>
+  );
+}
+
+/** "Pick from Copeybara certified": the directory bundled with this build; each tick re-checked live through the quorum. */
+export function CertifiedPicker({ st, busy, onFollow }: { st: PublicState; busy: boolean; onFollow: (name: string) => void }) {
+  if (CERTIFIED.length === 0) return null;
+  return (
+    <section class="cert-pick" aria-labelledby="cert-pick-title">
+      <div class="cert-pick-head">
+        <Copey mood="verified" size={46} class="cert-pick-copey" />
+        <div class="grow">
+          <p class="label"><Icon name="shield-check" size={14} />Copeybara certified</p>
+          <h3 id="cert-pick-title">Pick a certified protocol</h3>
+          <p class="small muted">We checked each one before listing it. The tick is checked again on chain right now, through 3 RPCs.</p>
+        </div>
+      </div>
+      <ul class="clean cert-list">
+        {CERTIFIED.map((e) => <CertifiedRow key={e.name} e={e} busy={busy} followed={st.protocols.some((p) => p.name === e.name)} onFollow={onFollow} />)}
+      </ul>
+    </section>
   );
 }

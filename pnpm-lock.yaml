@@ -35,6 +35,9 @@ importers:
       '@copeybara/guard':
         specifier: workspace:*
         version: link:../../packages/guard
+      '@copeybara/protocol-cli':
+        specifier: workspace:*
+        version: link:../../packages/protocol-cli
       '@copeybara/quorum':
         specifier: workspace:*
         version: link:../../packages/quorum
