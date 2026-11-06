@@ -36,8 +36,12 @@ Friction:
 3. **Recipient magic values.** `_mapRecipient` treats `address(1)` as msg.sender and `address(2)` as the PositionManager. A policy that pins every payout to the user's address must know about them. We refuse both and always encode the user's address explicitly.
 4. **Permit2 allowances outlive the mint.** An LP who minted through the app has a live Permit2 allowance to the PositionManager. A hijacked frontend can send a `modifyLiquidities` that looks like "manage position" but contains `SETTLE_PAIR` or `INCREASE_LIQUIDITY` and pulls tokens from the wallet. Wallet-level decoding of v4 action lists, and docs that call this out, would protect users. Our Guard bans those actions in an exit.
 
+5. **Hook permissions are in the address, which helps.** We read the low 14 bits of `PoolKey.hooks` and warn when a pool's hook runs on remove liquidity or can return a delta on it ([`hookBadges`](packages/adapters/src/v4-math.ts#L129-L140)). This needs no RPC call. The bits only say which callbacks run, not what they do, so the warning has to be generic. A public list of reviewed hooks would let tools say more.
+6. **No machine-readable address list.** To stop flagging the normal Permit2 flow as a drainer we keep our own table of Uniswap contracts ([`config/known-contracts.json`](config/known-contracts.json)), copied from the deployment docs pages (now on developers.uniswap.org) and checked with `cast code`. Each chain has three live Universal Router versions. UniswapX reactors are not in that table, so we still flag a UniswapX order signature (`PermitWitnessTransferFrom` to a reactor) as dangerous. A signed JSON of official addresses per chain would let wallets tell the Uniswap flow from a phishing Permit2 request.
+
 ## Where to look
 
 - Adapters: `packages/adapters/src/uniswap-v3.ts`, `packages/adapters/src/uniswap-v4.ts`, `packages/adapters/src/v4-math.ts`
+- Permit2 classification: `packages/guard/src/classify.ts`, `packages/core/src/known.ts`, tests in `packages/guard/test/known-uniswap.test.ts`
 - Fork tests: v3 in-range, out-of-range and owed-only positions in `packages/adapters/test/uniswap-v3.fork.test.ts`; v4 on Sepolia in `packages/exec/test/uniswap-v4.fork.test.ts`
 - End-to-end exit in a real browser: `apps/kit/e2e/exit.spec.ts`
