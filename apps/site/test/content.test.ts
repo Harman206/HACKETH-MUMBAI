@@ -14,6 +14,14 @@ describe('site content', () => {
     for (const i of INCIDENTS) expect(Boolean(i.sources?.length) || i.unverified === true, i.name).toBe(true);
     for (const s of INCIDENTS.flatMap((i) => i.sources ?? [])) expect(s.url, s.label).toMatch(/^https:\/\//);
   });
+  test('every headline loss figure is sourced and matches the reported loss text', () => {
+    for (const i of INCIDENTS.filter((x) => x.usd)) {
+      expect(i.sources?.length, i.name).toBeGreaterThan(0);
+      const usd = i.usd!;
+      const stated = i.loss.replace(/,/g, '').includes(`$${usd}`) || i.loss.includes(`$${usd / 1e6} million`);
+      expect(stated, `${i.name}: ${usd} vs "${i.loss}"`).toBe(true);
+    }
+  });
   test('every tx hash in the content is backed by deployments or replay fixtures', () => {
     const text = JSON.stringify({ INCIDENTS, HOW, REPLAY_R1 });
     for (const h of text.match(/0x[0-9a-fA-F]{64}/g) ?? []) expect(evidence.includes(h.toLowerCase()), h).toBe(true);

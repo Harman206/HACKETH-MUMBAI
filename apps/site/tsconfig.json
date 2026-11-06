@@ -26,6 +26,7 @@
   ],
   "include": [
     "src",
+    "src/*.json",
     "test",
     "vite.config.ts",
     "../../contracts/deployments/*.json",

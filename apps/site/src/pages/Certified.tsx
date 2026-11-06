@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { createQuorum } from '@copeybara/quorum';
 import { CopyButton } from '../sections/Ui';
-import copeyVerified from '../../../../assets/brand/copey-verified.png';
 import networks from '../../../../config/networks.json';
 import { CERTIFIED, RULE, checkCertified, findCertified, type Verdict } from '../certified';
 import type { CertifiedEntry } from '@copeybara/protocol-cli/onchain';
@@ -97,12 +96,12 @@ function Directory() {
               can change them are all published on ENS, and locked down. We check before listing. This page checks again, live, every time.
             </p>
           </div>
-          <img class="page-copey" src={copeyVerified} alt="" width={200} height={200} />
+          <img class="page-copey" src="copey/verified.webp" alt="" width={200} height={200} />
         </div>
       </section>
       <section class="section tight">
         <div class="wrap">
-          <h2 class="h2-sm">What certified means</h2>
+          <h2 class="h2-sm means-head">What certified means</h2>
           <div class="cap-grid means">
             {MEANS.map((m, i) => (
               <article key={m.title} class="cap">

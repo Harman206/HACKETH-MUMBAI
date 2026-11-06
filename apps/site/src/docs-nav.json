@@ -1,0 +1,34 @@
+{
+  "groups": [
+    {
+      "title": "Get started",
+      "pages": [
+        { "slug": "overview", "summary": "What a protocol publishes in ENS, the SDK packages, and the ground rules.", "task": "tell me which Copeybara records and SDK packages this repository needs, and what is missing" },
+        { "slug": "quickstart", "summary": "From an ENS name owned by your Safe to a certified exit, step by step.", "task": "integrate Copeybara end to end, following the quickstart step by step" },
+        { "slug": "agents", "summary": "Copy-paste prompts and machine-readable docs for coding agents.", "task": "integrate Copeybara end to end" }
+      ]
+    },
+    {
+      "title": "Guides",
+      "pages": [
+        { "slug": "configuration", "summary": "Every field of copeybara.config.ts and what manifest refuses.", "task": "write or fix copeybara.config.ts for our contracts" },
+        { "slug": "exit-spec", "summary": "Declarative exits (org.copeybara.exits) for your own contracts: schema, discovery, placeholders.", "task": "describe the exits of our own contracts as a declarative exit spec" },
+        { "slug": "safe-proposals", "summary": "How record changes become one Safe batch, and what a batch may contain.", "task": "prepare the Safe batch for our records and explain every call in it" },
+        { "slug": "site-fingerprint", "summary": "Vite, Next.js and webpack plugins that hash every script your site runs.", "task": "add the site fingerprint plugin to our build and make CI fail on unpinned third-party scripts" },
+        { "slug": "widget", "summary": "<copeybara-exit>: the dependency-free element that points users at the verified kit.", "task": "add the <copeybara-exit> widget to our site, self-hosted" },
+        { "slug": "watcher", "summary": "The always-on agent that checks your site and raises status and blocklist warnings.", "task": "set up the Copeybara watcher with Docker Compose, without starting it" },
+        { "slug": "drill", "summary": "Prove an exit on anvil forks with the website and primary RPC switched off.", "task": "write a drill seed for our protocol and run the drill until it reports RECOVERED" },
+        { "slug": "certification", "summary": "The Copeybara certified tick: the rules, how to apply, what it does not mean.", "task": "run copeybara certify and fix every failing line that can be fixed in this repository" }
+      ]
+    },
+    {
+      "title": "Reference",
+      "pages": [
+        { "slug": "cli", "summary": "Every copeybara command, flag, output file and failure.", "task": "use the copeybara CLI to check our integration and summarise every problem" },
+        { "slug": "ens-records", "summary": "Exact formats of every org.copeybara.* text record.", "task": "read our ENS records with the copeybara CLI and explain what each one says" },
+        { "slug": "security", "summary": "Trust model, guarantees and what Copeybara does not cover.", "task": "review our integration against the Copeybara security model and list any gaps" },
+        { "slug": "runbooks", "summary": "Releases, contract changes, website deploys and incident response.", "task": "follow the runbook I name and stop before anything needs a signature" }
+      ]
+    }
+  ]
+}

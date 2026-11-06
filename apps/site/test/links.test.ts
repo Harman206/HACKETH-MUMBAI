@@ -12,7 +12,7 @@ beforeAll(() => {
   }) as typeof fetch;
   Element.prototype.scrollIntoView ??= function () {};
   window.scrollTo = () => {};
-  globalThis.requestAnimationFrame ??= ((f: FrameRequestCallback) => setTimeout(() => f(0), 0)) as typeof requestAnimationFrame;
+  globalThis.requestAnimationFrame ??= ((f: FrameRequestCallback) => setTimeout(() => f(0), 0)) as unknown as typeof requestAnimationFrame;
 });
 afterAll(() => {
   globalThis.fetch = realFetch;
@@ -27,7 +27,7 @@ async function renderAt(hash: string) {
   return root;
 }
 
-const PAGES = ['', '#/developers', '#/extension', '#/certified', '#/certified/demoswap-blackout.eth'];
+const PAGES = ['', '#/developers', '#/extension', '#/certified', '#/certified/demoswap-blackout.eth', '#/docs', '#/docs/quickstart'];
 
 describe('site links', () => {
   test.each(PAGES)('every link on %s goes somewhere', async (hash) => {

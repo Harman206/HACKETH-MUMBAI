@@ -47,7 +47,8 @@ export function DevelopersPage() {
             <p class="lede">{DEV_HERO.sub}</p>
             <div class="cta">
               <Lnk class="btn" href="#onboarding">Add your protocol <span aria-hidden="true">↓</span></Lnk>
-              <Lnk href="#cli">CLI reference <span aria-hidden="true">↓</span></Lnk>
+              <a class="btn ghost" href="#/docs/quickstart">Read the docs</a>
+              <a class="text-link" href="#/docs/agents">Build it with an AI agent <span aria-hidden="true">→</span></a>
               <a class="text-link" href="#/certified">Copeybara certified <span aria-hidden="true">→</span></a>
             </div>
           </div>
@@ -122,7 +123,7 @@ export function DevelopersPage() {
 
       <section id="cli" class="section evidence">
         <div class="wrap">
-          <header class="section-head"><h2 class="h2-sm">CLI reference</h2><p class="lede">Every output lands in .copeybara/. Run any command with --config to point at another config.</p></header>
+          <header class="section-head"><h2 class="h2-sm">CLI reference</h2><p class="lede">Every output lands in .copeybara/. Run any command with --config to point at another config. Flags and failures: <a href="#/docs/cli">CLI reference</a>.</p></header>
           <table class="cli-table">
             <thead><tr><th>Command</th><th>What it does</th><th>Writes</th></tr></thead>
             <tbody>{CLI.map(([c, what, out]) => <tr key={c}><td class="mono">copeybara {c}</td><td>{what}</td><td class="mono">{out}</td></tr>)}</tbody>

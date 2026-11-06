@@ -44,43 +44,50 @@ export function LiveProof({ onLive }: { onLive(s: string): void }) {
 
   return (
     <div class="proof-layout">
-      <article class="card" aria-live="polite">
-        <h3>Current ENS release</h3>
-        {!p && <p>Checking the release with three Sepolia providers…</p>}
-        {p?.error && <><p class="bad">We couldn’t verify the current release on ENS. Reload to try again. You can still review the recorded transactions below.</p><details><summary>Provider details</summary><p>{p.error}</p></details></>}
+      <article class="card proof-card" aria-live="polite">
+        <p class="kicker">Checked just now, on Sepolia</p>
+        {!p && <p class="proof-big"><i class="spin" />Asking three providers…</p>}
+        {p?.error && <><p class="bad">We couldn’t verify the current release on ENS. Reload to try again. You can still review the recorded rescue.</p><details><summary>Provider details</summary><p>{p.error}</p></details></>}
         {p?.release && (
           <>
-            <p><b>{ENS_NAME}</b> · release <b>v{p.release.version}</b> · block {p.block}</p>
-            <p style="margin-top:8px">Published SHA-256 fingerprint</p>
+            <p class="proof-big"><span class="proof-ok">✓</span> Release v{p.release.version} is official</p>
+            <p>Published on <b>{ENS_NAME}</b> at block {p.block}. At least two of three independent providers agree.</p>
+            <p class="checksum">Fingerprint</p>
             <p class="mono">{p.release.sha256}</p>
-            <p style="margin-top:8px">Published exit contracts (the mainnet entries are tested on mainnet forks, not used in this demo):</p>
-            <ul>{p.exits.map((e) => <li>{e}</li>)}</ul>
-            <p class="muted" style="font-size:14px">Owned by the 2-of-3 <a href={addr(SAFE)}>release Safe</a> via its <a href={addr(RESOLVER)}>Permissioned Resolver</a>. In this demo all three Safe keys are held by one maintainer.</p>
           </>
         )}
       </article>
-      <article class="card">
-        <h3>What a stolen website key can change</h3>
-        <PermissionTable rows={p?.permissions ?? []} label="Website key transaction results" />
-        <h3 style="margin-top:20px">What a stolen watcher key can change</h3>
-        <p class="muted" style="font-size:14px">The watcher may only write the status and blocklist records, which warn about or block websites, never an exit.</p>
-        <PermissionTable rows={p?.watcherPermissions ?? []} label="Watcher key transaction results" />
-      </article>
-      <article class="card recorded-run">
-        <h3>Last recorded attack and recovery</h3>
+      <article class="card proof-card recorded-run">
+        <p class="kicker">Last recorded rescue</p>
         {!p ? (
           <p>Loading the recorded run…</p>
         ) : !p.lastRun ? (
           <p>There’s no recorded run available. The booth demo can record a new one.</p>
         ) : (
           <>
-            <p class="muted" style="margin:0">{p.lastRun.network === 'local-fork' ? 'LOCAL FORK' : 'Sepolia'} · {new Date(p.lastRun.at).toUTCString()}</p>
-            <p style="margin-top:8px">The hijacked site drained <b class="bad">{p.lastRun.drained}</b> (<a href={tx(p.lastRun.drainTx)}>drain tx</a>).</p>
-            <p style="margin-top:8px">With the site and its RPC down, the saved kit withdrew the victim’s liquidity position, <b class="ok">{p.lastRun.recovered}</b>, straight from the contracts (<a href={tx(p.lastRun.rescueTx)}>exit transaction</a>).</p>
-            <p class="muted" style="margin-top:8px;font-size:14px">The drained tokens stay with the attacker: the kit cannot undo an approval you already signed. It protects what is still yours and refuses to send that approval in the first place.</p>
+            <dl class="rescue">
+              <div><dt>Website hijacked and drained</dt><dd class="bad">{p.lastRun.drained}</dd><a href={tx(p.lastRun.drainTx)}>drain tx ↗</a></div>
+              <div><dt>Recovered with the site down</dt><dd class="ok">{p.lastRun.recovered}</dd><a href={tx(p.lastRun.rescueTx)}>exit tx ↗</a></div>
+            </dl>
+            <p class="muted small">{p.lastRun.network === 'local-fork' ? 'Local fork' : 'Sepolia'} · {new Date(p.lastRun.at).toUTCString()}. The kit can’t undo an approval you already signed; it saves what is still yours, and refuses to send that approval in the first place.</p>
           </>
         )}
       </article>
+      <details class="card proof-more">
+        <summary>For the technically curious: what a stolen key can change</summary>
+        {p?.release && (
+          <>
+            <p>Published exit contracts (the mainnet entries are tested on mainnet forks, not used in this demo):</p>
+            <ul>{p.exits.map((e) => <li>{e}</li>)}</ul>
+            <p class="muted small">Owned by the 2-of-3 <a href={addr(SAFE)}>release Safe</a> via its <a href={addr(RESOLVER)}>Permissioned Resolver</a>. In this demo all three Safe keys are held by one maintainer.</p>
+          </>
+        )}
+        <h3>A stolen website key</h3>
+        <PermissionTable rows={p?.permissions ?? []} label="Website key transaction results" />
+        <h3>A stolen watcher key</h3>
+        <p class="muted small">The watcher may only write the status and blocklist records, which warn about or block websites, never an exit.</p>
+        <PermissionTable rows={p?.watcherPermissions ?? []} label="Watcher key transaction results" />
+      </details>
     </div>
   );
 }

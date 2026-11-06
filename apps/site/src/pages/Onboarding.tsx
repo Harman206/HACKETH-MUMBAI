@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import { CONFIG_SAMPLE, ONBOARDING, PLUGINS, RUNBOOK, type OnbStep } from '../developers';
 import { Code, Command, CopyButton, Lnk, scrollToId } from '../sections/Ui';
-import copeyChecking from '../../../../assets/brand/copey-checking.png';
-import copeyProtected from '../../../../assets/brand/copey-protected.png';
 
+const copeyChecking = 'copey/checking.webp';
+const copeyProtected = 'copey/protected.webp';
 /** Ticked steps are a per-browser convenience only: nothing here is sent anywhere. */
 const KEY = 'copeybara.onboarding.v1';
 const IDS = new Set(ONBOARDING.map((s) => s.id));

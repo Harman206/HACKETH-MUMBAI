@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'preact/hooks';
-import { Download, Extension, Footer, Hero, How, Problem, Protocols, Trust } from './sections/Sections';
+import { Download, Footer } from './sections/Sections';
+import { ExtensionBand, Faq, ForProtocols, Hero, Incidents, Scenarios, Steps } from './sections/Landing';
 import { BrandMark } from './sections/Icons';
 import { LiveDemo } from './sections/LiveDemo';
 import { CertifiedPage } from './pages/Certified';
 import { DevelopersPage } from './pages/Developers';
+import { DocsPage } from './pages/Docs';
 import { ExtensionPage } from './pages/ExtensionPage';
 import { useRoute } from './router';
+import { useReveal } from './motion';
 
 export function App() {
   const route = useRoute();
   const [sha, setSha] = useState<string | null>(null);
   const [live, setLive] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  useReveal(route.page === 'docs' ? `docs/${route.slug}` : route.page);
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext) {
       void navigator.serviceWorker.ready.then(() => setOffline(true));
@@ -26,10 +30,10 @@ export function App() {
         <nav class="wrap nav-layout" aria-label="Main">
           <a class="brand" href="#top"><BrandMark />Copeybara</a>
           <ul>
-            <li><a href="#how">How it works</a></li>
+            <li><a href="#what">What it does</a></li>
             <li><a href="#/extension" {...here('extension')}>Extension</a></li>
-            <li><a href="#demo">Live demo</a></li>
             <li><a href="#/developers" {...here('developers')}>Developers</a></li>
+            <li><a href="#/docs" {...here('docs')}>Docs</a></li>
             <li><a href="#/certified" {...here('certified')}>Certified</a></li>
           </ul>
           <a class="nav-action" href="#download">Get the kit <span aria-hidden="true">↓</span></a>
@@ -40,18 +44,21 @@ export function App() {
           <DevelopersPage />
         ) : route.page === 'extension' ? (
           <ExtensionPage />
+        ) : route.page === 'docs' ? (
+          <DocsPage slug={route.slug} />
         ) : route.page === 'certified' ? (
           <CertifiedPage name={route.name} />
         ) : (
           <>
             <Hero live={live} />
-            <Extension preview />
-            <How />
-            <Problem />
+            <Scenarios />
+            <Steps />
+            <ExtensionBand />
+            <Incidents />
             <LiveDemo onLive={setLive} />
-            <Trust />
             <Download sha={sha} offline={offline} />
-            <Protocols />
+            <ForProtocols />
+            <Faq />
           </>
         )}
       </main>
