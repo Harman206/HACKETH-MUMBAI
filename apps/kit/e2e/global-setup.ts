@@ -137,7 +137,7 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
     } catch {
       return void res.writeHead(404).end();
     }
-    const type = f.endsWith('.html') ? 'text/html; charset=utf-8' : f.endsWith('.js') ? 'text/javascript' : f.endsWith('.css') ? 'text/css' : 'text/plain';
+    const type = f.endsWith('.html') ? 'text/html; charset=utf-8' : f.endsWith('.js') ? 'text/javascript' : f.endsWith('.css') ? 'text/css' : f.endsWith('.svg') ? 'image/svg+xml' : f.endsWith('.json') ? 'application/json' : 'text/plain';
     res.writeHead(200, { 'content-type': type }).end(body);
   });
   await new Promise<void>((r) => siteServer.listen(0, '127.0.0.1', r));

@@ -72,3 +72,15 @@ table.perm td, table.perm th { text-align: left; padding: 8px 6px; border-bottom
 /* Grid children must be allowed to shrink below their content (long hashes / code), or phones scroll sideways. */
 .grid > *, .cols > *, .replay > * { min-width: 0; }
 pre { max-width: 100%; }
+.nextbar { position: sticky; top: 64px; z-index: 5; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; margin: 0 0 16px; border-radius: 12px; border: 2px solid var(--accent); background: var(--card); font-size: 17px; font-weight: 600; box-shadow: 0 6px 24px color-mix(in srgb, var(--fg) 10%, transparent); }
+.nextbar .tag { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.nextbar.done { border-color: var(--ok); }
+.nextbar.done .tag { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.nextbar a { margin-left: auto; font-weight: 700; text-decoration: none; }
+.theater .chapter { scroll-margin-top: 160px; }
+.foot { display: flex; gap: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.foot p { margin: 0; flex: 1 1 280px; }
+.qr { display: flex; gap: 12px; align-items: center; margin: 0; }
+.qr img { background: #fff; padding: 6px; border-radius: 8px; border: 1px solid var(--line); flex: none; }
+.qr figcaption { font-size: 13px; color: var(--muted); }
+.qr.big figcaption { font-size: 16px; font-weight: 600; color: var(--fg); }

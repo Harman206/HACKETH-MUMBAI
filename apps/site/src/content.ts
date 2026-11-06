@@ -1,6 +1,10 @@
 /** All website copy. Plain language first; every number traceable to the repo's evidence. */
 import deployment from '../../../contracts/deployments/sepolia.json';
 import permissions from '../../../contracts/deployments/sepolia-permissions.json';
+import site from '../site.json';
+
+/** The public site (also encoded in dist/qr.svg at build time). */
+export const SITE_URL = site.url;
 
 export const ENS_NAME = (deployment as { name: string }).name;
 /** Opens the hosted kit with the demo name filled in. The kit shows a "came from a link: confirm it" banner. */

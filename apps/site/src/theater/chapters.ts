@@ -78,3 +78,25 @@ export function verifyVerdict(out: string): 'match' | 'mismatch' | 'unverified' 
   if (/^MISMATCH\b/.test(out)) return 'mismatch';
   return 'unverified';
 }
+
+/** The one thing to do next, for the sticky caption bar (presenter and visitor read the same line). */
+export function nextStep(s: TState): { chapter: 1 | 2 | 3 | 4 | 'done'; text: string } {
+  if (!s.victim) return { chapter: 1, text: 'Paste a victim wallet (a second MetaMask account works) and press “Prepare victim wallet”.' };
+  if (!(s.prepared ?? s.prepareTxs.length > 0)) return { chapter: 1, text: 'Funding the victim wallet with DUSD and a Uniswap position on Sepolia. This takes a few blocks…' };
+  if (s.chapter === 1) {
+    if (!s.switches.hijack) return { chapter: 2, text: 'Press “Hijack the domain”. DemoSwap’s address will now serve the attacker’s copy.' };
+    if (s.drains.length === 0) return { chapter: 2, text: 'Open the fake DemoSwap as the victim, click Connect wallet, and approve the request in MetaMask, as a hurried user would.' };
+    return { chapter: 2, text: 'Approval seen. The attacker’s bot is draining the wallet…' };
+  }
+  if (s.chapter === 2) return { chapter: 3, text: 'Take the website and the RPC down. This is where users are normally stuck.' };
+  if (s.chapter === 3) {
+    if (!s.verify) return { chapter: 4, text: 'Verify the saved kit against the attacker’s kit: only one matches the fingerprint on ENS.' };
+    return { chapter: 4, text: 'Open the kit and exit. It refuses the attacker’s request and withdraws straight from the contracts.' };
+  }
+  const b = scoreboard(s);
+  const time = b.timeToExitSec === null ? '' : ` in ${b.timeToExitSec} s`;
+  return {
+    chapter: 'done',
+    text: `Done. The hijack drained ${b.lost.join(' + ') || 'nothing'}. The saved kit recovered ${b.recovered.join(' + ') || 'nothing'}${time}, with the website and RPC down. Reset to run it again.`,
+  };
+}

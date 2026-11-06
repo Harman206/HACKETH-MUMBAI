@@ -41,3 +41,13 @@ test('service worker: precaches the page and the exact kit; CSP allows only a sa
   expect(sw).toMatch(/const CACHE = 'blackout-[0-9a-f]{12}';/);
   expect(html).toMatch(/worker-src 'self'/);
 });
+
+test('qr.svg is the QR code of the public site URL, and is precached for offline use', async () => {
+  const { url } = JSON.parse(readFileSync(join(SITE, 'site.json'), 'utf8')) as { url: string };
+  expect(url).toMatch(/^https:\/\//);
+  const QR = (await import('qrcode')).default;
+  const want = await QR.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } });
+  expect(readFileSync(join(SITE, 'dist', 'qr.svg'), 'utf8')).toBe(want);
+  expect(readFileSync(join(SITE, 'dist', 'sw.js'), 'utf8')).toContain('"qr.svg"');
+});
+

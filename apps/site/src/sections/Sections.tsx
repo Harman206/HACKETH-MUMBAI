@@ -1,4 +1,4 @@
-import { HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL } from '../content';
+import { HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL } from '../content';
 import { Icons } from './Icons';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
@@ -134,8 +134,27 @@ export function Protocols() {
   );
 }
 
+/** Scan-to-open card (booth visitors take the site with them). The SVG is generated at build time. */
+export function QrCard({ big }: { big?: boolean }) {
+  return (
+    <figure class={`qr ${big ? 'big' : ''}`} data-qr>
+      <img src="qr.svg" alt={`QR code for ${SITE_URL}`} width={big ? 168 : 112} height={big ? 168 : 112} />
+      <figcaption>
+        Scan to open on your phone
+        <br />
+        <span class="mono">{SITE_URL.replace(/^https:\/\//, '')}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 export function Footer() {
   return (
-    <footer><div class="wrap">BLACKOUT · open source (MIT) · no analytics, no trackers, no server · built at ETHGlobal with ENSv2, Uniswap v3 and the CROPS principles.</div></footer>
+    <footer>
+      <div class="wrap foot">
+        <p>BLACKOUT · open source (MIT) · no analytics, no trackers, no server · built at ETHGlobal with ENSv2, Uniswap v3 and the CROPS principles.</p>
+        <QrCard />
+      </div>
+    </footer>
   );
 }

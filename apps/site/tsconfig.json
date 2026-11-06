@@ -6,7 +6,8 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "types": [
-      "vite/client"
+      "vite/client",
+      "qrcode"
     ]
   },
   "references": [
@@ -25,6 +26,7 @@
     "test",
     "vite.config.ts",
     "../../contracts/deployments/*.json",
-    "../../config/*.json"
+    "../../config/*.json",
+    "site.json"
   ]
 }

@@ -16,25 +16,31 @@ test('attack theater: prepare → hijack (real drain) → outage → verify + re
   await site.goto(t.site);
   await expect(site.getByRole('heading', { name: 'Attack Theater: live' })).toBeVisible({ timeout: 30_000 });
   await expect(site.getByText('LOCAL FORK')).toBeVisible();
+  const next = site.locator('[data-next]');
+  await expect(next).toHaveAttribute('data-next', '1');
 
   // Chapter 1: a normal day
   await site.locator('#victim').fill(t.victim);
   await site.getByRole('button', { name: 'Prepare victim wallet' }).click();
   await expect(site.getByText(/holds 10,000 DUSD/)).toBeVisible({ timeout: 60_000 });
+  await expect(next).toHaveAttribute('data-next', '2', { timeout: 30_000 });
+  await expect(next).toContainText('Hijack the domain');
 
   // Chapter 2: the hijack. The victim approves on the fake DemoSwap; the bot drains.
   await site.getByRole('button', { name: 'Hijack the domain' }).click();
   const fakeLink = site.getByRole('link', { name: /Open DemoSwap \(now fake\)/ });
   const [demo] = await Promise.all([context.waitForEvent('page'), fakeLink.click()]);
-  await expect(demo.getByText('Approve to view your rewards')).toBeVisible();
+  await expect(demo.getByText('Approve to view your rewards')).toBeVisible({ timeout: 15_000 }); // page load goes through the hijack router
   await demo.getByRole('button', { name: 'Connect wallet' }).click();
   await expect(site.getByText('Without BLACKOUT', { exact: false }).first()).toBeVisible({ timeout: 60_000 });
   await expect(site.locator('.scoreboard .big.bad')).toHaveText('10,000 DUSD', { timeout: 60_000 });
+  await expect(next).toHaveAttribute('data-next', '3', { timeout: 30_000 });
 
   // Chapter 3: the outage
   await site.getByRole('button', { name: 'Take the website down' }).click();
   await site.getByRole('button', { name: 'Take the RPC down' }).click();
   await expect(site.getByText(/Website: down/)).toBeVisible();
+  await expect(next).toHaveAttribute('data-next', '4', { timeout: 30_000 });
 
   // Chapter 4: the rescue
   await site.getByRole('button', { name: /Verify the saved kit/ }).click();
@@ -60,4 +66,7 @@ test('attack theater: prepare → hijack (real drain) → outage → verify + re
   // Scoreboard: lost vs recovered, time to exit
   await expect(site.locator('.scoreboard .big.ok')).toContainText('DUSD', { timeout: 30_000 });
   await expect(site.getByText(/Time to exit .*: \d+(\.\d+)? s/)).toBeVisible();
+  await expect(next).toHaveAttribute('data-next', 'done', { timeout: 30_000 });
+  await expect(next).toContainText(/Done\. The hijack drained 10,000 DUSD\. The saved kit recovered .*DUSD/);
+  await expect(site.locator('.scoreboard [data-qr] img')).toBeVisible();
 });

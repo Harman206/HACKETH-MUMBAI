@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { boothUrl } from '../src/theater/api';
-import { CHAPTERS, gate, scoreboard, kitLinks, type TState } from '../src/theater/chapters';
+import { CHAPTERS, gate, nextStep, scoreboard, kitLinks, type TState } from '../src/theater/chapters';
 
 const DUSD = '0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA';
 const DETH = '0x62715d2762949Ab8Fb124eB01f78898Feb8a596A';
@@ -63,3 +63,25 @@ describe('verify verdicts (review #5)', () => {
     expect(verifyVerdict('')).toBe('unverified');
   });
 });
+
+describe('next step bar (booth captions)', () => {
+  const ready = { ...base, victim: '0x1', prepared: true, prepareTxs: ['0xa'] };
+  const drained = { ...ready, switches: { site: 'up', rpc: 'up', hijack: true } as TState['switches'], chapter: 2 as const, drains: [{ victim: '0x1', token: DUSD, amount: (10_000n * 10n ** 18n).toString(), approveTx: '0xa', drainTx: '0xd', at: 1 }] };
+  test('always exactly one instruction, in story order', () => {
+    expect(nextStep(base)).toMatchObject({ chapter: 1, text: expect.stringMatching(/victim wallet.*Prepare victim wallet/) });
+    expect(nextStep({ ...base, victim: '0x1', prepared: false })).toMatchObject({ chapter: 1, text: expect.stringMatching(/Funding the victim wallet/) });
+    expect(nextStep(ready)).toMatchObject({ chapter: 2, text: expect.stringMatching(/Hijack the domain/) });
+    expect(nextStep({ ...ready, switches: { ...ready.switches, hijack: true } })).toMatchObject({ chapter: 2, text: expect.stringMatching(/fake DemoSwap.*approve/i) });
+    expect(nextStep({ ...drained, chapter: 1, drains: [{ ...drained.drains[0]!, drainTx: null }] })).toMatchObject({ chapter: 2, text: expect.stringMatching(/bot is draining/) });
+    expect(nextStep(drained)).toMatchObject({ chapter: 3, text: expect.stringMatching(/Take the website and the RPC down/) });
+    expect(nextStep({ ...drained, chapter: 3 })).toMatchObject({ chapter: 4, text: expect.stringMatching(/Verify the saved kit/) });
+    expect(nextStep({ ...drained, chapter: 3, verify: { real: 'MATCH v=3', tampered: 'MISMATCH' } })).toMatchObject({ chapter: 4, text: expect.stringMatching(/Open the kit and exit/) });
+  });
+
+  test('done: the caption is the result, in plain numbers', () => {
+    const done = { ...drained, chapter: 4 as const, failures: [{ kind: 'site-down', at: 1_000 }],
+      rescue: { results: [{ status: 'recovered', txHashes: ['0xe'], confirmedAt: 31_000, deltas: [{ token: DUSD, before: '0', after: (999n * 10n ** 18n).toString() }] }] } };
+    expect(nextStep(done)).toEqual({ chapter: 'done', text: 'Done. The hijack drained 10,000 DUSD. The saved kit recovered 999 DUSD in 30 s, with the website and RPC down. Reset to run it again.' });
+  });
+});
+

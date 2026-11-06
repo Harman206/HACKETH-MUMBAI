@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { ENS_NAME } from '../content';
+import { QrCard } from '../sections/Sections';
 import { theaterApi } from './api';
-import { CHAPTERS, gate, kitLinks, scoreboard, verifyVerdict, type TState } from './chapters';
+import { CHAPTERS, gate, kitLinks, nextStep, scoreboard, verifyVerdict, type TState } from './chapters';
 
 const tx = (h: string, fork: boolean) => (fork ? null : `https://sepolia.etherscan.io/tx/${h}`);
 
@@ -63,6 +64,7 @@ export function Theater({ base }: { base: string }) {
       </button>
     );
   };
+  const next = nextStep(s);
   const why = (n: 1 | 2 | 3 | 4) => {
     const g = gate(n, s);
     return g.ok ? null : <p class="muted" style="font-size:14px;margin-top:8px">🔒 {g.why}</p>;
@@ -78,9 +80,14 @@ export function Theater({ base }: { base: string }) {
           </li>
         ))}
       </ol>
+      <div class={`nextbar ${next.chapter === 'done' ? 'done' : ''}`} role="status" aria-live="polite" data-next={next.chapter}>
+        <span class="tag">{next.chapter === 'done' ? 'Result' : `Next · chapter ${next.chapter}`}</span>
+        <span>{next.text}</span>
+        {next.chapter !== 'done' && <a href={`#ch${next.chapter}`}>Go ↓</a>}
+      </div>
       {err && <div class="card notice" role="alert">{err}</div>}
 
-      <article class="card chapter">
+      <article class="card chapter" id="ch1">
         <p class="num">CHAPTER 1</p><h3>{CHAPTERS[0].title}</h3><p>{CHAPTERS[0].sentence}</p>
         <label for="victim" style="display:block;margin-top:12px;font-weight:700">Victim wallet (use a second MetaMask account, e.g. “Account 2”)</label>
         <div class="cta" style="margin-top:6px">
@@ -96,7 +103,7 @@ export function Theater({ base }: { base: string }) {
         <p style="margin-top:8px"><a href={s.links.demoswap} target="_blank" rel="noreferrer">Open DemoSwap</a>: the real site, working normally.</p>
       </article>
 
-      <article class="card chapter">
+      <article class="card chapter" id="ch2">
         <p class="num">CHAPTER 2</p><h3>{CHAPTERS[1].title}</h3><p>{CHAPTERS[1].sentence}</p>
         <div class="cta" style="margin-top:12px">
           <Btn n={2} id="hijack" label="Hijack the domain" onClick={() => act('hijack', () => api.switch('hijack-on'))} />
@@ -114,7 +121,7 @@ export function Theater({ base }: { base: string }) {
         )}
       </article>
 
-      <article class="card chapter">
+      <article class="card chapter" id="ch3">
         <p class="num">CHAPTER 3</p><h3>{CHAPTERS[2].title}</h3><p>{CHAPTERS[2].sentence}</p>
         <div class="cta" style="margin-top:12px">
           <Btn n={3} id="site" label={s.switches.site === 'down' ? 'Website is down' : 'Take the website down'} onClick={() => act('site', () => api.switch('site-down'))} />
@@ -124,7 +131,7 @@ export function Theater({ base }: { base: string }) {
         <p style="margin-top:12px">Website: <b class={s.switches.site === 'up' ? 'ok' : 'bad'}>{s.switches.site}</b> · Protocol RPC: <b class={s.switches.rpc === 'up' ? 'ok' : 'bad'}>{s.switches.rpc}</b> · DNS: <b class={s.switches.hijack ? 'bad' : 'ok'}>{s.switches.hijack ? 'hijacked' : 'ok'}</b></p>
       </article>
 
-      <article class="card chapter">
+      <article class="card chapter" id="ch4">
         <p class="num">CHAPTER 4</p><h3>{CHAPTERS[3].title}</h3><p>{CHAPTERS[3].sentence}</p>
         <div class="cta" style="margin-top:12px">
           <Btn n={4} id="verify" label="Verify the saved kit vs the attacker’s kit" onClick={() => act('verify', () => api.verify())} />
@@ -162,6 +169,7 @@ export function Theater({ base }: { base: string }) {
         <p style="margin-top:12px">Time to exit (first outage → confirmed exit): <b>{board.timeToExitSec === null ? '—' : `${board.timeToExitSec} s`}</b></p>
         <p class="muted" style="font-size:14px">Real incident for scale: Curve 2022, one victim lost 400,227.23 USDC (mainnet fork replay, see above).</p>
         <button class="btn ghost" style="margin-top:8px" disabled={busy !== null} onClick={() => act('reset', () => api.switch('reset'))}>Reset switches</button>
+        <div style="margin-top:16px"><QrCard big /></div>
       </article>
     </div>
   );

@@ -24,6 +24,10 @@ test('website public mode: explains, reads ENS live, zero third-party requests',
   await expect(page.getByText('400,227.23 USDC').first()).toBeVisible();
   await expect(page.getByText(/release v\d+/).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('reverted ✓').first()).toBeVisible();
+  const qr = page.locator('footer [data-qr] img');
+  await qr.scrollIntoViewIfNeeded();
+  await expect(qr).toBeVisible();
+  expect(await qr.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0), 'qr.svg loads under the CSP').toBe(true);
   const third = [...origins].filter((o) => o !== new URL(url).origin && !PUBLIC_RPCS.includes(o));
   expect(third).toEqual([]);
 });
