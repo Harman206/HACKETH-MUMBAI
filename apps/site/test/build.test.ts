@@ -18,6 +18,10 @@ test('no third-party scripts, styles, fonts or analytics', () => {
   expect(html + js).not.toMatch(/fonts\.googleapis|google-analytics|googletagmanager|segment\.io|plausible/);
 });
 
+test('CSP lets the site fetch its own files (recorded run, kit sha256)', () => {
+  expect(html).toMatch(/connect-src 'self' /);
+});
+
 test('strict CSP meta with self-only scripts', () => {
   expect(html).toMatch(/http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self';/);
 });
