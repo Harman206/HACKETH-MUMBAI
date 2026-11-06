@@ -88,8 +88,8 @@ describe('Uniswap v4 adapter on a Sepolia fork (real PoolManager / PositionManag
   test('discover finds both freshly minted positions through the Transfer-log scan', async () => {
     const ps = await uniswapV4.discover(USER, ctx);
     const found = ps.filter((p) => !p.manual).map((p) => p.id);
-    expect(found).toEqual(expect.arrayContaining([ids.inRange!.toString(), ids.outOfRange!.toString()]));
-    expect(ps.find((p) => p.id === ids.inRange!.toString())!.label).toMatch(/^Uniswap v4 #\d+ (DETH\/DUSD|DUSD\/DETH) 0\.3%$/);
+    expect(found).toEqual(expect.arrayContaining([`v4:${ids.inRange}`, `v4:${ids.outOfRange}`]));
+    expect(ps.find((p) => p.id === `v4:${ids.inRange}`)!.label).toMatch(/^Uniswap v4 #\d+ (DETH\/DUSD|DUSD\/DETH) 0\.3%$/);
   });
 
   test('in-range exit: Guard ok → simulated → sent → Recovered, and the math preview equals what arrived', async () => {
@@ -115,8 +115,8 @@ describe('Uniswap v4 adapter on a Sepolia fork (real PoolManager / PositionManag
     const res = await runExit(plan, sender, { ...fresh, pollMs: 200, timeoutMs: 60_000 });
     expect(res.status).toBe('recovered');
     const after = await uniswapV4.discover(USER, { ...ctx, block: await ctx.q.pinBlock() });
-    expect(after.filter((p) => !p.manual).map((p) => p.id)).not.toContain(ids.inRange!.toString());
-    expect(after.filter((p) => !p.manual).map((p) => p.id)).not.toContain(ids.outOfRange!.toString());
+    expect(after.filter((p) => !p.manual).map((p) => p.id)).not.toContain(`v4:${ids.inRange}`);
+    expect(after.filter((p) => !p.manual).map((p) => p.id)).not.toContain(`v4:${ids.outOfRange}`);
   });
 
   test('byId refuses a real position owned by another wallet (ownerOf on chain)', async () => {

@@ -11,7 +11,7 @@ export interface E2EState {
   rpcs: string[];
   ensName: string;
   wallet: string;
-  positions: { inRange: string; outOfRange: string; owedOnly: string };
+  positions: { inRange: string; outOfRange: string; owedOnly: string; v4: string };
   drill: { wallet: string; positions: string[]; control: string; router: string; site: string; rpcProxy: string };
   theater: { site: string; control: string; victim: string; rpcProxy: string };
 }

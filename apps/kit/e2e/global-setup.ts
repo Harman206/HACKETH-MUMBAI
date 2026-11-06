@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 import { FORK_RPCS, startFork, type Fork } from '@blackout/testkit';
+import { seedV4 } from './seed-v4';
 import { createServer as netServer } from 'node:net';
 import { startHarness } from '../../../harness/services/control';
 import { createDrainerBot } from '../../../harness/services/drainer-bot';
@@ -78,6 +79,8 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
   env.DEMO_WALLET = execFileSync(CAST, ['wallet', 'address', '--private-key', K[5]!], { encoding: 'utf8' }).trim();
   forge(['script', 'script/SeedPositions.s.sol']);
   const positions = JSON.parse(readFileSync(join(CONTRACTS, env.POSITIONS_FILE), 'utf8'));
+  // Plus one Uniswap v4 position (real v4 contracts on the fork), found by the kit's log scan.
+  const v4Id = await seedV4(fork, positions.wallet, positions.token0, positions.token1);
   // A second wallet for the fire drill, so specs do not consume each other's positions.
   env.TEST_WALLET_KEY = K[6];
   env.DEMO_WALLET = execFileSync(CAST, ['wallet', 'address', '--private-key', K[6]!], { encoding: 'utf8' }).trim();
@@ -151,7 +154,7 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
       rpcs,
       ensName: `${label}.eth`,
       wallet: positions.wallet,
-      positions: { inRange: String(positions.inRange), outOfRange: String(positions.outOfRange), owedOnly: String(positions.owedOnly) },
+      positions: { inRange: String(positions.inRange), outOfRange: String(positions.outOfRange), owedOnly: String(positions.owedOnly), v4: `v4:${v4Id}` },
       drill: {
         wallet: drillPositions.wallet,
         positions: [drillPositions.inRange, drillPositions.outOfRange, drillPositions.owedOnly].map(String),

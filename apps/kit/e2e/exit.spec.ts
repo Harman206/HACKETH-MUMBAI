@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { installTestWallet, presetSettings, state } from './helpers';
 
-test('full exit: ENS manifest → three positions → exit all → recovered → report', async ({ page }) => {
+test('full exit: ENS manifest → three Uniswap v3 + one Uniswap v4 position → exit all → recovered → report', async ({ page }) => {
   const s = state();
   await installTestWallet(page, s);
   await presetSettings(page, s);
@@ -32,7 +32,8 @@ test('full exit: ENS manifest → three positions → exit all → recovered →
   const report = JSON.parse(readFileSync((await dl.path())!, 'utf8'));
   expect(report.ensName).toBe(s.ensName);
   expect(report.kit.sha256).toBe(s.kitSha256);
-  expect(report.results).toHaveLength(3);
+  expect(report.results).toHaveLength(4);
+  expect(report.results.map((r: { positionId: string }) => r.positionId)).toContain(s.positions.v4);
   expect(report.results.every((r: { status: string }) => r.status === 'recovered')).toBe(true);
 
   const walletCalls: string[] = await page.evaluate(() => (window as unknown as { __walletCalls: string[] }).__walletCalls);

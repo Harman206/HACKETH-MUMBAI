@@ -56,7 +56,8 @@ async function load(address: Address, tokenId: bigint, ctx: Ctx): Promise<Positi
   const hook = eq(pk.hooks, ZERO) ? '' : ` · hook ${short(pk.hooks)}`;
   return {
     adapter: 'uniswap-v4',
-    id: tokenId.toString(),
+    // v3 and v4 NFT ids are independent counters: a wallet can hold v3 #N and v4 #N, so keep the kit's keys distinct.
+    id: `v4:${tokenId}`,
     label: `Uniswap v4 #${tokenId} ${s0}/${s1} ${pk.fee / 10_000}%${hook}`,
     tokens: native ? [pk.currency1] : [pk.currency0, pk.currency1],
     ...(native
@@ -103,8 +104,9 @@ export const uniswapV4: ExitAdapter = {
   async byId(id, user, ctx) {
     const address = posm(ctx);
     if (!address) throw new Error(`Uniswap v4 is not listed in the manifest for chain ${ctx.chainId}.`);
-    if (!/^\d{1,30}$/.test(id.trim())) throw new Error('A Uniswap v4 position ID is a whole number, like 41448.');
-    const tokenId = BigInt(id.trim());
+    const raw = id.trim().replace(/^(#|v4:)/i, '');
+    if (!/^\d{1,30}$/.test(raw)) throw new Error('A Uniswap v4 position ID is a whole number, like 41448.');
+    const tokenId = BigInt(raw);
     const owner = await ctx.q.read({ address, abi: v4PosmAbi, functionName: 'ownerOf', args: [tokenId] }, ctx.block).catch(() => null);
     if (!owner) throw new Error(`Uniswap v4 position #${tokenId} does not exist.`);
     if (!eq(owner, user)) throw new Error(`Uniswap v4 position #${tokenId} is owned by ${short(owner)}, not your wallet.`);

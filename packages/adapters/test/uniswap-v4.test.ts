@@ -69,7 +69,7 @@ describe('Uniswap v4 adapter', () => {
       positions: { '7': { owner: USER, liquidity: 10n ** 18n }, '8': { owner: OTHER, liquidity: 1n }, '9': { owner: USER, liquidity: 0n } },
     });
     const ps = await uniswapV4.discover(USER, ctx);
-    expect(ps.map((p) => p.id)).toEqual(['7']);
+    expect(ps.map((p) => p.id)).toEqual(['v4:7']); // v3 and v4 NFT ids are separate counters: never let them collide
     expect(ps[0]!.label).toBe('Uniswap v4 #7 TKN/TKN 0.3%');
     expect(ps[0]!.tokens).toEqual([T0, T1]);
   });
@@ -84,7 +84,7 @@ describe('Uniswap v4 adapter', () => {
   test('discover: scans backwards in 10k-block chunks and stops (keeping results) where RPCs no longer have history', async () => {
     const { ctx, calls } = stub({ balance: 1n, logIds: [7n], logsFailBefore: 980_000n, positions: { '7': { owner: USER, liquidity: 1n } } });
     const ps = await uniswapV4.discover(USER, ctx);
-    expect(ps.map((p) => p.id)).toEqual(['7']);
+    expect(ps.map((p) => p.id)).toEqual(['v4:7']);
     expect(calls.filter((c) => c.startsWith('getLogs'))).toEqual(['getLogs 990001-1000000', 'getLogs 980001-990000', 'getLogs 970001-980000']);
   });
 
@@ -102,7 +102,8 @@ describe('Uniswap v4 adapter', () => {
 
   test('byId: adds a position the scan missed, but only if this wallet owns it', async () => {
     const { ctx } = stub({ balance: 1n, logIds: [], positions: { '41': { owner: USER, liquidity: 5n }, '42': { owner: OTHER, liquidity: 5n } } });
-    expect((await uniswapV4.byId!('41', USER, ctx)).id).toBe('41');
+    expect((await uniswapV4.byId!('41', USER, ctx)).id).toBe('v4:41');
+    expect((await uniswapV4.byId!('#41', USER, ctx)).id).toBe('v4:41'); // as shown in labels
     await expect(uniswapV4.byId!('42', USER, ctx)).rejects.toThrow(/owned by 0x2222…2222, not your wallet/);
     await expect(uniswapV4.byId!('99', USER, ctx)).rejects.toThrow(/does not exist/);
     await expect(uniswapV4.byId!('abc', USER, ctx)).rejects.toThrow(/number/);
