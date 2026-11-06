@@ -138,4 +138,16 @@ describe('exit flow', () => {
     expect(onReport).toHaveBeenCalledTimes(1);
     expect(onReport.mock.calls[0]![0].failures).toEqual([{ kind: 'rpc-down', at: 2_000 }]);
   });
+
+  test('review I5: one adapter failing discovery does not hide the others', async () => {
+    const broken: ExitAdapter = { id: 'aave-v3', discover: async () => { throw new Error('Only 1 of 3 RPC paths answered eth_call; need 2.'); }, buildExit: vi.fn() };
+    const { d, adapter } = deps();
+    const f = createFlow({ ...d, adapters: [adapter, broken] });
+    await f.start(settings);
+    const s = f.state.get();
+    expect(s.step).toBe('positions');
+    if (s.step !== 'positions') return;
+    expect(s.positions).toEqual([pos]);
+    expect(s.discoveryErrors).toEqual([expect.stringMatching(/aave-v3.*Only 1 of 3/)]);
+  });
 });

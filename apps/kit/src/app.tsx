@@ -176,6 +176,9 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
             </button>
           )}
         </div>
+        {state.discoveryErrors.map((e) => (
+          <p class="warn" role="alert" style="margin-top:12px">{e}</p>
+        ))}
         {state.positions.length === 0 && <p class="muted" style="margin-top:12px">{COPY.noPositions}</p>}
         {state.positions.map((p) => (
           <PositionRow p={p} result={state.results[p.id]} busy={state.busy} chainId={state.chainId} onExit={() => flow.exit(p.id)} />

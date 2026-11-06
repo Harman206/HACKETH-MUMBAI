@@ -20,6 +20,8 @@ export type FlowState =
       positions: Position[];
       results: Record<string, ExitResult>;
       busy: string | null;
+      /** Adapters whose discovery failed; their positions are unknown, the others stay exitable. */
+      discoveryErrors: string[];
     }
   | { step: 'error'; message: string };
 
@@ -105,8 +107,11 @@ export function createFlow(deps: FlowDeps): Flow {
         slippageBps: s.slippageBps,
         nowSec: () => Math.floor(deps.now() / 1000),
       };
-      const positions = (await Promise.all(deps.adapters.map((a) => a.discover(account, ctx!)))).flat();
-      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null });
+      const settled = await Promise.allSettled(deps.adapters.map((a) => a.discover(account, ctx!)));
+      const positions = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+      const discoveryErrors = settled.flatMap((r, i) => (r.status === 'rejected' ? [`Could not check ${deps.adapters[i]!.id}: ${message(r.reason)}`] : []));
+      if (discoveryErrors.length === deps.adapters.length && deps.adapters.length > 0) return fail(discoveryErrors.join(' '));
+      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors });
     } catch (e) {
       return fail(message(e));
     }
