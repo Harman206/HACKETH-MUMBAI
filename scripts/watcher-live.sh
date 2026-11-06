@@ -6,5 +6,5 @@ cd "$(dirname "$0")/.."
 set -a; . contracts/.env; set +a
 export WATCH_NAMES=${WATCH_NAMES:-demoswap-blackout.eth}
 export CANDIDATES=${CANDIDATES:-"demoswap-blackout.eth=http://demoswap-rewards.localhost:8082/"}
-export STATUS_PORT=${STATUS_PORT:-8095} INTERVAL_MS=${INTERVAL_MS:-15000}
+export STATUS_PORT=${STATUS_PORT:-8095} INTERVAL_MS=${INTERVAL_MS:-6000}
 exec pnpm --filter @copeybara/watcher start

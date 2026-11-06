@@ -62,6 +62,23 @@ function Warning() {
             const r = await send<{ ok: boolean; error?: string }>({ t: 'openKit', name });
             setMsg(r.ok ? 'The verified exit kit opened in a new tab.' : (r.error ?? 'Could not open the kit.'));
           }}><Icon name="log-out" size={17} />Exit safely with the kit</button>
+          {reason !== 'mismatch' && from && (
+            <button
+              id="recheck"
+              class="secondary"
+              onClick={async () => {
+                setMsg('Reading ENS again…');
+                const st = await send<{ protocols?: { name: string; snapshot: { status: { state: string } | null; blocklist: string[] } | null }[] }>({ t: 'sync' });
+                const p = st.protocols?.find((x) => x.name === name);
+                const host = new URL(from).hostname;
+                const still = p?.snapshot?.status?.state === 'compromised' || (p?.snapshot?.blocklist ?? []).some((d) => host === d || host.endsWith(`.${d}`));
+                if (still) setMsg(`${name}'s ENS records still flag this site. Use the exit kit.`);
+                else location.replace(from);
+              }}
+            >
+              Check ENS again
+            </button>
+          )}
           <button class="secondary" onClick={() => (history.length > 2 ? history.go(-2) : location.replace('about:blank'))}>Leave this site</button>
         </div>
         {msg && <p class="small" data-kit-msg style="margin-top:12px">{msg}</p>}
