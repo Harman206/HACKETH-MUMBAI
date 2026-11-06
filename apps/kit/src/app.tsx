@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { ADAPTERS } from '@copeybara/adapters';
 import { createQuorum, type Quorum } from '@copeybara/quorum';
 import { reportToHtml, reportToJson, type ExitResult } from '@copeybara/exec';
@@ -17,6 +17,8 @@ import { CheckScreen } from './screens/Check';
 import { ReleaseScreen } from './screens/Release';
 import { PositionBadges } from './screens/Badges';
 import { BrandMark, IconAlert, IconCheckCircle, IconChevron, IconDownload, IconExit, IconExternal, IconFingerprint, IconInfo, IconLayers, IconLock, IconSearch, IconShield, IconStop, IconWallet } from './screens/Icons';
+import { Celebration } from './screens/Celebrate';
+import { savedLine } from './saved';
 import './styles.css';
 
 function download(name: string, text: string, type: string) {
@@ -415,8 +417,19 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
   const anyResult = Object.keys(state.results).length > 0;
   const exitable = state.positions.filter((p) => !p.manual);
   const recovered = Object.values(state.results).filter((r) => r.status === 'recovered').length;
+  // "Saved by Copey!" once the exits the user started have finished and at least one new one is Recovered.
+  const celebrated = useRef(new Set(Object.entries(state.results).filter(([, r]) => r.status === 'recovered').map(([id]) => id)));
+  const [party, setParty] = useState<string | null>(null);
+  useEffect(() => {
+    if (state.busy || state.batch) return;
+    const fresh = Object.entries(state.results).filter(([id, r]) => r.status === 'recovered' && !celebrated.current.has(id));
+    if (fresh.length === 0) return;
+    for (const [id] of fresh) celebrated.current.add(id);
+    setParty(savedLine(fresh.map(([, r]) => r), state.meta));
+  }, [state.results, state.busy, state.batch, state.meta]);
   return (
     <>
+      {party && <Celebration reason={party} onDone={() => setParty(null)} />}
       {state.rollbackWarning && (
         <div class="notice warn-notice" role="alert">
           <IconAlert /> <span>{COPY.rollback}</span>
