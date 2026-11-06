@@ -21,9 +21,10 @@ const lines = [
   ...(d.kitRelease ? [`| Published kit sha256 (\`org.blackout.release\` v2) | \`${d.kitRelease}\` |`] : []),
   '', `Must-revert checks, sent on chain from the website key:`, '',
   `| Check | Result | Tx |`, `|---|---|---|`,
-  ...perms.map((p) => `| ${p.check} | ${p.status === 'false' || p.status === '0' ? 'reverted ✓' : 'succeeded'} | ${tx(p.tx)} |`),
+  ...perms.map((p) => `| ${p.check} (must ${p.expected === 'revert' ? 'revert' : 'succeed'}) | ${p.pass ? `${p.status === 'revert' ? 'reverted' : 'succeeded'} ✓` : `FAILED (got ${p.status})`} | ${p.tx ? tx(p.tx) : '—'} |`),
   ...(pos ? ['', `Seeded Uniswap v3 positions (owner ${ad(pos.wallet)}): #${pos.inRange} in range, #${pos.outOfRange} out of range, #${pos.owedOnly} owed only.`] : []),
 ];
+if (perms.length && perms.some((p) => !p.pass)) throw new Error(`refusing to publish: failing permission checks in ${base}-permissions.json`);
 const md = readFileSync(readme, 'utf8');
 const out = md.replace(/<!-- LIVE-DEPLOYMENT:START -->[\s\S]*<!-- LIVE-DEPLOYMENT:END -->/, `<!-- LIVE-DEPLOYMENT:START -->\n${lines.join('\n')}\n<!-- LIVE-DEPLOYMENT:END -->`);
 if (out === md) throw new Error('LIVE-DEPLOYMENT markers not found');

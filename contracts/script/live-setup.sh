@@ -28,8 +28,9 @@ if [ ! -f "$DF" ] || [ "$(jq -r '.tokenId // empty' "$DF")" = "" ]; then
 fi
 jq . "$DF"
 
-if [ "$(cast balance "$WEB_KEY_ADDR" --rpc-url "$SEPOLIA_RPC")" = "0" ]; then
-  cast send "$WEB_KEY_ADDR" --value 0.01ether --private-key "$DEPLOYER_KEY" --rpc-url "$SEPOLIA_RPC" >/dev/null
+# Top the web key up: 6 sends x 300k gas limit need headroom at Sepolia fee levels.
+if [ "$(cast balance "$WEB_KEY_ADDR" --rpc-url "$SEPOLIA_RPC")" -lt 30000000000000000 ]; then
+  cast send "$WEB_KEY_ADDR" --value 0.05ether --private-key "$DEPLOYER_KEY" --rpc-url "$SEPOLIA_RPC" >/dev/null
 fi
 # Publish the DemoSwap main-bundle fingerprint for hijack detection (org.blackout.site), once.
 if [ ! -f "$DF.site-published" ]; then
