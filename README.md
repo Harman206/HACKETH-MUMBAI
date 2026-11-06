@@ -182,7 +182,7 @@ Our deployment (`demoswap-blackout.eth`: Safe, resolver, must-revert transaction
 | Release Safe (2-of-3, name owner) | [`0x3ae03951044Ced07F7fa12072CfE7F95827A057F`](https://sepolia.etherscan.io/address/0x3ae03951044Ced07F7fa12072CfE7F95827A057F) |
 | PermissionedResolver (per app) | [`0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82`](https://sepolia.etherscan.io/address/0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82) |
 | Website key (url only) | [`0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182`](https://sepolia.etherscan.io/address/0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182) |
-| Published kit sha256 (`org.blackout.release` v3) | `e466b44cce87059035de8860a0e82ee20193db2f9634957ed57d1811581d4e60` |
+| Published kit sha256 (`org.blackout.release` v4) | `5485e76be539ca554d1798f47a3bf50ef2c18d8657a206a271ccdb502a53c561` |
 
 Must-revert checks, sent on chain from the website key:
 
