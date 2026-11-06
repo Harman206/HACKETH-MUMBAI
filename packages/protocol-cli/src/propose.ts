@@ -60,10 +60,12 @@ export function buildProposal(i: ProposeInput): Proposal {
 
 /**
  * Every call in a batch is a resolver setText of a Safe-owned Copeybara key on this name, or one of the two scoped
- * grants (website key → url, watcher → status / blocklist). Anything else throws: the CLI never proposes it.
+ * grants (website key → url, watcher → status / blocklist). An incident batch may write status and blocklist only and
+ * grants nothing. Anything else throws: the CLI never proposes it.
  */
-export function assertBatchScope(calls: SafeCall[], cfg: CopeybaraConfig): void {
+export function assertBatchScope(calls: SafeCall[], cfg: CopeybaraConfig, o: { incident?: boolean } = {}): void {
   const name = dnsName(cfg.name);
+  const writable: readonly string[] = o.incident ? WATCHER_KEYS : SAFE_KEYS;
   const allowedGrant = (acct: string, key: string) =>
     (acct.toLowerCase() === cfg.websiteKey.toLowerCase() && (WEBSITE_KEYS as readonly string[]).includes(key)) ||
     (!!cfg.watcher && acct.toLowerCase() === cfg.watcher.key.toLowerCase() && (WATCHER_KEYS as readonly string[]).includes(key));
@@ -72,8 +74,8 @@ export function assertBatchScope(calls: SafeCall[], cfg: CopeybaraConfig): void 
     const d = decodeFunctionData({ abi: resolverAbi, data: c.data });
     if (d.functionName === 'setText') {
       const [n, key] = d.args as [Hex, string, string];
-      if (n !== name || !(SAFE_KEYS as readonly string[]).includes(key)) throw new Error(`batch writes ${key} on ${hexToString(n)}`);
-    } else if (d.functionName === 'grantSetterRoles') {
+      if (n !== name || !writable.includes(key)) throw new Error(`batch writes ${key} on ${hexToString(n)}`);
+    } else if (d.functionName === 'grantSetterRoles' && !o.incident) {
       const [setter, acct] = d.args as [Hex, Address];
       const s = decodeFunctionData({ abi: resolverAbi, data: setter });
       if (s.functionName !== 'setText') throw new Error('grant is not scoped to setText');

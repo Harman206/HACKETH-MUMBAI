@@ -112,6 +112,7 @@ export const CLI = [
   ['roles-check [--live]', 'Sends each forbidden write as the website and watcher keys next to a Safe control, on a fork or as live eth_calls.', 'exit 1 on any ✗'],
   ['drill [--sample]', 'Fork, seed, switch off the site and primary RPC, discover → build → Guard → send → balance check.', 'drill.json'],
   ['certify', 'verify + the certified rules + a drill that used this exact kit.', 'certification.json'],
+  ['incident --state s [--block host]', 'One Safe batch setting org.copeybara.status and the look-alike blocklist. Extensions block the site; exits are never affected.', 'incident-batch.json'],
   ['watcher [--up]', 'Docker Compose for the watcher from the config, with healthcheck and a pinned watcher address.', 'watcher/compose.yml'],
   ['adapter new <name>', 'Scaffolds a code adapter with a fork test, Guard corpus cases and a property test.', 'packages/adapters/…'],
 ] as const;

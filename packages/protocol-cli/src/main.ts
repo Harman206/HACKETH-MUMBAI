@@ -7,8 +7,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { parseArgs } from 'node:util';
 import { createPublicClient, getAddress, http, type Hex } from 'viem';
-import { COPEYBARA_KEYS, parseSiteRecord, type Address } from '@copeybara/core';
-import { readCopeybaraRecords } from '@copeybara/ens';
+import { COPEYBARA_KEYS, parseSiteRecord, type Address, type StatusState } from '@copeybara/core';
+import { readCopeybaraRecords, readRawTexts } from '@copeybara/ens';
+import { buildIncident } from './incident';
 import { createQuorum, type Quorum } from '@copeybara/quorum';
 import { readOnChain } from './chain';
 import { certifyLive } from './certify';
@@ -34,6 +35,8 @@ const HELP = `copeybara <command> [--config copeybara.config.ts]
   certify                  verify + the Copeybara certified checks; writes certification.json
   roles-check [--live]     prove the website and watcher keys cannot write anything else (fork by default)
   drill [--sample]         fork the chain, switch off the site + primary RPC, exit a seeded position headlessly
+  incident --state s        ONE Safe batch setting org.copeybara.status (ok | degraded | compromised)
+          [--note "…"] [--block host]… [--unblock host]…   and the look-alike blocklist; never touches exits
   watcher [--up]           docker compose for the watcher (status + blocklist key only), with a healthcheck
   adapter new <name>       scaffold a code adapter with fork tests, Guard corpus cases and property tests
 
@@ -103,7 +106,7 @@ async function desired(l: LoadedConfig, siteFlag?: string): Promise<Partial<Reco
   return v;
 }
 
-async function proposeCmd(l: LoadedConfig, o: Record<string, string | boolean | undefined>) {
+async function proposeCmd(l: LoadedConfig, o: Record<string, string | string[] | boolean | undefined>) {
   const { cfg } = l;
   const values = await desired(l, o.site as string | undefined);
   let current: Record<string, string> | undefined;
@@ -182,6 +185,18 @@ async function verifyCmd(l: LoadedConfig) {
   say('\nverify: OK');
 }
 
+async function incidentCmd(l: LoadedConfig, o: { state?: string; note?: string; block?: string[]; unblock?: string[] }) {
+  const { cfg } = l;
+  const state = o.state as StatusState | undefined;
+  if (!state || !['ok', 'degraded', 'compromised'].includes(state)) die('incident: --state ok | degraded | compromised');
+  const q = ensQuorum(l);
+  const { texts } = await readRawTexts(cfg.name, [COPEYBARA_KEYS.blocklist], q, { universalResolver: universalResolver(cfg) });
+  const r = buildIncident({ cfg, ensChainId: ensChainId(cfg), state: state!, note: o.note, block: o.block, unblock: o.unblock, currentBlocklist: texts[COPEYBARA_KEYS.blocklist] ?? '', now: Date.now() });
+  for (const c of r.calls) say(`  ${c.label}`);
+  say(`Safe batch → ${await writeOut(l, 'incident-batch.json', JSON.stringify(r.batch, null, 2))}`);
+  say('Safe{Wallet} → Transaction Builder → drag in the file. Extensions following the name act on the next read; the exit kit ignores status.');
+}
+
 async function certifyCmd(l: LoadedConfig) {
   const { cfg } = l;
   const watcher = cfg.watcher ?? die('certify: a watcher (status + blocklist only) is required for Copeybara certified.');
@@ -229,6 +244,10 @@ async function main() {
       force: { type: 'boolean' },
       sample: { type: 'boolean' },
       up: { type: 'boolean' },
+      state: { type: 'string' },
+      note: { type: 'string' },
+      block: { type: 'string', multiple: true },
+      unblock: { type: 'string', multiple: true },
     },
   });
   if (cmd === 'init') {
@@ -258,6 +277,8 @@ async function main() {
       return (await import('./fingerprint')).fingerprintCmd(l, { dist: o.dist, url: o.url, write: (f, b) => writeOut(l, f, b) });
     case 'roles-check':
       return (await import('./roles')).rolesCheckCmd(l, { live: !!o.live });
+    case 'incident':
+      return incidentCmd(l, o);
     case 'watcher':
       return (await import('./watcher')).watcherCmd(l, { up: !!o.up });
     case 'drill':
