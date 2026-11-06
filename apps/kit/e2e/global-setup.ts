@@ -14,6 +14,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 import { FORK_RPCS, startFork, type Fork } from '@blackout/testkit';
 import { createServer as netServer } from 'node:net';
 import { startHarness } from '../../../harness/services/control';
+import { createDrainerBot } from '../../../harness/services/drainer-bot';
+import { makePrepareVictim, makeReadVictim, makeSender } from '../../../harness/services/chain';
+import { createQuorum } from '@blackout/quorum';
 
 const free = () => new Promise<number>((r) => { const s = netServer(); s.listen(0, () => { const p = (s.address() as { port: number }).port; s.close(() => r(p)); }); });
 
@@ -32,6 +35,8 @@ const K = [
   '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
   '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba',
   '0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e',
+  '0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356', // 7: theater attacker
+  '0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97', // 8: theater victim
 ];
 
 export default async function globalSetup() {
@@ -80,9 +85,19 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
   forge(['script', 'script/SeedPositions.s.sol']);
   const drillPositions = JSON.parse(readFileSync(join(CONTRACTS, env.POSITIONS_FILE), 'utf8'));
 
+  // Attack Theater world: the drainer, the bot (attacker = key 7), victim = key 8, token holder = key 5 (seeded pool #1).
+  env.ATTACKER_KEY = K[7];
+  env.DEPLOYER_KEY = K[0];
+  env.POSITIONS_FILE = 'deployments/rehearsal-e2e-positions.json';
+  env.ATTACK_FILE = 'deployments/rehearsal-e2e-attack.json';
+  forge(['script', 'script/DeployAttack.s.sol']);
+  const attack = JSON.parse(readFileSync(join(CONTRACTS, env.ATTACK_FILE), 'utf8'));
+  execFileSync('pnpm', ['--filter', '@blackout/site', 'build'], { cwd: join(KIT, '..', '..'), stdio: 'pipe' });
+
   const html = readFileSync(kitFile);
   const server = createServer((req, res) => {
-    if (req.url === '/' || req.url === '/blackout-kit.html') {
+    const path = (req.url ?? '/').split('?')[0];
+    if (path === '/' || path === '/blackout-kit.html') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(html);
     } else res.writeHead(404).end();
   });
@@ -96,6 +111,36 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
     primaryRpc: fork.url, kitFile, ensName: `${label}.eth`, ensRpcs: rpcs, chainId: 11155111,
     universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: positions.token0, ports: hp, mode: 'process',
   });
+  const tq = createQuorum({ urls: rpcs, timeoutMs: 30_000, expectedChainId: 11155111 });
+  const bot = createDrainerBot({ q: tq, send: makeSender(fork.url, K[7] as `0x${string}`), drainer: attack.drainer, tokens: [attack.DUSD], fromBlock: await tq.pinBlock(), pollMs: 1000 });
+  bot.start();
+  const tp = { control: await free(), router: await free(), site: await free(), hijack: await free(), rpc: await free() };
+  const theaterHarness = await startHarness({
+    primaryRpc: fork.url, kitFile, ensName: `${label}.eth`, ensRpcs: rpcs, chainId: 11155111,
+    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: attack.DUSD, drainer: attack.drainer, ports: tp, mode: 'process',
+    kitUrl: `http://localhost:${port}`,
+    theater: {
+      network: 'local-fork',
+      prepareVictim: makePrepareVictim({ rpcUrl: fork.url, deployerKey: K[5] as `0x${string}`, dusd: attack.DUSD, deth: attack.DETH }),
+      readVictim: makeReadVictim({ q: tq, dusd: attack.DUSD }),
+      drains: bot.records,
+      tokens: { [attack.DUSD]: 'DUSD', [attack.DETH]: 'DETH' },
+    },
+  });
+  const siteDist = join(KIT, '..', 'site', 'dist');
+  const siteServer = createServer((req, res) => {
+    const path = (req.url ?? '/').split('?')[0]!;
+    const f = join(siteDist, path === '/' ? 'index.html' : path);
+    try {
+      const type = f.endsWith('.html') ? 'text/html; charset=utf-8' : f.endsWith('.js') ? 'text/javascript' : f.endsWith('.css') ? 'text/css' : 'text/plain';
+      res.writeHead(200, { 'content-type': type }).end(readFileSync(f));
+    } catch {
+      res.writeHead(404).end();
+    }
+  });
+  await new Promise<void>((r) => siteServer.listen(0, '127.0.0.1', r));
+  const sitePort = (siteServer.address() as { port: number }).port;
+
   writeFileSync(
     STATE,
     JSON.stringify({
@@ -113,10 +158,19 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
         site: `http://127.0.0.1:${hp.site}`,
         rpcProxy: `http://localhost:${hp.rpc}`,
       },
+      theater: {
+        site: `http://localhost:${sitePort}/?booth=${encodeURIComponent(`http://localhost:${tp.control}`)}`,
+        control: `http://localhost:${tp.control}`,
+        victim: execFileSync(CAST, ['wallet', 'address', '--private-key', K[8]!], { encoding: 'utf8' }).trim(),
+        rpcProxy: `http://localhost:${tp.rpc}`,
+      },
     }),
   );
 
   return async () => {
+    bot.stop();
+    siteServer.close();
+    await theaterHarness.stop();
     await harness.stop();
     server.close();
     await fork.stop();
