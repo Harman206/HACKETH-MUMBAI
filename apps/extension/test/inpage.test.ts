@@ -71,6 +71,16 @@ describe('MAIN-world shim', () => {
     expect(p.calls).not.toContain('eth_sign');
     off();
   });
+  test('connect requests (eth_requestAccounts, wallet_requestPermissions) are asked first: a look-alike is stopped before the wallet popup', async () => {
+    const seen: { method: string }[] = [];
+    const off = answerWith('block', seen);
+    await expect((window as any).ethereum.request({ method: 'eth_requestAccounts' })).rejects.toMatchObject({ code: 4001 });
+    await expect((window as any).ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] })).rejects.toMatchObject({ code: 4001 });
+    expect(seen.map((x) => x.method)).toEqual(['eth_requestAccounts', 'wallet_requestPermissions']);
+    expect(p.calls).not.toContain('eth_requestAccounts');
+    expect(p.calls).not.toContain('wallet_requestPermissions');
+    off();
+  });
   test('legacy sendAsync is covered too', async () => {
     const off = answerWith('block');
     const err = await new Promise((r) => (window as any).ethereum.sendAsync({ method: 'eth_sendTransaction', params: [] }, (e: unknown) => r(e)));

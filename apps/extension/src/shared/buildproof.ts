@@ -20,7 +20,8 @@ export interface TreeEntry {
   sha256: string;
 }
 
-export type BuildProofVerdict = 'match' | 'mismatch' | 'no-record' | 'old-record';
+/** 'local-audio': the only difference from the published tree is the user's own song under audio/ (never in a release) */
+export type BuildProofVerdict = 'match' | 'mismatch' | 'no-record' | 'old-record' | 'local-audio';
 
 /** What the worker answers to {t:'buildProof'} (or { error } when a file could not be read). */
 export interface BuildProof {
@@ -73,4 +74,21 @@ export function parseBuildFiles(text: string): string[] {
   const paths = files as string[];
   if (!paths.includes(BUILD_FILES) || !paths.includes('manifest.json')) throw new Error(`${BUILD_FILES} must list manifest.json and itself.`);
   return paths;
+}
+
+/** Optional celebration song a user can drop in locally (src/pages/audio/, gitignored): never part of a release. */
+export const LOCAL_AUDIO_DIR = 'audio/';
+export const isLocalAudio = (path: string) => path.startsWith(LOCAL_AUDIO_DIR);
+/** build-files.json exactly as scripts/build.mjs writes it */
+export const buildFilesText = (paths: string[]) => JSON.stringify({ v: 1, files: [...paths].sort() }) + '\n';
+
+/**
+ * The tree hash this build would have without the files under audio/ (and with build-files.json listing only the
+ * rest), or null when there are none. Lets a local build with the user's own song be told apart from a tampered one.
+ */
+export async function treeWithoutAudio(entries: TreeEntry[]): Promise<string | null> {
+  if (!entries.some((e) => isLocalAudio(e.path))) return null;
+  const kept = entries.filter((e) => !isLocalAudio(e.path) && e.path !== BUILD_FILES);
+  const listing = buildFilesText([...kept.map((e) => e.path), BUILD_FILES]);
+  return treeHash([...kept, { path: BUILD_FILES, sha256: await sha256Bytes(listing) }]);
 }

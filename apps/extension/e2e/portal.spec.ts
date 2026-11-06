@@ -18,11 +18,22 @@ async function openFrom(ctx: BrowserContext, portal: Page, scenario: string) {
   return tab;
 }
 
-async function expectDrainerStopped(ctx: BrowserContext, page: Page, reason: RegExp) {
-  const [win] = await Promise.all([
-    ctx.waitForEvent('page', { predicate: (p) => p.url().includes('/confirm.html'), timeout: 20_000 }),
-    page.locator('#go').click(),
-  ]);
+const confirmWindow = (ctx: BrowserContext) => ctx.waitForEvent('page', { predicate: (p) => p.url().includes('/confirm.html'), timeout: 20_000 });
+
+/** The scam host imitates DemoSwap: its connect request is stopped first, before the wallet's connect popup. */
+async function expectLookalikeConnect(ctx: BrowserContext, page: Page, w: World) {
+  const [win] = await Promise.all([confirmWindow(ctx), page.locator('#go').click()]);
+  await expect(win.locator('[data-verdict="risky"]')).toBeVisible();
+  await expect(win.getByRole('heading', { name: /Don.t connect your wallet here/ })).toBeVisible();
+  await expect(win.locator('[data-reasons]')).toContainText(`This site imitates ${w.ensName} but is not its official address (${new URL(w.siteUrl).origin} from ENS)`);
+  expect(await page.evaluate(() => (window as any).__walletCalls as string[])).not.toContain('eth_requestAccounts');
+  return win;
+}
+
+/** The user connects anyway; then the drainer request itself is stopped. */
+async function expectDrainerStopped(ctx: BrowserContext, page: Page, reason: RegExp, w: World) {
+  const connect = await expectLookalikeConnect(ctx, page, w);
+  const [win] = await Promise.all([confirmWindow(ctx), connect.locator('#continue').click()]);
   await expect(win.locator('[data-verdict="dangerous"]')).toBeVisible();
   await expect(win.getByText('This looks like a wallet drainer')).toBeVisible();
   await expect(win.locator('[data-reasons]')).toContainText(reason);
@@ -73,6 +84,11 @@ test('demo portal: scenarios 1, 2, 4, 5, 6 open the right targets and the extens
   await hijacked.waitForURL(/warning\.html\?reason=mismatch/, { timeout: 30_000 });
   await expect(hijacked.locator('[data-reason="mismatch"]')).toBeVisible();
   await expect(hijacked.locator('[data-unknown]')).toContainText('/inject.js');
+  await expect(hijacked.locator('[data-celebration-reason]')).toContainText('hijacked');
+  await expect(hijacked.locator('#celebrate-play')).toBeVisible(); // no gesture yet: the song waits for a tap
+  await hijacked.waitForTimeout(900);
+  await shot(hijacked, 'saved-warning');
+  await expect(hijacked.locator('[data-celebration]')).toHaveCount(0, { timeout: 10_000 }); // dismisses itself
   await expect(hijacked.getByRole('button', { name: /continue/i })).toHaveCount(0);
   await hijacked.close();
 
@@ -81,7 +97,7 @@ test('demo portal: scenarios 1, 2, 4, 5, 6 open the right targets and the extens
   await approve.waitForURL(attackUrl(w, 'drainer'));
   await expect(portal.locator('#st-dns')).toContainText('Normal'); // every scenario resets first
   await expect(approve.locator('[data-attack-page="approve"]')).toBeVisible();
-  await expectDrainerStopped(ctx, approve, /ALL of this token/);
+  await expectDrainerStopped(ctx, approve, /ALL of this token/, w);
   await approve.close();
 
   // ---------- 5. Permit2 signature phishing (through the guided demo) ----------
@@ -90,13 +106,13 @@ test('demo portal: scenarios 1, 2, 4, 5, 6 open the right targets and the extens
   await expect(portal.locator('#g-title')).toHaveText('Permit2 signature phishing');
   const [permit] = await Promise.all([ctx.waitForEvent('page'), portal.locator('#g-actions [data-run="permit"]').click()]);
   await permit.waitForURL(attackUrl(w, 'permit'));
-  await expectDrainerStopped(ctx, permit, /Permit2/);
+  await expectDrainerStopped(ctx, permit, /Permit2/, w);
   await permit.close();
 
   // ---------- 6. setApprovalForAll "NFT airdrop" ----------
   const nft = await openFrom(ctx, portal, 'nft');
   await nft.waitForURL(attackUrl(w, 'nft'));
-  await expectDrainerStopped(ctx, nft, /spend|move|NFT|ALL/i);
+  await expectDrainerStopped(ctx, nft, /spend|move|NFT|ALL/i, w);
   await nft.close();
 
   // the guided demo's Reset everything puts the harness back
@@ -104,4 +120,25 @@ test('demo portal: scenarios 1, 2, 4, 5, 6 open the right targets and the extens
   await portal.locator('#g-reset').click();
   await expect(portal.locator('#g-reset-msg')).toHaveText('Everything reset.');
   await expect(portal.locator('#st-dns')).toContainText('Normal');
+});
+
+test('a look-alike scam page (demoswap-airdrop.localhost): the connect attempt opens Copeybara first; Cancel closes the window; the wallet never sees it', async ({ ctx, ext, w }) => {
+  await follow(ext, w);
+  const scam = await ctx.newPage();
+  await scam.goto(`http://demoswap-airdrop.localhost:${new URL(w.portal).port}/drainer`);
+  await expect(scam.locator('[data-attack-page="approve"]')).toBeVisible();
+  const win = await expectLookalikeConnect(ctx, scam, w);
+  await shot(win, 'confirm-lookalike');
+  await win.locator('#cancel').click();
+  await expect(scam.locator('#result')).toHaveText('error 4001');
+  // "Saved by Copey!", then the window goes away by itself
+  await expect(win.locator('[data-celebration]')).toBeVisible();
+  await expect(win.getByRole('heading', { name: 'Saved by Copey!' })).toBeVisible();
+  await expect(win.locator('[data-celebration-reason]')).toHaveText(`You didn’t connect your wallet to a fake ${w.ensName} site.`);
+  await expect(win.locator('#celebrate-capybara')).toHaveText('Play the Capybara song ↗');
+  await win.waitForTimeout(900);
+  await shot(win, 'saved-confirm');
+  await expect.poll(() => win.isClosed(), { timeout: 15_000 }).toBe(true); // the worker closes it (real Chrome ignored window.close())
+  const calls = await scam.evaluate(() => (window as any).__walletCalls as string[]);
+  expect(calls.filter((m) => m === 'eth_requestAccounts' || m === 'eth_sendTransaction')).toEqual([]);
 });

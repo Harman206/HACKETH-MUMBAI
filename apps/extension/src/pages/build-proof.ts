@@ -39,6 +39,8 @@ export function formatBuildProof(r: BuildProofResult): BuildProofView {
       return { tone: 'bad', title: 'Does not match the published build', detail: `The installed files differ from the build ${r.ens!.name} published (v${r.ens!.version}). Reinstall from the published zip and check it with scripts/verify-extension.sh.`, rows };
     case 'old-record':
       return { tone: 'grey', title: 'Published record has no tree hash', detail: `${r.ens!.name} published only the zip hash (v${r.ens!.version}). Check the zip with scripts/verify-extension.sh.`, rows };
+    case 'local-audio':
+      return { tone: 'grey', title: 'Local build with your own audio', detail: `Apart from your own song under audio/, every installed file hashes to the tree ${r.ens!.name} published on ENS (v${r.ens!.version}). Published builds never include audio.`, rows };
     case 'no-record':
       return { tone: 'grey', title: 'No ENS record to compare', detail: 'None of the protocols you follow publishes an extension build.', rows };
   }

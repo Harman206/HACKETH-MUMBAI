@@ -7,7 +7,7 @@ import { hostMatches, type Address, type ReleaseRecord } from '@copeybara/core';
 import { normaliseName, type CopeybaraRecords } from '@copeybara/ens';
 import { classifyRequest, type Classification } from '@copeybara/guard';
 import { checkScripts, sha256Hex, type CodeItem } from '@copeybara/sitecheck';
-import { BUILD_FILES, parseBuildFiles, sha256Bytes, treeHash, type BuildProof } from '../shared/buildproof';
+import { BUILD_FILES, parseBuildFiles, sha256Bytes, treeHash, treeWithoutAudio, type BuildProof } from '../shared/buildproof';
 import { classifySender, parseContentMsg, parsePageMsg, type SenderLike } from '../shared/messages';
 import {
   emptyStats,
@@ -31,7 +31,11 @@ export interface ChromeLike {
     create(props: { url: string }): Promise<unknown>;
     sendMessage(tabId: number, msg: unknown): Promise<unknown>;
   };
-  windows: { create(o: { url: string; type: 'popup'; width: number; height: number; focused?: boolean }): Promise<{ id?: number }> };
+  windows: {
+    create(o: { url: string; type: 'popup'; width: number; height: number; focused?: boolean }): Promise<{ id?: number }>;
+    /** the worker closes the confirm window itself: window.close() from the page is not reliable in every Chrome */
+    remove(windowId: number): Promise<void>;
+  };
   action: {
     setBadgeText(o: { tabId?: number; text: string }): Promise<void>;
     setBadgeBackgroundColor(o: { tabId?: number; color: string }): Promise<void>;
@@ -55,6 +59,8 @@ export interface CoreDeps {
   version: string;
   /** how long a page waits for the user in the confirm window */
   confirmTimeoutMs?: number;
+  /** after Cancel, the confirm window shows "Saved by Copey!"; the worker closes it after this long at the latest */
+  celebrateMs?: number;
 }
 
 export const FRESH_MS = 60_000;
@@ -82,6 +88,25 @@ const BADGE: Record<string, { text: string; color: string; title: string }> = {
   compromised: { text: '!', color: '#dc2626', title: 'Copeybara: the protocol reports its site is compromised.' },
   blocklisted: { text: '!', color: '#dc2626', title: 'Copeybara: a protocol you follow lists this site as a fake.' },
 };
+
+/** Wallet connect requests: checked only for look-alike sites, before the wallet shows its own connect popup. */
+export const CONNECT_METHODS = new Set(['eth_requestAccounts', 'wallet_requestPermissions']);
+
+const escapeRe = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** `label` appears in `host` as whole '-'/'.'-separated tokens (demoswap in demoswap-airdrop.localhost, not in mydemoswapper). */
+export function hasToken(host: string, label: string): boolean {
+  return new RegExp(`(^|[.-])${escapeRe(label)}($|[.-])`).test(host);
+}
+
+/**
+ * The distinctive labels of a protocol: the first label of its official host (www. skipped) and the first label of its
+ * ENS name, each at least 4 characters (shorter ones like "app" would match half the web).
+ */
+export function protocolLabels(officialHost: string, ensName: string): string[] {
+  const first = officialHost.replace(/^www\./, '').split('.')[0] ?? '';
+  const ens = ensName.split('.')[0] ?? '';
+  return [...new Set([first, ens].map((x) => x.toLowerCase()).filter((x) => x.length >= 4))];
+}
 
 const DEFAULT_SETTINGS = (kitUrl: string): Settings => ({ account: null, userRpcs: [], useDefaultRpcs: true, kitUrl, setupDone: false });
 
@@ -118,7 +143,11 @@ export function createCore(deps: CoreDeps) {
   const tabs = new Map<number, TabState>();
   /** confirm windows opened per tab (kept apart from TabState: a page that never said hello is limited too) */
   const confirmTimes = new Map<number, number[]>();
+  /** "tabId|origin" pairs where the user chose to connect anyway on a look-alike: not asked again for that page */
+  const connectOk = new Set<string>();
   const confirms = new Map<string, { pending: PendingConfirm; resolve: (allow: boolean) => void; windowId?: number }>();
+  /** confirm windows showing the celebration after Cancel: closed by the page's Done, or by a timer */
+  const closing = new Map<string, () => void>();
   let loaded: Promise<void> | null = null;
   let seq = 0;
 
@@ -183,6 +212,27 @@ export function createCore(deps: CoreDeps) {
   // ---------- tabs & site verdicts ----------
   function protocolFor(origin: string): ProtocolState | undefined {
     return protocols.find((p) => p.snapshot?.origin === origin);
+  }
+  /** A followed protocol this host pretends to be: on its blocklist, or carrying its name without being its official host. */
+  function imitated(host: string): { protocol: string; official: string } | undefined {
+    const h = host.toLowerCase().replace(/\.$/, '');
+    for (const p of protocols) {
+      const s = p.snapshot;
+      if (!s) continue;
+      const official = s.origin ?? '';
+      let officialHost = '';
+      try {
+        officialHost = official ? new URL(official).hostname : '';
+      } catch {
+        officialHost = '';
+      }
+      if (s.blocklist.some((d) => hostMatches(h, d))) return { protocol: p.name, official: official || 'no website' };
+      if (!officialHost) continue;
+      // the official host, its subdomains, and the domains above it belong to the protocol
+      if (hostMatches(h, officialHost) || hostMatches(officialHost, h)) continue;
+      if (protocolLabels(officialHost, p.name).some((l) => hasToken(h, l))) return { protocol: p.name, official };
+    }
+    return undefined;
   }
   function blocklistHit(host: string): { protocol: string; domain: string } | undefined {
     for (const p of protocols) for (const d of p.snapshot?.blocklist ?? []) if (hostMatches(host, d)) return { protocol: p.name, domain: d };
@@ -276,11 +326,30 @@ export function createCore(deps: CoreDeps) {
       const p0 = Array.isArray(msg.params) ? (msg.params[0] as { from?: unknown } | undefined) : undefined;
       return p0 && typeof p0 === 'object' && typeof p0.from === 'string' ? (p0.from as Address) : null;
     })();
-    const c: Classification = classifyRequest({ method: msg.method, params: msg.params }, {
+    let c: Classification = classifyRequest({ method: msg.method, params: msg.params }, {
       account: fromParam ?? settings.account,
       chainId: msg.chainId ?? ENS_CHAIN_ID,
       manifests,
     });
+    let context: string | null = null;
+    const connectKey = `${tabId}|${origin}`;
+    if (CONNECT_METHODS.has(msg.method) && !connectOk.has(connectKey)) {
+      let host = '';
+      try {
+        host = new URL(origin).hostname;
+      } catch {
+        host = '';
+      }
+      const fake = host ? imitated(host) : undefined;
+      if (fake) {
+        c = {
+          verdict: 'risky',
+          method: msg.method,
+          reasons: [`This site imitates ${fake.protocol} but is not its official address (${fake.official} from ENS). Don't connect your wallet here.`],
+        };
+        context = `${fake.protocol}'s official site, from its ENS records: ${fake.official}`;
+      }
+    }
     if (c.verdict === 'pass') return { decision: 'allow', verdict: 'pass', reasons: c.reasons };
     stats.requestsChecked[c.verdict]++;
 
@@ -290,7 +359,6 @@ export function createCore(deps: CoreDeps) {
       await save(['stats']);
       return { decision: 'block', verdict: c.verdict, reasons: ['Blocked: this site is not running the code its protocol published.', ...c.reasons] };
     }
-    let context: string | null = null;
     let verdict = c.verdict;
     if (site?.kind === 'protocol' && verdict === 'unknown') {
       verdict = 'risky';
@@ -313,16 +381,39 @@ export function createCore(deps: CoreDeps) {
     recent.push(now);
     const id = `c${now.toString(36)}${(seq++).toString(36)}`;
     const pending: PendingConfirm = { id, tabId, origin, classification: { ...c, verdict }, context, createdAt: now };
+    const entry: { pending: PendingConfirm; resolve: (a: boolean) => void; windowId?: number; done?: boolean } = { pending, resolve: () => {} };
+    const close = () => {
+      entry.done = true;
+      if (entry.windowId !== undefined) void chrome.windows.remove(entry.windowId).catch(() => {});
+    };
+    let timedOut = false;
     const allow = await new Promise<boolean>((resolve) => {
-      const entry: { pending: PendingConfirm; resolve: (a: boolean) => void; windowId?: number } = { pending, resolve };
+      entry.resolve = resolve;
       confirms.set(id, entry);
       chrome.windows
         .create({ url: chrome.runtime.getURL(`/src/pages/confirm.html?id=${id}`), type: 'popup', width: 440, height: 640, focused: true })
-        .then((w) => (entry.windowId = w.id))
+        .then((w) => {
+          entry.windowId = w.id;
+          if (entry.done) close(); // decided (or timed out) before the window existed
+        })
         .catch(() => resolve(false));
-      setTimeout(() => resolve(false), deps.confirmTimeoutMs ?? 180_000);
+      setTimeout(() => {
+        timedOut = true;
+        resolve(false);
+      }, deps.confirmTimeoutMs ?? 180_000);
     });
     confirms.delete(id);
+    if (allow || timedOut) close();
+    else {
+      // Cancelled: the page is answered now; the window stays a moment for "Saved by Copey!", then closes.
+      const timer = setTimeout(() => closing.get(id)?.(), deps.celebrateMs ?? 12_000);
+      closing.set(id, () => {
+        clearTimeout(timer);
+        closing.delete(id);
+        close();
+      });
+    }
+    if (allow && CONNECT_METHODS.has(msg.method)) connectOk.add(connectKey);
     if (allow) stats.requestsAllowedAfterWarning++;
     else stats.requestsBlocked++;
     await save(['stats']);
@@ -374,10 +465,11 @@ export function createCore(deps: CoreDeps) {
       }
     }
     const tree = await treeHash(entries);
+    const noAudio = await treeWithoutAudio(entries);
     const recs = protocols.flatMap((p) => (p.snapshot?.extension ? [{ name: p.name, rel: p.snapshot.extension }] : []));
-    const pick = recs.find((r) => r.rel.tree === tree) ?? recs.find((r) => r.rel.tree) ?? recs[0];
+    const pick = recs.find((r) => r.rel.tree === tree) ?? (noAudio ? recs.find((r) => r.rel.tree === noAudio) : undefined) ?? recs.find((r) => r.rel.tree) ?? recs[0];
     const ens = pick ? { name: pick.name, version: pick.rel.version, tree: pick.rel.tree ?? null, zip: pick.rel.sha256 } : null;
-    const verdict = !ens ? 'no-record' : !ens.tree ? 'old-record' : ens.tree === tree ? 'match' : 'mismatch';
+    const verdict = !ens ? 'no-record' : !ens.tree ? 'old-record' : ens.tree === tree ? 'match' : noAudio && ens.tree === noAudio ? 'local-audio' : 'mismatch';
     return { version: chrome.runtime.getManifest?.().version ?? deps.version, treeHash: tree, files: entries.length, ens, verdict };
   }
 
@@ -420,6 +512,11 @@ export function createCore(deps: CoreDeps) {
           return publicState();
         case 'getConfirm':
           return confirms.get(m.id)?.pending ?? null;
+        case 'closeConfirm': {
+          const f = closing.get(m.id);
+          f?.();
+          return { ok: !!f };
+        }
         case 'confirmDecision': {
           const c = confirms.get(m.id);
           c?.resolve(m.allow);
@@ -522,6 +619,7 @@ export function createCore(deps: CoreDeps) {
     onTabRemoved(tabId: number) {
       tabs.delete(tabId);
       confirmTimes.delete(tabId);
+      for (const k of connectOk) if (k.startsWith(`${tabId}|`)) connectOk.delete(k);
     },
     onWindowRemoved(windowId: number) {
       for (const c of confirms.values()) if (c.windowId === windowId) c.resolve(false);

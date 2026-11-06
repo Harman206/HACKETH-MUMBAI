@@ -427,7 +427,7 @@ footer { padding:36px 0 48px; color:var(--muted); font-size:13px; display:flex; 
     { id: 'approve', mood: 'worried', tone: 'bad', icon: 'hand', title: 'Malicious approval: fake airdrop claim', link: 'approve', switches: ['reset'], cta: 'Open the airdrop page', ctaIcon: 'ext',
       attacker: 'A “Claim your DemoSwap airdrop” page on a site you have never seen. Claim asks your wallet to approve the drainer for ALL of a token.',
       copeybara: 'Catches the request before the wallet sees it: an unlimited approval to an address that no protocol you follow publishes.',
-      see: chip('bad', 'alert', 'Stopped') + ' A Copeybara window: “This looks like a wallet drainer”. Cancel, and MetaMask never sees the request.',
+      see: chip('warn', 'alert', 'Look-alike') + ' First, before MetaMask’s connect popup: “Don’t connect your wallet here” (the host imitates DemoSwap). Choose <em>Connect anyway</em> to see the next line of defence: ' + chip('bad', 'alert', 'Stopped') + ' “This looks like a wallet drainer”. Cancel, and MetaMask never sees the request.',
       say: 'Most wallets are emptied by one approval. This airdrop page asks for unlimited spending by an unknown address. Copeybara stops it in its own window, before MetaMask.' },
     { id: 'permit', mood: 'worried', tone: 'bad', icon: 'pen', title: 'Permit2 signature phishing', link: 'permit', switches: ['reset'], cta: 'Open the gasless claim', ctaIcon: 'ext',
       attacker: 'A “gasless” claim that asks for a signature, not a transaction: a Permit2 <code>PermitSingle</code> (<code>eth_signTypedData_v4</code>) whose spender is the drainer.',

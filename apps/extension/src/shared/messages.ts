@@ -25,6 +25,8 @@ export type PageMsg =
   | { t: 'sync' }
   | { t: 'getConfirm'; id: string }
   | { t: 'confirmDecision'; id: string; allow: boolean }
+  /** the "Saved by Copey" screen is done: close the confirm window now */
+  | { t: 'closeConfirm'; id: string }
   | { t: 'acceptAddress' }
   | { t: 'rejectAddress' }
   | { t: 'openKit'; name: string }
@@ -128,7 +130,8 @@ export function parsePageMsg(m: unknown): PageMsg | null {
       return patch ? { t: 'settings', patch } : null;
     }
     case 'getConfirm':
-      return str(m.id, 64) ? { t: 'getConfirm', id: m.id } : null;
+    case 'closeConfirm':
+      return str(m.id, 64) ? { t: m.t, id: m.id } : null;
     case 'confirmDecision':
       return str(m.id, 64) && typeof m.allow === 'boolean' ? { t: 'confirmDecision', id: m.id, allow: m.allow } : null;
     case 'getTab':

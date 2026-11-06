@@ -5,6 +5,8 @@ import type { PendingConfirm } from '../shared/types';
 import { send } from './api';
 import { Chip, TopBar } from './components';
 import { Copey, Icon } from './icons';
+import { Celebration } from './celebrate';
+import { savedReason } from './saved';
 
 const id = new URLSearchParams(location.search).get('id') ?? '';
 
@@ -14,8 +16,15 @@ function Confirm() {
   useEffect(() => {
     void send<PendingConfirm | null>({ t: 'getConfirm', id }).then(setP);
   }, []);
+  const [saved, setSaved] = useState(false);
   const decide = async (allow: boolean) => {
-    await send({ t: 'confirmDecision', id, allow });
+    // The worker closes this window when the decision arrives (after "Saved by Copey!" on Cancel); window.close() is the fallback.
+    await send({ t: 'confirmDecision', id, allow }).catch(() => undefined);
+    if (allow) window.close();
+    else setSaved(true);
+  };
+  const closeNow = async () => {
+    await send({ t: 'closeConfirm', id }).catch(() => undefined);
     window.close();
   };
   if (p === undefined) return <div class="wrap confirm muted" style="padding-top:20px">Loading…</div>;
@@ -29,6 +38,8 @@ function Confirm() {
   const c = p.classification;
   const dangerous = c.verdict === 'dangerous';
   const tone = dangerous ? 'bad' : 'warn';
+  // a connect request from a look-alike site, stopped before the wallet's own connect popup
+  const connect = c.method === 'eth_requestAccounts' || c.method === 'wallet_requestPermissions';
   return (
     <div class="wrap confirm" data-verdict={c.verdict}>
       <TopBar caption="Wallet request">
@@ -38,9 +49,11 @@ function Confirm() {
         <div class="risk-head">
           <Copey mood="worried" size={72} class="risk-copey" />
           <div class="grow">
-            <p class="label" style={`color:var(--${tone})`}>{dangerous ? 'High risk' : 'Unusual request'}</p>
-            <h1>{dangerous ? 'This looks like a wallet drainer' : 'Check this request'}</h1>
-            <p class="small"><span class="mono">{p.origin}</span> asked your wallet for <b class="num">{c.method}</b>.</p>
+            <p class="label" style={`color:var(--${tone})`}>{dangerous ? 'High risk' : connect ? 'Look-alike site' : 'Unusual request'}</p>
+            <h1>{dangerous ? 'This looks like a wallet drainer' : connect ? 'Don’t connect your wallet here' : 'Check this request'}</h1>
+            <p class="small">
+              <span class="mono">{p.origin}</span> {connect ? 'asked to connect your wallet' : <>asked your wallet for <b class="num">{c.method}</b></>}.
+            </p>
           </div>
         </div>
         <div class="risk-body">
@@ -64,9 +77,10 @@ function Confirm() {
           </label>
         )}
         <button id="continue" class="secondary" disabled={dangerous && !understood} onClick={() => decide(true)}>
-          Continue to my wallet anyway
+          {connect ? 'Connect anyway' : 'Continue to my wallet anyway'}
         </button>
       </div>
+      {saved && <Celebration reason={savedReason(c)} autoplay onDone={closeNow} />}
     </div>
   );
 }

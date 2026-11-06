@@ -15,7 +15,7 @@ const APP = 'console.log("demoswap app")';
 
 function fakeChrome() {
   const store: Record<string, unknown> = {};
-  const calls = { tabsUpdate: [] as { tabId: number; url: string }[], tabsCreate: [] as string[], windows: [] as string[], rules: [] as unknown[], badge: new Map<number, string>() };
+  const calls = { tabsUpdate: [] as { tabId: number; url: string }[], tabsCreate: [] as string[], windows: [] as string[], removed: [] as number[], rules: [] as unknown[], badge: new Map<number, string>() };
   const chrome: ChromeLike = {
     runtime: { id: 'abc', getURL: (p) => EXT + p.replace(/^\//, '') },
     storage: {
@@ -29,7 +29,7 @@ function fakeChrome() {
       create: async (p) => void calls.tabsCreate.push(p.url),
       sendMessage: async () => undefined,
     },
-    windows: { create: async (o) => (calls.windows.push(o.url), { id: calls.windows.length }) },
+    windows: { create: async (o) => (calls.windows.push(o.url), { id: calls.windows.length }), remove: async (id) => void calls.removed.push(id) },
     action: {
       setBadgeText: async (o) => void calls.badge.set(o.tabId ?? -1, o.text),
       setBadgeBackgroundColor: async () => {},
@@ -84,6 +84,7 @@ async function setup(over: Partial<CopeybaraRecords> = {}) {
     defaultKitUrl: 'https://kit.example/copeybara-kit.html',
     version: 'test',
     confirmTimeoutMs: 50,
+    celebrateMs: 30,
   });
   const page = { id: 'abc', url: `${EXT}src/pages/dashboard.html` };
   await core.handleMessage({ t: 'settings', patch: { account: USER } }, page);
@@ -255,6 +256,43 @@ describe('wallet requests', () => {
     expect(await p).toMatchObject({ decision: 'allow' });
     expect(core.publicState().stats.requestsAllowedAfterWarning).toBe(1);
   });
+  test('Cancel: the page is answered at once; the worker closes the confirm window itself after the "Saved by Copey" moment', async () => {
+    const { core, calls, page } = await setup();
+    const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(15, 'https://x.example/'));
+    await new Promise((r) => setTimeout(r, 5));
+    const id = new URL(calls.windows[0]!).searchParams.get('id')!;
+    await core.handleMessage({ t: 'confirmDecision', id, allow: false }, page);
+    expect(await p).toMatchObject({ decision: 'block' });
+    expect(calls.removed).toEqual([]); // the celebration is showing
+    await new Promise((r) => setTimeout(r, 40));
+    expect(calls.removed).toEqual([1]); // closed by the worker even if the page never says so
+  });
+  test('Done on the celebration (closeConfirm) closes the window at once, only once', async () => {
+    const { core, calls, page } = await setup();
+    const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(18, 'https://x.example/'));
+    await new Promise((r) => setTimeout(r, 5));
+    const id = new URL(calls.windows[0]!).searchParams.get('id')!;
+    await core.handleMessage({ t: 'confirmDecision', id, allow: false }, page);
+    await p;
+    expect(await core.handleMessage({ t: 'closeConfirm', id }, page)).toEqual({ ok: true });
+    expect(calls.removed).toEqual([1]);
+    await new Promise((r) => setTimeout(r, 40));
+    expect(calls.removed).toEqual([1]);
+    expect(await core.handleMessage({ t: 'closeConfirm', id }, tab(18, 'https://x.example/'))).toEqual({ error: 'bad message' }); // pages only
+  });
+  test('Continue: the window is closed at once', async () => {
+    const { core, calls, page } = await setup();
+    const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(16, 'https://x.example/'));
+    await new Promise((r) => setTimeout(r, 5));
+    await core.handleMessage({ t: 'confirmDecision', id: new URL(calls.windows[0]!).searchParams.get('id')!, allow: true }, page);
+    expect(await p).toMatchObject({ decision: 'allow' });
+    expect(calls.removed).toEqual([1]);
+  });
+  test('no answer before the timeout: blocked and the window is closed', async () => {
+    const { core, calls } = await setup();
+    expect(await core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(17, 'https://x.example/'))).toMatchObject({ decision: 'block' });
+    expect(calls.removed).toEqual([1]);
+  });
   test('closing the confirm window blocks', async () => {
     const { core } = await setup();
     const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(12, 'https://x.example/'));
@@ -281,6 +319,61 @@ describe('wallet requests', () => {
     await core.handleMessage({ t: 'hello' }, tab());
     await core.handleMessage({ t: 'request', id: '1', method: 'eth_sendTransaction', params: [{ from: USER, to: DRAINER, data: '0xd0e30db0' }], chainId: 11155111 }, tab());
     expect(calls.windows).toHaveLength(1);
+  });
+});
+
+describe('connect requests on look-alike sites (before the wallet shows its connect popup)', () => {
+  const connect = (method = 'eth_requestAccounts') => ({ t: 'request', id: '1', method, params: [], chainId: null });
+  test('a connect on an ordinary site or the official site passes without a prompt', async () => {
+    const { core, calls } = await setup();
+    await core.handleMessage({ t: 'hello' }, tab());
+    expect(await core.handleMessage(connect(), tab())).toMatchObject({ decision: 'allow', verdict: 'pass' });
+    expect(await core.handleMessage(connect('wallet_requestPermissions'), tab(2, 'https://app.uniswap.org/'))).toMatchObject({ decision: 'allow' });
+    expect(await core.handleMessage(connect(), tab(3, 'http://127.0.0.1:9000/'))).toMatchObject({ decision: 'allow' });
+    expect(await core.handleMessage(connect(), tab(4, 'http://app.demoswap.localhost:8080/'))).toMatchObject({ decision: 'allow' });
+    // a word that merely contains the label is not a token match
+    expect(await core.handleMessage(connect(), tab(5, 'https://mydemoswapper.example/'))).toMatchObject({ decision: 'allow' });
+    expect(calls.windows).toHaveLength(0);
+  });
+  for (const host of ['demoswap-airdrop.localhost:8090', 'demoswap-rewards.localhost', 'app-demoswap.xyz', 'claim.demoswap.io', 'demoswap-blackout-claim.example']) {
+    test(`${host} imitates the protocol: the confirm window opens first, as risky, naming the official origin`, async () => {
+      const { core, calls, page } = await setup();
+      const p = core.handleMessage(connect(), tab(40, `http://${host}/drainer`));
+      await new Promise((r) => setTimeout(r, 5));
+      expect(calls.windows).toHaveLength(1);
+      const id = new URL(calls.windows[0]!).searchParams.get('id')!;
+      const pending = (await core.handleMessage({ t: 'getConfirm', id }, page)) as { classification: { verdict: string; method: string; reasons: string[] } };
+      expect(pending.classification.verdict).toBe('risky');
+      expect(pending.classification.method).toBe('eth_requestAccounts');
+      expect(pending.classification.reasons[0]).toBe(`This site imitates ${NAME} but is not its official address (${SITE} from ENS). Don't connect your wallet here.`);
+      await core.handleMessage({ t: 'confirmDecision', id, allow: false }, page);
+      expect(await p).toMatchObject({ decision: 'block', verdict: 'risky' });
+    });
+  }
+  test('wallet_requestPermissions is checked the same way', async () => {
+    const { core, calls } = await setup();
+    expect(await core.handleMessage(connect('wallet_requestPermissions'), tab(41, 'http://demoswap-airdrop.localhost:8090/'))).toMatchObject({ decision: 'block' });
+    expect(calls.windows).toHaveLength(1);
+  });
+  test('a host on a followed blocklist asks too (even with no look-alike name)', async () => {
+    const { core, calls } = await setup({ blocklist: ['totally-legit.example'] });
+    expect(await core.handleMessage(connect(), tab(42, 'https://totally-legit.example/'))).toMatchObject({ decision: 'block', verdict: 'risky' });
+    expect(calls.windows).toHaveLength(1);
+  });
+  test('after the user chooses to connect anyway, later connects from that tab do not ask again; the drainer request still does', async () => {
+    const { core, calls, page } = await setup();
+    const t = tab(43, 'http://demoswap-airdrop.localhost:8090/drainer');
+    const p = core.handleMessage(connect(), t);
+    await new Promise((r) => setTimeout(r, 5));
+    await core.handleMessage({ t: 'confirmDecision', id: new URL(calls.windows[0]!).searchParams.get('id')!, allow: true }, page);
+    expect(await p).toMatchObject({ decision: 'allow' });
+    expect(await core.handleMessage(connect(), t)).toMatchObject({ decision: 'allow' });
+    expect(calls.windows).toHaveLength(1);
+    const approve = encodeFunctionData({ abi: parseAbi(['function approve(address,uint256)']), functionName: 'approve', args: [DRAINER, 2n ** 256n - 1n] });
+    const d = core.handleMessage({ t: 'request', id: '2', method: 'eth_sendTransaction', params: [{ from: USER, to: TOKEN, data: approve }], chainId: 11155111 }, t);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(calls.windows).toHaveLength(2);
+    expect(await d).toMatchObject({ decision: 'block', verdict: 'dangerous' });
   });
 });
 
