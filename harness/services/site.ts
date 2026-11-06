@@ -9,11 +9,16 @@ const files: Record<string, [string, string]> = {
   '/app.js': ['app.js', 'text/javascript'],
 };
 
-export function startSite(port = envPort('SITE_PORT', 8081)) {
+/** The demo bar's control-server URL lives in a <meta> (markup, not code: the script fingerprint does not change). */
+export const withControl = (html: string, controlUrl?: string) =>
+  controlUrl ? html.replace('<meta name="copeybara-demo-control" content="http://localhost:8090">', `<meta name="copeybara-demo-control" content="${controlUrl}">`) : html;
+
+export function startSite(port = envPort('SITE_PORT', 8081), controlUrl?: string) {
   return serve(port, (req, res) => {
     const f = files[(req.url ?? '/').split('?')[0]!];
     if (!f) return void res.writeHead(404).end();
-    res.writeHead(200, { 'content-type': f[1] }).end(readFileSync(join(DIR, f[0])));
+    const body = readFileSync(join(DIR, f[0]));
+    res.writeHead(200, { 'content-type': f[1] }).end(f[0] === 'index.html' ? withControl(body.toString('utf8'), controlUrl) : body);
   });
 }
 

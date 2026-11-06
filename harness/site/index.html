@@ -4,36 +4,158 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DemoSwap: provide liquidity, earn fees</title>
+  <!-- Copeybara demo lab: where the demo bar reaches the harness control server (rewritten by the harness). -->
+  <meta name="copeybara-demo-control" content="http://localhost:8090">
   <!-- A normal app frontend: several third-party origins, on purpose. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
-    :root{--bg:#0b1020;--card:#141b2f;--line:#24304f;--fg:#e6ebff;--muted:#94a0c4;--accent:#7c5cff}
-    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#2a1f6b,transparent),var(--bg);color:var(--fg)}
-    header{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;border-bottom:1px solid var(--line)}
-    .logo{font-weight:700;font-size:20px;letter-spacing:-.02em}.logo span{color:var(--accent)}
-    main{max-width:880px;margin:0 auto;padding:28px 16px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}
-    table{width:100%;border-collapse:collapse}td,th{padding:10px 6px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500;font-size:13px}
-    button{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}
-    .muted{color:var(--muted)}.lure{background:linear-gradient(90deg,#ffb020,#ff5c8a);color:#1a0b00;border-radius:12px;padding:14px 16px;margin:16px 0;font-size:15px}
+    :root{--bg:#f5f6fa;--card:#fff;--tint:#eef0f8;--line:#dfe3ee;--ink:#141a2e;--muted:#5b6380;--accent:#3b4fd8;--accent-ink:#fff;--ok:#1f7a4a;--ok-bg:#e2f3ea;--warn:#8a5a0c;--warn-bg:#fbf0dc;--shadow:0 1px 2px rgba(20,26,46,.05),0 8px 24px rgba(20,26,46,.06);color-scheme:light}
+    @media (prefers-color-scheme:dark){:root{--bg:#0c1020;--card:#131a2e;--tint:#19213a;--line:#253052;--ink:#e8ecfb;--muted:#9aa4c7;--accent:#8796ff;--accent-ink:#0c1020;--ok:#5fd38a;--ok-bg:#15301f;--warn:#e3b766;--warn-bg:#352b17;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.3);color-scheme:dark}}
+    *{box-sizing:border-box}
+    body{margin:0;font:15px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+    a{color:var(--accent);text-decoration:none}
+    .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+    svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+    header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--card) 80%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+    header .wrap{display:flex;align-items:center;gap:28px;height:64px}
+    .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:18px;letter-spacing:-.02em;color:var(--ink)}
+    .logo svg{width:28px;height:28px}
+    nav{display:flex;gap:4px}
+    nav a{color:var(--muted);font-weight:500;padding:7px 12px;border-radius:9px}
+    nav a:hover,nav a.on{color:var(--ink);background:var(--tint)}
+    .sp{flex:1}
+    .net{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:var(--card)}
+    .net i{width:7px;height:7px;border-radius:50%;background:#e0a33a}
+    button{font:inherit;cursor:pointer}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:11px;padding:9px 16px;font-weight:600;background:var(--accent);color:var(--accent-ink)}
+    .btn:hover{filter:brightness(1.08)}.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}.btn.ghost:hover{background:var(--tint)}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+    .hero{padding:44px 0 8px;display:grid;grid-template-columns:1.3fr 1fr;gap:32px;align-items:end}
+    h1{font-size:44px;line-height:1.08;letter-spacing:-.03em;margin:0 0 12px}
+    h2{font-size:19px;letter-spacing:-.01em;margin:0}
+    .muted{color:var(--muted)}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+    .stat b{display:block;font-size:21px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}.stat span{font-size:12.5px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;margin:26px 0}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:20px}
+    .card-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+    td,th{padding:12px 8px;text-align:left;border-bottom:1px solid var(--line)}tr:last-child td{border-bottom:0}
+    th{color:var(--muted);font-weight:500;font-size:12.5px}
+    td.r,th.r{text-align:right}
+    .pair{display:flex;align-items:center;gap:10px;font-weight:600}
+    .coins{display:flex}.coins i{width:22px;height:22px;border-radius:50%;border:2px solid var(--card);display:block}.coins i+i{margin-left:-7px}
+    .fee{font-size:12px;color:var(--muted);background:var(--tint);border-radius:6px;padding:1px 6px;font-weight:500}
+    .apr{color:var(--ok);font-weight:600}
+    .pos{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+    .pos+.pos{margin-top:10px}.pos small{color:var(--muted);font-variant-numeric:tabular-nums}
+    .badge{font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--ok-bg);color:var(--ok)}.badge.off{background:var(--warn-bg);color:var(--warn)}
+    .swap label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 6px}
+    .field{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--tint)}
+    .field input{flex:1;min-width:0;border:0;background:transparent;font:600 20px/1.2 inherit;color:var(--ink);outline:none}
+    .tok{font-weight:600;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px}
+    #status{margin:0}
+    .note{font-size:13px;color:var(--muted);margin:10px 0 0;min-height:1.2em}
+    .lure{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:12px 16px;margin:20px 0 0;box-shadow:var(--shadow)}
+    /* demo bar: part of the Copeybara attack lab, not of DemoSwap */
+    .demobar{--d-bg:#0d1611;--d-ink:#e7efe9;--d-muted:#9db0a3;--d-line:#22352a;--d-on:#6fbf8a;background:var(--d-bg);color:var(--d-ink);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;border-bottom:1px solid var(--d-line);transition:background .2s}
+    .demobar[data-tone="bad"]{--d-bg:#5a1d14;--d-line:#7a2a1e;--d-on:#ffb4a6}
+    .demobar[data-tone="warn"]{--d-bg:#4a3510;--d-line:#6a4c18;--d-on:#f3cf86}
+    .demobar .row{display:flex;align-items:center;gap:14px;min-height:42px}
+    .demo-tag{font:700 11px/1 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.12em;background:#e3b766;color:#1a1204;border-radius:5px;padding:4px 6px;flex:none}
+    .demo-name{font-weight:600;white-space:nowrap;flex:none}
+    .demo-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+    .demo-tabs::-webkit-scrollbar{display:none}
+    .demo-tabs button{border:0;background:transparent;color:var(--d-muted);font:inherit;font-weight:500;padding:6px 10px;border-radius:7px;white-space:nowrap}
+    .demo-tabs button:hover{color:var(--d-ink);background:rgba(255,255,255,.07)}
+    .demo-tabs button.on{color:var(--d-bg);background:var(--d-on);font-weight:700}
+    .demo-tabs button[disabled]{opacity:.5;cursor:progress}
+    .demo-line{display:flex;align-items:center;gap:9px;padding:0 0 10px;font-size:13.5px}
+    .demo-line b{letter-spacing:.02em}
+    .demo-dot{width:8px;height:8px;border-radius:50%;background:var(--d-on);flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+    footer{border-top:1px solid var(--line);margin-top:30px}
+    footer .wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:20px 24px 36px;font-size:13px;color:var(--muted)}
+    .exit{display:inline-flex;align-items:center;gap:7px;font-weight:600}
+    @media (max-width:860px){.hero,.grid{grid-template-columns:1fr}nav{display:none}h1{font-size:34px}.stats{grid-template-columns:1fr 1fr 1fr}}
+    .tablewrap{overflow-x:auto}
+    .grid>*,.hero>*{min-width:0}
+    @media (max-width:520px){.wrap{padding:0 16px}.net{display:none}.stats{grid-template-columns:1fr}td:nth-child(3),th:nth-child(3){display:none}.pair .fee{display:none}header .wrap{gap:12px}.demo-name{display:none}h1{font-size:30px}}
   </style>
 </head>
 <body>
-  <header><div class="logo">Demo<span>Swap</span></div><button id="connect">Connect wallet</button></header>
-  <main>
-    <!--LURE-->
-    <h1>Provide liquidity. Earn fees.</h1>
-    <p class="muted">DemoSwap is a demo app for the Copeybara live attack replication (Sepolia testnet).</p>
-    <div class="card">
-      <h2>Pools</h2>
-      <table><tr><th>Pool</th><th>Fee</th><th>TVL</th><th>APR</th></tr>
-        <tr><td>DETH / DUSD</td><td>0.30%</td><td>$2.1M</td><td>14.2%</td></tr>
-        <tr><td>DUSD / USDC</td><td>0.01%</td><td>$880K</td><td>3.1%</td></tr></table>
+  <div class="demobar" id="demobar" data-tone="ok" aria-label="Copeybara demo controls">
+    <div class="wrap row">
+      <span class="demo-tag">DEMO</span><span class="demo-name">Copeybara attack lab</span>
+      <div class="demo-tabs" role="tablist">
+        <button data-mode="normal">Normal</button>
+        <button data-mode="hijack">DNS hijack</button>
+        <button data-mode="lookalike">Look-alike</button>
+        <button data-mode="approve">Malicious approval</button>
+        <button data-mode="permit">Permit phishing</button>
+        <button data-mode="nft">NFT approval phishing</button>
+        <button data-mode="down">Site down</button>
+      </div>
     </div>
-    <div class="card"><h2>Your liquidity</h2><p id="status" class="muted">Connect your wallet to see positions.</p></div>
+    <div class="wrap demo-line"><span class="demo-dot"></span><span id="demo-text">Connecting to the demo controls…</span></div>
+  </div>
+  <header><div class="wrap">
+    <a class="logo" href="#"><svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#3b4fd8"/><path d="M8 11h9l-3-3M20 17h-9l3 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>DemoSwap</a>
+    <nav><a href="#pools" class="on">Pools</a><a href="#positions">Positions</a><a href="#swap">Swap</a></nav>
+    <span class="sp"></span>
+    <span class="net"><i></i>Sepolia</span>
+    <button class="btn" id="connect">Connect wallet</button>
+  </div></header>
+  <main class="wrap">
+    <!--LURE-->
+    <section class="hero">
+      <div>
+        <h1>Provide liquidity. Earn fees.</h1>
+        <p class="muted">Concentrated liquidity on Uniswap v3 pools, with one-click deposits and withdrawals. DemoSwap is a demo app for the Copeybara live attack replication (Sepolia testnet).</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>$4.27M</b><span>Total value locked</span></div>
+        <div class="stat"><b>$612K</b><span>Volume (24h)</span></div>
+        <div class="stat"><b>1,948</b><span>Liquidity providers</span></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card" id="pools">
+        <div class="card-h"><h2>Pools</h2><span class="sp"></span><span class="muted" style="font-size:13px">Fees paid to LPs</span></div>
+        <div class="tablewrap"><table>
+          <tr><th>Pool</th><th class="r">TVL</th><th class="r">Volume 24h</th><th class="r">APR</th><th></th></tr>
+          <tr><td><div class="pair"><span class="coins"><i style="background:#6a7bff"></i><i style="background:#2bb38a"></i></span>DETH / DUSD <span class="fee">0.30%</span></div></td><td class="r">$2.10M</td><td class="r">$388K</td><td class="r apr">14.2%</td><td class="r"><button class="btn ghost" data-deposit="DETH/DUSD">Deposit</button></td></tr>
+          <tr><td><div class="pair"><span class="coins"><i style="background:#2bb38a"></i><i style="background:#2775ca"></i></span>DUSD / USDC <span class="fee">0.01%</span></div></td><td class="r">$880K</td><td class="r">$161K</td><td class="r apr">3.1%</td><td class="r"><button class="btn ghost" data-deposit="DUSD/USDC">Deposit</button></td></tr>
+          <tr><td><div class="pair"><span class="coins"><i style="background:#6a7bff"></i><i style="background:#8a92b2"></i></span>DETH / WETH <span class="fee">0.05%</span></div></td><td class="r">$1.29M</td><td class="r">$63K</td><td class="r apr">5.8%</td><td class="r"><button class="btn ghost" data-deposit="DETH/WETH">Deposit</button></td></tr>
+        </table></div>
+        <p class="note" id="deposit-note"></p>
+      </section>
+
+      <section class="card swap" id="swap">
+        <div class="card-h"><h2>Swap</h2></div>
+        <label for="from">You pay</label>
+        <div class="field"><input id="from" inputmode="decimal" value="250"><span class="tok">DUSD</span></div>
+        <label for="to">You receive</label>
+        <div class="field"><input id="to" readonly value="0.0741"><span class="tok">DETH</span></div>
+        <p class="note">1 DETH = 3,372.40 DUSD · price impact &lt;0.01%</p>
+        <button class="btn" id="swap-go" style="width:100%;margin-top:6px">Review swap</button>
+      </section>
+    </div>
+
+    <section class="card" id="positions">
+      <div class="card-h"><h2>Your liquidity</h2><span class="sp"></span><span class="muted" style="font-size:13px" id="acct"></span></div>
+      <p id="status" class="muted">Connect your wallet to see positions.</p>
+      <div id="pos-list"></div>
+    </section>
   </main>
+  <footer><div class="wrap">
+    <span>© DemoSwap Labs · Sepolia testnet</span><span class="sp"></span>
+    <a class="exit" href="https://blackout-red.vercel.app/copeybara-kit.html?ens=demoswap-blackout.eth" rel="noopener"><svg class="i" viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg>Emergency exit: demoswap-blackout.eth</a>
+    <a href="#">Docs</a><a href="#">Audits</a>
+  </div></footer>
   <img alt="" width="1" height="1" style="display:none" src="https://www.google-analytics.com/collect?v=1&t=pageview&tid=UA-DEMO">
   <script src="/app.js"></script>
 </body>

