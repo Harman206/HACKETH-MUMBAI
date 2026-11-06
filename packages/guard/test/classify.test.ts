@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import fc from 'fast-check';
 import { encodeFunctionData, parseAbi, toHex, type Hex } from 'viem';
-import type { Address } from '@copeybara/core';
+import { erc4626Kind, specExitSelector, type Address } from '@copeybara/core';
 import { classifyRequest, worstVerdict, type ClassifyCtx } from '../src/classify';
 import { ATTACKER, USER, approveData, collectData, decreaseData, multicallData } from './helpers';
 import { CURVE_POOL, MANIFEST, NPM_SEPOLIA, POSM_SEPOLIA } from './manifest-fixture';
@@ -139,5 +139,26 @@ describe('property: nothing is ever "exit" unless the Exit Guard accepts it', ()
       }),
       { numRuns: 300 },
     );
+  });
+});
+
+describe('declarative exits (org.copeybara.exits): a followed protocol’s own vault', () => {
+  const VAULT: Address = '0x5555555555555555555555555555555555555555';
+  const kind = erc4626Kind('Sample vault');
+  const specManifest = { v: 1 as const, chains: { '11155111': { spec: { vault: { address: VAULT, selectors: [specExitSelector(kind)] } } } } };
+  const redeem = (receiver: Address, owner: Address = USER) =>
+    encodeFunctionData({ abi: parseAbi(['function redeem(uint256,address,address) returns (uint256)']), functionName: 'redeem', args: [10n ** 18n, receiver, owner] });
+  const withSpec: ClassifyCtx = { account: USER, chainId: 11155111, manifests: [{ name: 'samplevault.eth', manifest: specManifest, exitSpec: { v: 1, kinds: { vault: kind } } }] };
+
+  test('redeem that pays the account → exit, with the exit spec the extension read', () => {
+    const r = classifyRequest(send(VAULT, redeem(USER)), withSpec);
+    expect(r.verdict).toBe('exit');
+    expect(r.protocol).toBe('samplevault.eth');
+  });
+  test('redeem that pays someone else → not an exit', () => {
+    expect(classifyRequest(send(VAULT, redeem(ATTACKER)), withSpec).verdict).not.toBe('exit');
+  });
+  test('without the exit spec the Guard cannot decode it → not an exit (fail-closed)', () => {
+    expect(classifyRequest(send(VAULT, redeem(USER)), { ...withSpec, manifests: [{ name: 'samplevault.eth', manifest: specManifest }] }).verdict).not.toBe('exit');
   });
 });

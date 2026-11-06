@@ -1,4 +1,4 @@
-import type { Address, Manifest, ReleaseRecord, StatusRecord } from '@copeybara/core';
+import type { Address, ExitSpec, Manifest, ReleaseRecord, StatusRecord } from '@copeybara/core';
 import type { Classification, RequestVerdict } from '@copeybara/guard';
 import type { CodeItem, SiteVerdict } from '@copeybara/sitecheck';
 
@@ -23,6 +23,8 @@ export interface Snapshot {
   origin: string | null;
   release: ReleaseRecord;
   manifest: Manifest;
+  /** org.copeybara.exits: lets the Guard recognise exits from the protocol's own (spec) contracts. Absent in old snapshots. */
+  exitSpec?: ExitSpec | null;
   site: string[] | null;
   extension: ReleaseRecord | null;
   status: StatusRecord | null;

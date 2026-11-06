@@ -127,6 +127,7 @@ function toSnapshot(r: CopeybaraRecords, now: number): Snapshot {
     origin,
     release: r.release,
     manifest: r.manifest,
+    exitSpec: r.exitSpec ?? null,
     site: r.site,
     extension: r.extension,
     status: r.status,
@@ -325,7 +326,7 @@ export function createCore(deps: CoreDeps) {
   // ---------- wallet requests ----------
   async function decide(tabId: number, origin: string, msg: { method: string; params: unknown; chainId: number | null }): Promise<Decision> {
     const t = tabs.get(tabId);
-    const manifests = protocols.flatMap((p) => (p.snapshot ? [{ name: p.name, manifest: p.snapshot.manifest }] : []));
+    const manifests = protocols.flatMap((p) => (p.snapshot ? [{ name: p.name, manifest: p.snapshot.manifest, exitSpec: p.snapshot.exitSpec ?? null }] : []));
     const fromParam = (() => {
       const p0 = Array.isArray(msg.params) ? (msg.params[0] as { from?: unknown } | undefined) : undefined;
       return p0 && typeof p0 === 'object' && typeof p0.from === 'string' ? (p0.from as Address) : null;

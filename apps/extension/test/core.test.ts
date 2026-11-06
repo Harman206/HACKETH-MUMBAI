@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { encodeFunctionData, parseAbi } from 'viem';
+import { erc4626Kind, specExitSelector } from '@copeybara/core';
 import type { CopeybaraRecords } from '@copeybara/ens';
 import { scriptHash } from '@copeybara/sitecheck';
 import { createCore, type ChromeLike } from '../src/background/core';
@@ -445,5 +446,21 @@ describe('Copeybara certified picker (bundled list, tick re-checked on chain by 
     expect(await core.handleMessage({ t: 'checkCertified', name: NAME }, page)).toEqual({ error: 'RPCs disagree' });
     expect(await mk().handleMessage({ t: 'checkCertified', name: NAME }, page)).toEqual({ error: 'not available' });
     expect(await core.handleMessage({ t: 'checkCertified', name: NAME }, tab())).toEqual({ error: 'bad message' });
+  });
+});
+
+describe('a protocol with declarative exits (org.copeybara.exits)', () => {
+  const VAULT = '0x5555555555555555555555555555555555555555';
+  test('its vault redeem paying the user is classified as an exit (the snapshot keeps the exit spec)', async () => {
+    const kind = erc4626Kind('Sample vault');
+    const { core } = await setup({
+      manifest: { v: 1, chains: { '11155111': { spec: { vault: { address: VAULT, selectors: [specExitSelector(kind)] } } } } },
+      exitSpec: { v: 1, kinds: { vault: kind } },
+    });
+    const redeem = (to: string) => encodeFunctionData({ abi: parseAbi(['function redeem(uint256,address,address) returns (uint256)']), functionName: 'redeem', args: [10n ** 18n, to as `0x${string}`, USER] });
+    const ok = (await core.handleMessage({ t: 'request', id: '1', method: 'eth_sendTransaction', params: [{ from: USER, to: VAULT, data: redeem(USER) }], chainId: 11155111 }, tab())) as { decision: string; verdict: string };
+    expect(ok).toMatchObject({ decision: 'allow', verdict: 'exit' });
+    const bad = (await core.handleMessage({ t: 'request', id: '2', method: 'eth_sendTransaction', params: [{ from: USER, to: VAULT, data: redeem(DRAINER) }], chainId: 11155111 }, tab())) as { verdict: string };
+    expect(bad.verdict).not.toBe('exit');
   });
 });
