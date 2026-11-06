@@ -21,6 +21,49 @@ importers:
         specifier: 2.1.9
         version: 2.1.9(@types/node@22.10.2)(jsdom@25.0.1)
 
+  apps/extension:
+    dependencies:
+      '@copeybara/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+      '@copeybara/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@copeybara/ens':
+        specifier: workspace:*
+        version: link:../../packages/ens
+      '@copeybara/guard':
+        specifier: workspace:*
+        version: link:../../packages/guard
+      '@copeybara/quorum':
+        specifier: workspace:*
+        version: link:../../packages/quorum
+      '@copeybara/sitecheck':
+        specifier: workspace:*
+        version: link:../../packages/sitecheck
+      preact:
+        specifier: 10.25.4
+        version: 10.25.4
+      viem:
+        specifier: 2.21.55
+        version: 2.21.55(typescript@5.6.3)
+    devDependencies:
+      '@copeybara/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+      '@playwright/test':
+        specifier: 1.49.1
+        version: 1.49.1
+      '@preact/preset-vite':
+        specifier: 2.9.4
+        version: 2.9.4(@babel/core@7.29.13)(preact@10.25.4)(vite@5.4.11(@types/node@22.10.2))
+      jsdom:
+        specifier: 25.0.1
+        version: 25.0.1
+      vite:
+        specifier: 5.4.11
+        version: 5.4.11(@types/node@22.10.2)
+
   apps/hosted: {}
 
   apps/kit:

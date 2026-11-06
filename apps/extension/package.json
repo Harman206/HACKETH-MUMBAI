@@ -1,0 +1,27 @@
+{
+  "name": "@copeybara/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@copeybara/adapters": "workspace:*",
+    "@copeybara/core": "workspace:*",
+    "@copeybara/ens": "workspace:*",
+    "@copeybara/guard": "workspace:*",
+    "@copeybara/quorum": "workspace:*",
+    "@copeybara/sitecheck": "workspace:*",
+    "preact": "10.25.4",
+    "viem": "2.21.55"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.9.4",
+    "@playwright/test": "1.49.1",
+    "@copeybara/testkit": "workspace:*",
+    "jsdom": "25.0.1",
+    "vite": "5.4.11"
+  }
+}

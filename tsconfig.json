@@ -30,6 +30,9 @@
     },
     {
       "path": "apps/site"
+    },
+    {
+      "path": "apps/extension"
     }
   ]
 }
