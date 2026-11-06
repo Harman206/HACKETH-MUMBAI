@@ -1,7 +1,8 @@
 /**
  * Fire Drill + Attack Theater launcher.
  *   pnpm --filter @copeybara/harness start
- * Then open: website ?booth=http://localhost:8090 · control http://localhost:8090 · DemoSwap http://demoswap.localhost:8080 · kit http://localhost:8000
+ * Then open the Demo Portal: http://localhost:8090 (scenarios + live status). Also: website ?booth=http://localhost:8090 ·
+ *   DemoSwap http://demoswap.localhost:8080 · kit http://localhost:8000. Optional: scripts/watcher-live.sh (status on :8095).
  * Env (or contracts/.env): DEPLOYER_KEY, ATTACKER_KEY, ENS_NAME, THEATER_RPC (default public Sepolia), THEATER_NETWORK=sepolia|local-fork
  */
 import { existsSync, readFileSync } from 'node:fs';
@@ -53,7 +54,13 @@ const h = await startHarness({
 });
 const kitPort = Number(env.KIT_PORT ?? 8000);
 await serve(kitPort, (_req, res) => res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(readFileSync(kitFile)));
-console.log(`control  http://localhost:${h.ports.control}${theater ? '   (Attack Theater on)' : ''}
-site     http://demoswap.localhost:${h.ports.router}
-rpc      http://localhost:${h.ports.rpc}   (primary RPC proxy)
-kit      http://localhost:${kitPort}`);
+console.log(`
+  Copeybara Demo Portal   http://localhost:${h.ports.control}${theater ? '   (Attack Theater on)' : ''}
+    open it in the browser that has the Copeybara extension (scripts/demo-browser.sh)
+
+  DemoSwap site           http://demoswap.localhost:${h.ports.router}
+  look-alike              http://demoswap-rewards.localhost:${h.ports.hijack}/
+  primary RPC proxy       http://localhost:${h.ports.rpc}
+  exit kit                http://localhost:${kitPort}
+  watcher (optional)      scripts/watcher-live.sh  → status on http://127.0.0.1:8095/
+`);

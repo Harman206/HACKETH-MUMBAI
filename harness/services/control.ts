@@ -9,6 +9,8 @@ import { startSite } from './site';
 import { startRpcProxy } from './rpc-proxy';
 import { startHijack, tamperKit } from './hijack';
 import { hijackRequest } from './hijack-request';
+import { attackPage, attackRequests, ensReader, portalLinks, watcherStatus } from './portal';
+import { DRAINER } from './hijack-request';
 import { startRouter, type RouteState } from './router';
 import { assemble, checkHijackRequest, checkTamperedKit, drillReportHtml } from './drill-report';
 import { createTheater, type TheaterDeps } from './theater';
@@ -41,6 +43,8 @@ export interface HarnessOpts {
   };
   /** Public URL of the kit server (the launcher serves it). */
   kitUrl?: string;
+  /** Watcher status JSON (scripts/watcher-live.sh), shown on the Demo Portal. Default http://127.0.0.1:8095/ */
+  watcherUrl?: string;
 }
 
 export async function startHarness(o: HarnessOpts) {
@@ -62,11 +66,11 @@ export async function startHarness(o: HarnessOpts) {
   let site: Server | null = null;
   let rpc: Server | null = null;
   const up = async () => {
-    site ??= mode === 'process' ? await startSite(p.site) : null;
+    site ??= mode === 'process' ? await startSite(p.site, `http://localhost:${p.control}`) : null;
     rpc ??= mode === 'process' ? await startRpcProxy({ port: p.rpc, upstream: o.primaryRpc }) : null;
   };
   await up();
-  const hijack = mode === 'process' ? await startHijack({ port: p.hijack, kitFile: o.kitFile, token: o.token, drainer: o.drainer }) : null;
+  const hijack = mode === 'process' ? await startHijack({ port: p.hijack, kitFile: o.kitFile, token: o.token, drainer: o.drainer, controlUrl: `http://localhost:${p.control}` }) : null;
   // In docker mode site/hijack/rpc-proxy are separate containers reached by service name.
   const router = await startRouter({
     port: p.router, sitePort: p.site, hijackPort: p.hijack, state: () => route,
@@ -121,10 +125,24 @@ export async function startHarness(o: HarnessOpts) {
       })
     : null;
 
+  const links = portalLinks({ ensName: o.ensName, ports: p, kitUrl: o.kitUrl, watcherUrl: o.watcherUrl ?? process.env.WATCHER_STATUS_URL });
+  const attacks = attackRequests({ token: o.token, drainer: o.drainer ?? DRAINER, chainId: o.chainId });
+  const readEns = ensReader({ ensName: o.ensName, ensRpcs: o.ensRpcs, universalResolver: o.universalResolver, chainId: o.chainId });
+  const html = (res: Parameters<typeof json>[0], body: string | Buffer) =>
+    void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(body);
+
   const control = await serve(p.control, async (req, res, body) => {
     // (bound to 0.0.0.0 in docker so the judge's browser can reach it)
     const path = (req.url ?? '/').split('?')[0]!;
-    if (req.method === 'GET' && path === '/') return void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(readFileSync(join(ROOT, 'control', 'index.html')));
+    // Demo Portal (the page) and what it reads
+    if (req.method === 'GET' && path === '/') return html(res, readFileSync(join(ROOT, 'control', 'index.html')));
+    if (req.method === 'GET' && (path === '/drainer' || path === '/permit' || path === '/nft')) {
+      const kind = path === '/drainer' ? 'approve' : (path.slice(1) as 'permit' | 'nft');
+      return html(res, attackPage(kind, attacks[kind], o.chainId));
+    }
+    if (path === '/portal/config') return json(res, { ensName: o.ensName, chainId: o.chainId, links, theater: !!theater });
+    if (path === '/portal/ens') return json(res, await readEns());
+    if (path === '/portal/watcher') return json(res, await watcherStatus(links.watcher));
     if (req.method === 'POST' && path.startsWith('/switch/')) {
       const sw = switches[path.slice('/switch/'.length)];
       if (!sw) return json(res, { error: 'unknown switch' }, 404);

@@ -1,32 +1,575 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Fire Drill</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copeybara Demo Portal</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23294634'/%3E%3Cpath d='M8 21v-7a6 6 0 0 1 12 0v3m-6 4h11m-4-4 4 4-4 4' fill='none' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
-:root{--bg:#fafaf9;--fg:#1c1917;--card:#fff;--line:#e7e5e4;--ok:#15803d;--bad:#b91c1c}
-@media (prefers-color-scheme:dark){:root{--bg:#0c0a09;--fg:#f5f5f4;--card:#1c1917;--line:#292524;--ok:#4ade80;--bad:#f87171}}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}main{max-width:720px;margin:0 auto;padding:24px 16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
-button{width:100%;padding:14px;border-radius:8px;border:0;background:#b91c1c;color:#fff;font:inherit;font-weight:700;cursor:pointer}button.reset{background:transparent;color:var(--fg);border:1px solid var(--line)}
-.up{color:var(--ok);font-weight:700}.down{color:var(--bad);font-weight:700}code{word-break:break-all}
-</style></head><body><main>
-<h1>Copeybara fire drill</h1><p>Break the protocol's infrastructure for real. Then exit from the saved kit.</p>
-<div class="grid">
-  <div class="card"><b>Website</b><p>Status: <span id="site">…</span></p><button data-switch="site-down">Take the website down</button></div>
-  <div class="card"><b>Primary RPC</b><p>Status: <span id="rpc">…</span></p><button data-switch="rpc-down">Take the RPC down</button></div>
-  <div class="card"><b>DNS</b><p>Status: <span id="dns">…</span></p><button data-switch="hijack-on">Hijack the domain</button></div>
-</div>
-<div class="card" style="margin-top:12px"><b>Failures injected</b><ul id="failures"></ul>
-<p><a href="/drill-report.html">Drill report (HTML)</a> · <a href="/drill-report.json">JSON</a></p>
-<button class="reset" data-switch="reset">Reset all</button></div>
+:root {
+  --accent:#294634; --accent-ink:#fff; --ink:#16261b; --muted:#4d5b51; --bg:#f6f7f2; --card:#fff; --tint:#eef2e7; --line:#d9e1d8;
+  --ok:#26633b; --bad:#9c3929; --warn:#805616;
+  --ok-bg:#e3efe5; --bad-bg:#f6e6e2; --warn-bg:#f5ecdc;
+  --shadow:0 1px 2px rgba(22,38,27,.05),0 8px 24px rgba(22,38,27,.06);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent:#6fbf8a; --accent-ink:#0d1611; --ink:#e7efe9; --muted:#9db0a3; --bg:#0d1611; --card:#132019; --tint:#18281f; --line:#22352a;
+    --ok:#5fd38a; --bad:#f08a78; --warn:#e3b766; --ok-bg:#163223; --bad-bg:#3a1f1a; --warn-bg:#352b17;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.28); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"] {
+  --accent:#6fbf8a; --accent-ink:#0d1611; --ink:#e7efe9; --muted:#9db0a3; --bg:#0d1611; --card:#132019; --tint:#18281f; --line:#22352a;
+  --ok:#5fd38a; --bad:#f08a78; --warn:#e3b766; --ok-bg:#163223; --bad-bg:#3a1f1a; --warn-bg:#352b17;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.28); color-scheme:dark;
+}
+* { box-sizing:border-box; }
+html { background:var(--bg); }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 var(--sans); -webkit-font-smoothing:antialiased; }
+a { color:var(--accent); text-underline-offset:3px; }
+code, .mono { font-family:var(--mono); font-size:.86em; font-variant-numeric:tabular-nums; }
+.wrap { max-width:1120px; margin:0 auto; padding:0 24px; }
+svg.i { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+
+/* header */
+header.top { border-bottom:1px solid var(--line); background:color-mix(in srgb, var(--card) 70%, transparent); backdrop-filter:saturate(1.4) blur(8px); position:sticky; top:0; z-index:5; }
+header.top .wrap { display:flex; align-items:center; gap:14px; height:64px; }
+.brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); }
+.brand svg { width:32px; height:32px; }
+.brand b { font:600 19px/1 var(--serif); letter-spacing:.01em; }
+.brand span { color:var(--muted); font-size:13px; padding-left:10px; margin-left:2px; border-left:1px solid var(--line); }
+.spacer { flex:1; }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border:1px solid var(--line); border-radius:999px; font-size:12.5px; color:var(--muted); background:var(--card); white-space:nowrap; }
+.dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex:none; }
+.dot.ok { background:var(--ok); } .dot.bad { background:var(--bad); } .dot.warn { background:var(--warn); }
+.iconbtn { display:inline-grid; place-items:center; width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+.iconbtn:hover { background:var(--tint); }
+
+/* hero */
+.hero { padding:44px 0 26px; display:grid; grid-template-columns:1.25fr 1fr; gap:36px; align-items:start; }
+.eyebrow { font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+h1 { font:500 42px/1.12 var(--serif); margin:10px 0 14px; letter-spacing:-.01em; }
+h2 { font:500 26px/1.2 var(--serif); margin:0; }
+h3 { font:600 19px/1.25 var(--serif); margin:0; }
+.lede { color:var(--muted); font-size:16.5px; max-width:56ch; margin:0; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
+
+/* checklist */
+.check { padding:20px 22px; }
+.check h3 { display:flex; align-items:center; gap:8px; font-size:17px; }
+.check ol { list-style:none; margin:14px 0 0; padding:0; display:grid; gap:14px; }
+.check li { display:grid; grid-template-columns:28px 1fr; gap:10px; }
+.num { width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font:600 13px/1 var(--sans); background:var(--tint); color:var(--accent); border:1px solid var(--line); }
+.check li b { display:block; font-weight:600; }
+.check li p { margin:2px 0 0; color:var(--muted); font-size:13.5px; }
+
+/* live strip */
+.section-h { display:flex; align-items:baseline; gap:12px; margin:34px 0 14px; }
+.section-h p { margin:0; color:var(--muted); font-size:14px; }
+.strip { display:grid; grid-template-columns:1.35fr 1fr 1fr; gap:14px; }
+.strip .card { padding:16px 18px; }
+.kicker { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px; }
+dl.kv { margin:0; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:13.5px; }
+dl.kv dt { color:var(--muted); }
+dl.kv dd { margin:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.state { display:inline-flex; align-items:center; gap:6px; font-weight:600; }
+.state.ok { color:var(--ok); } .state.bad { color:var(--bad); } .state.warn { color:var(--warn); } .state.idle { color:var(--muted); font-weight:500; }
+.links { display:grid; gap:2px; }
+.links a { display:flex; align-items:center; gap:10px; padding:7px 8px; margin:0 -8px; border-radius:9px; text-decoration:none; color:var(--ink); font-size:14px; }
+.links a:hover { background:var(--tint); }
+.links a small { color:var(--muted); margin-left:auto; font-size:12px; }
+
+
+/* scenarios */
+.scenarios { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; }
+.scen { padding:22px; display:flex; flex-direction:column; gap:14px; }
+.scen.wide { grid-column:1 / -1; }
+.scen-h { display:flex; gap:14px; align-items:flex-start; }
+.badge { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; flex:none; border:1px solid var(--line); background:var(--tint); color:var(--accent); }
+.badge svg.i { width:22px; height:22px; }
+.badge.bad { color:var(--bad); background:var(--bad-bg); border-color:transparent; }
+.badge.warn { color:var(--warn); background:var(--warn-bg); border-color:transparent; }
+.badge.ok { color:var(--ok); background:var(--ok-bg); border-color:transparent; }
+.scen-h .meta { color:var(--muted); font-size:12.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+.scen p.what { margin:0; color:var(--muted); }
+.target { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); min-width:0; }
+.target code { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
+.expect { background:var(--tint); border:1px solid var(--line); border-radius:12px; padding:13px 15px; font-size:14px; }
+.expect .lbl { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.expect p { margin:0; }
+.expect ul { margin:6px 0 0; padding-left:18px; color:var(--muted); }
+.expect li + li { margin-top:2px; }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:2px 9px 2px 7px; border-radius:999px; font-size:12.5px; font-weight:600; vertical-align:1px; }
+.chip svg.i { width:14px; height:14px; stroke-width:2.2; }
+.chip.ok { color:var(--ok); background:var(--ok-bg); } .chip.bad { color:var(--bad); background:var(--bad-bg); } .chip.warn { color:var(--warn); background:var(--warn-bg); }
+.actions { display:flex; gap:10px; margin-top:auto; padding-top:4px; flex-wrap:wrap; align-items:center; }
+button { font:inherit; cursor:pointer; }
+.btn { display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:11px; border:1px solid transparent; font-weight:600; font-size:14.5px; transition:transform .05s, filter .15s, background .15s; }
+.btn:active { transform:translateY(1px); }
+.btn.primary { background:var(--accent); color:var(--accent-ink); }
+.btn.primary:hover { filter:brightness(1.12); }
+.btn.ghost { background:transparent; color:var(--ink); border-color:var(--line); }
+.btn.ghost:hover { background:var(--tint); }
+.btn[disabled] { opacity:.6; cursor:progress; }
+
+.note { font-size:13px; color:var(--muted); }
+.note.ok { color:var(--ok); } .note.bad { color:var(--bad); }
+.watch { border:1px dashed var(--line); border-radius:12px; padding:12px 14px; font-size:13.5px; }
+.watch .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.watch code.cmd { background:var(--tint); padding:2px 7px; border-radius:6px; border:1px solid var(--line); }
+
+/* scenario card body: attacker / Copeybara / you */
+.triad { display:grid; gap:10px; margin:0; }
+.triad > div { display:grid; grid-template-columns:22px 1fr; gap:4px 10px; font-size:14px; }
+.triad svg.i { margin-top:2px; color:var(--muted); width:17px; height:17px; }
+.triad dt { font-size:11.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); grid-column:2; }
+.triad dd { margin:0; grid-column:2; }
+.triad .see { background:var(--tint); border:1px solid var(--line); border-radius:12px; padding:11px 13px; grid-template-columns:22px 1fr; }
+.triad .see svg.i { color:var(--accent); }
+
+/* guided demo */
+.guide { margin-top:8px; display:grid; grid-template-columns:230px 1fr; overflow:hidden; }
+.guide-steps { background:var(--tint); border-right:1px solid var(--line); padding:18px 12px; display:flex; flex-direction:column; gap:2px; }
+.guide-steps .kicker { padding:0 8px; }
+.gstep { display:flex; align-items:center; gap:10px; padding:8px; border-radius:10px; border:0; background:transparent; color:var(--muted); text-align:left; font-size:13.5px; }
+.gstep:hover { background:color-mix(in srgb, var(--card) 70%, transparent); color:var(--ink); }
+.gstep .num { width:24px; height:24px; font-size:12px; background:var(--card); }
+.gstep.on { background:var(--card); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+.gstep.on .num { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.gstep.done .num { color:var(--ok); }
+.guide-main { padding:26px 30px 24px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+.guide-top { display:flex; align-items:center; gap:10px; }
+.guide-title { font:500 34px/1.12 var(--serif); margin:0; letter-spacing:-.01em; }
+.say { margin:0; padding:14px 18px; border-left:3px solid var(--accent); background:var(--tint); border-radius:0 12px 12px 0; font:italic 18px/1.5 var(--serif); }
+.say .lbl { display:flex; align-items:center; gap:6px; font:600 11.5px/1 var(--sans); letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-style:normal; margin-bottom:8px; }
+.guide-expect { display:grid; grid-template-columns:22px 1fr; gap:4px 10px; font-size:15px; }
+.guide-expect svg.i { color:var(--accent); margin-top:3px; }
+#g-actions { margin-top:0; padding-top:0; }
+.scenarios > *, .strip > *, .hero > * { min-width:0; }
+.triad dd { overflow-wrap:anywhere; }
+.guide-nav { display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-top:1px solid var(--line); padding-top:16px; margin-top:auto; }
+.btn.lg { padding:13px 20px; font-size:15.5px; }
+body.presenting header.top .pill, body.presenting .hide-present { display:none !important; }
+body.presenting .guide { margin-top:28px; min-height:calc(100vh - 140px); }
+body.presenting .guide-title { font-size:46px; }
+body.presenting .say { font-size:23px; }
+body.presenting .guide-expect { font-size:17px; }
+
+/* advanced */
+details.adv { margin:34px 0 0; }
+details.adv > summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; padding:16px 20px; font-weight:600; }
+details.adv > summary::-webkit-details-marker { display:none; }
+details.adv > summary .chev { margin-left:auto; transition:transform .15s; color:var(--muted); }
+details.adv[open] > summary .chev { transform:rotate(90deg); }
+.adv-body { padding:0 20px 20px; display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+.switch { border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+.switch b { font-size:14px; }
+.btn.danger { background:var(--bad-bg); color:var(--bad); }
+.btn.danger:hover { filter:brightness(.97); }
+.failures { grid-column:1 / -1; font-size:13.5px; color:var(--muted); }
+.failures ul { margin:6px 0 0; padding-left:18px; }
+
+footer { padding:36px 0 48px; color:var(--muted); font-size:13px; display:flex; gap:16px; flex-wrap:wrap; }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns:1fr; padding-top:28px; }
+  .strip { grid-template-columns:1fr; }
+  .scenarios { grid-template-columns:1fr; }
+  .guide { grid-template-columns:1fr; }
+  .guide-steps { flex-direction:row; overflow-x:auto; border-right:0; border-bottom:1px solid var(--line); padding:10px; }
+  .guide-steps .kicker, .gstep span.t { display:none; }
+  .adv-body { grid-template-columns:1fr 1fr; }
+  h1 { font-size:34px; }
+}
+@media (max-width: 560px) {
+  .wrap { padding:0 16px; }
+  .brand span, .top .pill { display:none; }
+  .adv-body { grid-template-columns:1fr; }
+  .guide-main { padding:20px 16px; }
+  .guide-title { font-size:27px; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4.2 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M5 7h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10"/><path d="M15 13.5h4"/><path d="M8 11l3 3m0-3-3 3"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M5 12a7 7 0 1 0 14 0"/><path d="m3 3 18 18"/></symbol>
+  <symbol id="i-exit" viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></symbol>
+  <symbol id="i-ens" viewBox="0 0 24 24"><path d="M12 2.5 5 12l7 9.5 7-9.5-7-9.5Z"/><path d="M5 12h14"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="7" rx="2"/><rect x="3.5" y="13" width="17" height="7" rx="2"/><path d="M7.5 7.5h.01M7.5 16.5h.01"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="9" cy="9" r="1.8"/><path d="m20.5 15-4.5-4.5L6 20.5"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5v14l11-7L7 5Z"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+</svg>
+
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#294634"/><path d="M8 21v-7a6 6 0 0 1 12 0v3m-6 4h11m-4-4 4 4-4 4" fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <b>Copeybara</b><span>Demo Portal</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="pill"><span class="dot" id="hdr-dot"></span><span id="hdr-name">Sepolia</span></span>
+    <button class="btn ghost" id="present" title="Presenter mode: only the guided demo, larger (Esc to leave)"><svg class="i"><use href="#i-expand"/></svg><span>Present</span></button>
+    <button class="iconbtn" id="theme" title="Switch light / dark" aria-label="Switch light or dark theme"><svg class="i"><use href="#i-moon"/></svg></button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero hide-present">
+    <div>
+      <div class="eyebrow">Live on Sepolia · ENSv2</div>
+      <h1>Watch Copeybara stop attacks on a DeFi app, live.</h1>
+      <p class="lede">Seven situations, each one click away. Every button sets up the demo and opens the target in a new tab.
+        Keep the Copeybara side panel open beside it: it checks sites against what the protocol's Safe published on
+        <span class="mono" data-ens-name>demoswap-blackout.eth</span>, stops drainer requests before the wallet sees them, and reacts on its own.</p>
+    </div>
+    <div class="card check" data-checklist>
+      <h3><svg class="i"><use href="#i-list"/></svg>Before you start</h3>
+      <ol>
+        <li><span class="num">1</span><div><b>Install the Copeybara extension</b><p>Run <code>scripts/demo-browser.sh</code> (or <code>--chrome</code> to load it unpacked from <code>apps/extension/dist/chrome</code>). Pin it and click the icon to open the side panel.</p></div></li>
+        <li><span class="num">2</span><div><b>Finish Copeybara setup</b><p>In the side panel, run setup and follow <code data-ens-name>demoswap-blackout.eth</code>. The protocol card should say <em>All clear</em>.</p></div></li>
+        <li><span class="num">3</span><div><b>MetaMask on Sepolia</b><p>Install MetaMask in the same browser profile and switch it to Sepolia. No funds are needed for steps 1 to 6.</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="card guide" data-guide>
+    <nav class="guide-steps" id="g-steps" aria-label="Demo steps"><div class="kicker"><svg class="i"><use href="#i-mic"/></svg>Guided demo</div></nav>
+    <div class="guide-main">
+      <div class="guide-top"><span class="eyebrow" id="g-count">Step 1 of 7</span><span class="spacer"></span><span class="note" id="g-target"></span></div>
+      <h2 class="guide-title" id="g-title">…</h2>
+      <blockquote class="say"><span class="lbl"><svg class="i"><use href="#i-mic"/></svg>Say</span><span id="g-say"></span></blockquote>
+      <div class="actions" id="g-actions"></div>
+      <div class="guide-expect"><svg class="i"><use href="#i-eye"/></svg><div><div class="eyebrow" style="font-size:11.5px">You should see</div><div id="g-see"></div></div></div>
+      <div class="guide-nav">
+        <button class="btn ghost" id="g-back"><svg class="i"><use href="#i-left"/></svg>Back</button>
+        <button class="btn ghost" id="g-next">Next<svg class="i"><use href="#i-chev"/></svg></button>
+        <span class="spacer"></span>
+        <span class="note" id="g-reset-msg"></span>
+        <button class="btn ghost" id="g-reset"><svg class="i"><use href="#i-reset"/></svg>Reset everything</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-h hide-present"><h2>Live status</h2><p>Refreshes every few seconds.</p></div>
+  <section class="strip hide-present">
+    <div class="card" data-ens>
+      <div class="kicker"><svg class="i"><use href="#i-ens"/></svg>ENS record · <span class="mono" data-ens-name style="text-transform:none;letter-spacing:0">demoswap-blackout.eth</span></div>
+      <dl class="kv">
+        <dt>Status</dt><dd id="ens-status"><span class="state idle">Reading through 3 RPCs…</span></dd>
+        <dt>Website</dt><dd id="ens-url" class="mono">…</dd>
+        <dt>Exit kit</dt><dd id="ens-release" class="mono">…</dd>
+        <dt>Site fingerprint</dt><dd id="ens-site">…</dd>
+        <dt>Blocklist</dt><dd id="ens-block">…</dd>
+      </dl>
+    </div>
+    <div class="card" data-switches>
+      <div class="kicker"><svg class="i"><use href="#i-server"/></svg>Demo infrastructure</div>
+      <dl class="kv">
+        <dt>DemoSwap website</dt><dd id="st-site"><span class="state idle">…</span></dd>
+        <dt>DNS</dt><dd id="st-dns"><span class="state idle">…</span></dd>
+        <dt>Primary RPC</dt><dd id="st-rpc"><span class="state idle">…</span></dd>
+        <dt>Watcher</dt><dd id="st-watch"><span class="state idle">…</span></dd>
+      </dl>
+    </div>
+    <div class="card">
+      <div class="kicker"><svg class="i"><use href="#i-link"/></svg>Links</div>
+      <div class="links">
+        <a id="ln-hosted" href="https://blackout-red.vercel.app/copeybara-kit.html?ens=demoswap-blackout.eth" target="_blank" rel="noopener"><svg class="i"><use href="#i-exit"/></svg>Hosted exit kit<small>Vercel</small></a>
+        <a id="ln-kit" href="http://localhost:8000/" target="_blank" rel="noopener"><svg class="i"><use href="#i-exit"/></svg>Local exit kit<small id="ln-kit-host">:8000</small></a>
+        <a id="ln-site" href="https://blackout-red.vercel.app" target="_blank" rel="noopener"><svg class="i"><use href="#i-ext"/></svg>Copeybara website<small>Vercel</small></a>
+        <a href="/drill-report.html" target="_blank" rel="noopener"><svg class="i"><use href="#i-list"/></svg>Fire drill report<small>HTML</small></a>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-h hide-present"><h2>All scenarios</h2><p>Run them in any order. Each one resets the demo first.</p></div>
+  <section class="scenarios hide-present" id="cards"></section>
+
+  <details class="card adv hide-present">
+    <summary><svg class="i"><use href="#i-sliders"/></svg>Fire drill switches <span class="note">Break each piece on its own</span><svg class="i chev"><use href="#i-chev"/></svg></summary>
+    <div class="adv-body">
+      <div class="switch"><b>Website</b><span id="sw-site" class="note">…</span><button class="btn danger" data-switch="site-down">Take the website down</button></div>
+      <div class="switch"><b>Primary RPC</b><span id="sw-rpc" class="note">…</span><button class="btn danger" data-switch="rpc-down">Take the RPC down</button></div>
+      <div class="switch"><b>DNS</b><span id="sw-dns" class="note">…</span><button class="btn danger" data-switch="hijack-on">Hijack the domain</button></div>
+      <div class="switch"><b>Everything</b><span class="note">Back to normal</span><button class="btn ghost" data-switch="reset"><svg class="i"><use href="#i-reset"/></svg>Reset all</button></div>
+      <div class="failures">Failures injected: <ul id="failures"><li>none yet</li></ul></div>
+    </div>
+  </details>
+
+  <footer class="hide-present">
+    <span>Copeybara demo harness. Everything here runs on your machine; the chain is Sepolia.</span>
+    <span class="spacer"></span>
+    <a href="/status" target="_blank" rel="noopener">/status</a>
+    <a href="/drill-report.json" target="_blank" rel="noopener">drill report JSON</a>
+  </footer>
 </main>
 <script>
-const $ = (id) => document.getElementById(id);
-async function refresh() {
-  const s = await (await fetch('/status')).json();
-  $('site').textContent = s.site; $('site').className = s.site === 'up' ? 'up' : 'down';
-  $('rpc').textContent = s.rpc; $('rpc').className = s.rpc === 'up' ? 'up' : 'down';
-  $('dns').textContent = s.hijack ? 'HIJACKED' : 'ok'; $('dns').className = s.hijack ? 'down' : 'up';
-  $('failures').innerHTML = s.failures.map((f) => `<li>${f.kind} at ${new Date(f.at).toLocaleTimeString()}</li>`).join('') || '<li>none yet</li>';
-}
-document.querySelectorAll('[data-switch]').forEach((b) => b.addEventListener('click', async () => { await fetch('/switch/' + b.dataset.switch, { method: 'POST' }); refresh(); }));
-refresh(); setInterval(refresh, 1000);
-</script></body></html>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
+  const state = (cls, text) => `<span class="state ${cls}"><span class="dot ${cls}"></span>${esc(text)}</span>`;
+  const ago = (ms) => { const s = Math.max(0, Math.round((Date.now() - ms) / 1000)); return s < 60 ? s + ' s ago' : Math.round(s / 60) + ' min ago'; };
+  const icon = (id) => `<svg class="i"><use href="#i-${id}"/></svg>`;
+  const chip = (tone, ic, text) => `<span class="chip ${tone}">${icon(ic)}${text}</span>`;
+  let cfg = null;
+
+  // The seven scenarios: cards and the guided demo are both rendered from this list. Text may contain markup.
+  const SCENARIOS = [
+    { id: 'verified', tone: 'ok', icon: 'shield', title: 'The real site, verified', link: 'site', switches: ['reset'], cta: 'Open the real site', ctaIcon: 'ext',
+      attacker: 'Nothing yet. This is DemoSwap exactly as its team shipped it: the baseline.',
+      copeybara: 'Hashes every script on the page and compares it with the fingerprint the protocol’s Safe published on ENS (<code>org.copeybara.site</code>).',
+      see: chip('ok', 'check', 'Verified') + ' The side panel says “Verified <span data-ens-name>demoswap-blackout.eth</span> site” and the toolbar icon shows a ✓.',
+      say: 'This is DemoSwap, the real one. Copeybara checked every script against the fingerprint the protocol published on ENS, so the side panel says Verified.' },
+    { id: 'hijack', tone: 'bad', icon: 'alert', title: 'DNS hijack: same domain, injected drainer', link: 'site', switches: ['reset', 'hijack-on'], cta: 'Hijack DNS and open the site', ctaIcon: 'alert',
+      attacker: 'Takes over the domain’s DNS, like Curve in 2022. Same address, same look, plus <code>/inject.js</code>, which turns Connect wallet and Deposit into an unlimited approval to the drainer.',
+      copeybara: 'Finds code the protocol never published (<code>/inject.js</code> and an inline script) and replaces the tab before the page can be used.',
+      see: chip('bad', 'x', 'Blocked') + ' Copeybara’s warning page instead of DemoSwap, listing the unknown code. There is no “continue anyway”.',
+      say: 'Now the attacker hijacks DNS. Same address, same page, but with injected drainer code. Copeybara sees code the protocol never published and pulls the page away before I can click.' },
+    { id: 'lookalike', tone: 'warn', icon: 'copy', title: 'Look-alike phishing domain', link: 'lookalike', switches: ['reset'], cta: 'Open the look-alike', ctaIcon: 'ext', watcher: true,
+      attacker: 'Puts a copy of DemoSwap on a similar domain, <code>demoswap-rewards.localhost</code>, and spreads the link.',
+      copeybara: 'The Copeybara watcher finds the copy and lists the domain on the protocol’s ENS blocklist, with a key that can write only the status and the blocklist. Every extension reads it.',
+      see: chip('bad', 'x', 'Blocked') + ' The warning page instead of the copy, once the watcher has listed it. The extension re-reads ENS every minute, or press <em>Check ENS now</em> in the side panel.',
+      say: 'Phishing doesn’t need DNS: here is a look-alike domain. The watcher spotted it and put it on the protocol’s ENS blocklist, so every Copeybara user is kept away from it.' },
+    { id: 'approve', tone: 'bad', icon: 'hand', title: 'Malicious approval: fake airdrop claim', link: 'approve', switches: ['reset'], cta: 'Open the airdrop page', ctaIcon: 'ext',
+      attacker: 'A “Claim your DemoSwap airdrop” page on a site you have never seen. Claim asks your wallet to approve the drainer for ALL of a token.',
+      copeybara: 'Catches the request before the wallet sees it: an unlimited approval to an address that no protocol you follow publishes.',
+      see: chip('bad', 'alert', 'Stopped') + ' A Copeybara window: “This looks like a wallet drainer”. Cancel, and MetaMask never sees the request.',
+      say: 'Most wallets are emptied by one approval. This airdrop page asks for unlimited spending by an unknown address. Copeybara stops it in its own window, before MetaMask.' },
+    { id: 'permit', tone: 'bad', icon: 'pen', title: 'Permit2 signature phishing', link: 'permit', switches: ['reset'], cta: 'Open the gasless claim', ctaIcon: 'ext',
+      attacker: 'A “gasless” claim that asks for a signature, not a transaction: a Permit2 <code>PermitSingle</code> (<code>eth_signTypedData_v4</code>) whose spender is the drainer.',
+      copeybara: 'Reads the typed data: a Permit2 permit for the maximum amount to a spender that no protocol you follow publishes.',
+      see: chip('bad', 'alert', 'Stopped') + ' The same Copeybara window, “This looks like a wallet drainer”, naming the Permit2 signature.',
+      say: 'Smarter drainers ask for a signature instead. It costs no gas and looks harmless, but it is a Permit2 permit for the drainer. Copeybara reads it and stops it.' },
+    { id: 'nft', tone: 'bad', icon: 'image', title: 'NFT airdrop: setApprovalForAll', link: 'nft', switches: ['reset'], cta: 'Open the free mint', ctaIcon: 'ext',
+      attacker: 'A free “LP Pass” mint that asks <code>setApprovalForAll</code> on the Uniswap v3 position manager: the drainer could take every liquidity position you hold.',
+      copeybara: 'Recognises permission for an unknown operator to move ALL your NFTs in that collection.',
+      see: chip('bad', 'alert', 'Stopped') + ' The Copeybara window again: “This looks like a wallet drainer”.',
+      say: 'The same trick with NFTs: a free mint that asks for permission to move all my Uniswap positions. Copeybara stops that too.' },
+    { id: 'down', tone: '', icon: 'plug', title: 'Site down: exit through the verified kit', link: 'site', switches: ['reset', 'site-down'], cta: 'Take the site down and open it', ctaIcon: 'plug',
+      attacker: 'Nothing needed: the website is gone (outage, takedown, or a frontend pulled under pressure). The funds are still on-chain.',
+      copeybara: 'Opens the exit kit, one HTML file whose sha256 is published on ENS. It reads your positions straight from the contracts and can send only allowlisted exit calls.',
+      see: chip('warn', 'plug', 'Site unreachable') + ' The tab shows a 502. In the side panel, press <em>Exit safely</em>: the verified kit opens. Connect MetaMask and withdraw.',
+      say: 'Finally, the site is simply gone. My funds aren’t. From the side panel I press Exit safely, and the verified kit lets me withdraw straight from the contracts.' },
+  ];
+  const byId = Object.fromEntries(SCENARIOS.map((s) => [s.id, s]));
+
+  // ---------- theme ----------
+  const root = document.documentElement;
+  const sysDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+  try { const t = localStorage.getItem('copeybara.portal.theme'); if (t) root.dataset.theme = t; } catch {}
+  const isDark = () => (root.dataset.theme ? root.dataset.theme === 'dark' : sysDark());
+  const themeIcon = () => { $('theme').innerHTML = icon(isDark() ? 'sun' : 'moon'); };
+  $('theme').onclick = () => {
+    root.dataset.theme = isDark() ? 'light' : 'dark';
+    try { localStorage.setItem('copeybara.portal.theme', root.dataset.theme); } catch {}
+    themeIcon();
+  };
+  themeIcon();
+
+  // ---------- running a scenario ----------
+  const post = (sw) => fetch('/switch/' + sw, { method: 'POST' }).then((r) => { if (!r.ok) throw new Error(sw + ': HTTP ' + r.status); });
+  const urlOf = (s) => cfg?.links?.[s.link];
+
+  async function run(btn, id, msg) {
+    const s = byId[id];
+    // open the tab inside the click (pop-up blockers), then point it at the target once the switches are set
+    const tab = window.open('about:blank', '_blank');
+    btn.disabled = true; msg.className = 'note'; msg.textContent = 'Setting up…';
+    try {
+      for (const sw of s.switches) await post(sw);
+      const url = urlOf(s);
+      if (!url) throw new Error('portal config not loaded');
+      if (tab) { tab.opener = null; tab.location.href = url; msg.textContent = 'Opened in a new tab.'; }
+      else msg.innerHTML = `Pop-up blocked: <a href="${esc(url)}" target="_blank" rel="noopener">open it here</a>.`;
+      msg.classList.add('ok');
+    } catch (e) {
+      tab?.close();
+      msg.className = 'note bad'; msg.textContent = String(e.message || e);
+    } finally {
+      btn.disabled = false; refresh();
+    }
+  }
+  async function reset(btn, msg) {
+    btn.disabled = true;
+    try { await post('reset'); msg.className = 'note ok'; msg.textContent = 'Demo reset.'; } catch (e) { msg.className = 'note bad'; msg.textContent = String(e.message || e); }
+    btn.disabled = false; refresh();
+  }
+  const actions = (s) => `<button class="btn primary" data-run="${s.id}">${icon(s.ctaIcon)}${esc(s.cta)}</button><button class="btn ghost" data-reset>${icon('reset')}Reset</button><span class="note" data-msg></span>`;
+  const wire = (scope, id) => {
+    const msg = scope.querySelector('[data-msg]');
+    scope.querySelector('[data-run]').addEventListener('click', (e) => run(e.currentTarget, id, msg));
+    scope.querySelector('[data-reset]').addEventListener('click', (e) => reset(e.currentTarget, msg));
+  };
+
+  // ---------- cards ----------
+  const watcherBox = `<div class="watch" data-watcher>
+      <div class="row"><b>Watcher</b><span id="w-state"><span class="state idle">checking…</span></span><span class="spacer"></span><span class="note" id="w-last"></span></div>
+      <div class="note" id="w-detail" style="margin-top:6px">Run <code class="cmd">scripts/watcher-live.sh</code> in a terminal (needs WATCHER_KEY in contracts/.env). It checks every 15 s and serves its status on <code>127.0.0.1:8095</code>.</div>
+    </div>`;
+  $('cards').innerHTML = SCENARIOS.map((s, i) => `
+    <article class="card scen${i === SCENARIOS.length - 1 ? ' wide' : ''}" data-scenario="${s.id}">
+      <div class="scen-h"><div class="badge ${s.tone}">${icon(s.icon)}</div>
+        <div><div class="meta">Scenario ${i + 1}</div><h3>${esc(s.title)}</h3></div></div>
+      <div class="target">${icon('link')}<code data-link="${s.link}">…</code></div>
+      <dl class="triad">
+        <div>${icon('user')}<dt>What the attacker does</dt><dd>${s.attacker}</dd></div>
+        <div>${icon('shield')}<dt>What Copeybara does</dt><dd>${s.copeybara}</dd></div>
+        <div class="see">${icon('eye')}<dt>What you should see</dt><dd>${s.see}</dd></div>
+      </dl>
+      ${s.watcher ? watcherBox : ''}
+      <div class="actions">${actions(s)}</div>
+    </article>`).join('');
+  document.querySelectorAll('#cards [data-scenario]').forEach((el) => wire(el, el.dataset.scenario));
+
+  // ---------- guided demo (presenter mode) ----------
+  let step = 0;
+  try { step = Math.min(SCENARIOS.length - 1, Math.max(0, Number(sessionStorage.getItem('copeybara.portal.step')) || 0)); } catch {}
+  $('g-steps').insertAdjacentHTML('beforeend', SCENARIOS.map((s, i) => `<button class="gstep" data-step="${i}"><span class="num">${i + 1}</span><span class="t">${esc(s.title)}</span></button>`).join(''));
+  function show(i) {
+    step = Math.min(SCENARIOS.length - 1, Math.max(0, i));
+    try { sessionStorage.setItem('copeybara.portal.step', String(step)); } catch {}
+    const s = SCENARIOS[step];
+    document.querySelectorAll('.gstep').forEach((b, j) => { b.classList.toggle('on', j === step); b.classList.toggle('done', j < step); });
+    $('g-count').textContent = `Step ${step + 1} of ${SCENARIOS.length}`;
+    $('g-title').textContent = s.title;
+    $('g-say').textContent = s.say;
+    $('g-see').innerHTML = s.see;
+    $('g-target').innerHTML = urlOf(s) ? `<code>${esc(urlOf(s))}</code>` : '';
+    $('g-actions').innerHTML = actions(s);
+    $('g-actions').dataset.step = s.id;
+    wire($('g-actions'), s.id);
+    $('g-back').disabled = step === 0;
+    $('g-next').disabled = step === SCENARIOS.length - 1;
+    fillNames();
+  }
+  document.querySelectorAll('.gstep').forEach((b) => b.addEventListener('click', () => show(Number(b.dataset.step))));
+  $('g-back').onclick = () => show(step - 1);
+  $('g-next').onclick = () => show(step + 1);
+  $('g-reset').onclick = async () => {
+    const m = $('g-reset-msg');
+    try { await post('reset'); m.className = 'note ok'; m.textContent = 'Everything reset.'; } catch (e) { m.className = 'note bad'; m.textContent = String(e.message || e); }
+    refresh();
+  };
+  const setPresenting = (on) => { document.body.classList.toggle('presenting', on); $('present').querySelector('span').textContent = on ? 'Exit' : 'Present'; if (on) window.scrollTo(0, 0); };
+  $('present').onclick = () => setPresenting(!document.body.classList.contains('presenting'));
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest?.('input, textarea')) return;
+    if (e.key === 'Escape') setPresenting(false);
+    if (!document.body.classList.contains('presenting')) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') show(step + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') show(step - 1);
+  });
+
+  // ---------- advanced switches ----------
+  document.querySelectorAll('[data-switch]').forEach((b) => b.addEventListener('click', async () => { await post(b.dataset.switch).catch(() => {}); refresh(); }));
+
+  // ---------- live data ----------
+  function fillNames() {
+    if (!cfg) return;
+    document.querySelectorAll('[data-ens-name]').forEach((e) => (e.textContent = cfg.ensName));
+    document.querySelectorAll('[data-link]').forEach((e) => (e.textContent = cfg.links[e.dataset.link]));
+  }
+  async function loadConfig() {
+    try {
+      cfg = await (await fetch('/portal/config')).json();
+      $('hdr-name').textContent = 'Sepolia · ' + cfg.ensName;
+      $('ln-hosted').href = cfg.links.hostedKit;
+      $('ln-kit').href = cfg.links.kit;
+      $('ln-kit-host').textContent = new URL(cfg.links.kit).host;
+      $('ln-site').href = cfg.links.website;
+      fillNames();
+      show(step);
+    } catch { /* retried below */ }
+  }
+
+  async function refreshStatus() {
+    try {
+      const s = await (await fetch('/status')).json();
+      $('st-site').innerHTML = s.hijack ? state('bad', 'Serving the hijacked clone') : s.site === 'up' ? state('ok', 'Up') : state('bad', 'Down (502)');
+      $('st-dns').innerHTML = s.hijack ? state('bad', 'Hijacked') : state('ok', 'Normal');
+      $('st-rpc').innerHTML = s.rpc === 'up' ? state('ok', 'Up') : state('bad', 'Down');
+      $('sw-site').textContent = s.site === 'up' ? 'Up' : 'Down';
+      $('sw-rpc').textContent = s.rpc === 'up' ? 'Up' : 'Down';
+      $('sw-dns').textContent = s.hijack ? 'Hijacked' : 'Normal';
+      $('failures').innerHTML = s.failures.map((f) => `<li>${esc(f.kind)} at ${new Date(f.at).toLocaleTimeString()}</li>`).join('') || '<li>none yet</li>';
+    } catch {
+      $('st-site').innerHTML = state('bad', 'Harness not answering');
+    }
+  }
+
+  async function refreshEns() {
+    try {
+      const e = await (await fetch('/portal/ens')).json();
+      if (!e.ok) {
+        $('ens-status').innerHTML = state('warn', 'Could not read');
+        $('ens-url').textContent = e.error || 'RPCs did not agree';
+        $('hdr-dot').className = 'dot warn';
+        return;
+      }
+      const st = e.status === 'ok' ? state('ok', 'All clear') : e.status === 'compromised' ? state('bad', 'Compromised') : e.status === 'degraded' ? state('warn', 'Degraded') : state('warn', e.status);
+      $('ens-status').innerHTML = st + (e.note ? ` <span class="note">· ${esc(e.note)}</span>` : '');
+      $('ens-status').title = e.note || '';
+      $('hdr-dot').className = 'dot ' + (e.status === 'ok' ? 'ok' : e.status === 'compromised' ? 'bad' : 'warn');
+      $('ens-url').textContent = e.url || 'none';
+      $('ens-release').textContent = `v${e.release.version} · sha256 ${e.release.sha256.slice(0, 10)}…${e.release.sha256.slice(-6)}`;
+      $('ens-site').textContent = e.scripts == null ? 'not published' : `${e.scripts} script${e.scripts === 1 ? '' : 's'} · block ${Number(e.block).toLocaleString('en-US')}`;
+      $('ens-block').innerHTML = e.blocklist.length ? e.blocklist.map((d) => `<code>${esc(d)}</code>`).join(', ') : '<span class="note">empty</span>';
+    } catch { /* next tick */ }
+  }
+
+  async function refreshWatcher() {
+    try {
+      const w = await (await fetch('/portal/watcher')).json();
+      if (!w.running) {
+        $('w-state').innerHTML = state('idle', 'Not running');
+        $('st-watch').innerHTML = state('idle', 'Not running');
+        $('w-last').textContent = '';
+        return;
+      }
+      const n = (w.names || {})[cfg?.ensName] || Object.values(w.names || {})[0] || {};
+      const cls = n.status === 'ok' ? 'ok' : n.status === 'compromised' ? 'bad' : 'warn';
+      $('w-state').innerHTML = state(cls, 'Running · ' + (n.status || 'starting'));
+      $('st-watch').innerHTML = state(cls, 'Running · ' + (n.status || 'starting'));
+      $('w-last').textContent = n.lastCheck ? 'last check ' + ago(n.lastCheck) : 'first check pending';
+      $('w-detail').innerHTML = (n.blocklist && n.blocklist.length)
+        ? 'Listed on ENS: ' + n.blocklist.map((d) => `<code>${esc(d)}</code>`).join(', ') + '. Open the look-alike: it is blocked.'
+        : 'Nothing listed yet. The watcher lists the look-alike on its next check; wait for it before opening.';
+    } catch { /* next tick */ }
+  }
+
+  function refresh() { refreshStatus(); refreshWatcher(); }
+  show(step);
+  loadConfig().then(() => { refresh(); refreshEns(); });
+  setInterval(refresh, 2500);
+  setInterval(refreshEns, 20000);
+  setInterval(() => { if (!cfg) loadConfig(); }, 3000);
+})();
+</script>
+</body>
+</html>
