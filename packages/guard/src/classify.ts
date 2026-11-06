@@ -6,10 +6,12 @@
  *   unknown   an ordinary call to a contract no followed protocol lists (no prompt by itself)
  *   risky     needs a look: standing permission to a known contract, ETH to a stranger, unreadable request
  *   dangerous the drainer patterns: approvals/permits/transfers to strangers, eth_sign, raw-hash signatures
+ * Approvals and permits to a well-known contract (the built-in table in @copeybara/core: Uniswap's Permit2, Universal
+ * Router, routers and position managers) are 'known', so the normal Uniswap flow is not flagged as a drainer.
  * Plain-language reasons only; the extension's trusted UI shows them.
  */
 import { getAddress, hexToBytes, isAddress, type Hex } from 'viem';
-import type { Address, Manifest, TxRequest } from '@copeybara/core';
+import { KNOWN_CONTRACTS, knownContract, type Address, type KnownContract, type KnownTable, type Manifest, type TxRequest } from '@copeybara/core';
 import { decodeCall, type Decoded } from './decode';
 import { guard } from './guard';
 
@@ -24,6 +26,8 @@ export interface ClassifyCtx {
   account: Address | null;
   chainId: number;
   manifests: FollowedManifest[];
+  /** Well-known contracts. Defaults to the built-in table (KNOWN_CONTRACTS); pass `{ v: 1, protocols: {} }` to turn it off. */
+  known?: KnownTable;
 }
 export interface Classification {
   verdict: RequestVerdict;
@@ -52,6 +56,20 @@ const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
 const UNLIMITED = 2n ** 255n;
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+const wellKnown = (addr: string | undefined, chainId: number, ctx: ClassifyCtx): KnownContract | undefined =>
+  addr ? knownContract(addr, chainId, ctx.known ?? KNOWN_CONTRACTS) : undefined;
+const isPermit2At = (addr: unknown, chainId: number, ctx: ClassifyCtx) => typeof addr === 'string' && wellKnown(addr, chainId, ctx)?.role === 'permit2';
+const NOT_UNISWAP = 'the most common way Uniswap users are drained';
+
+/** Plain reason for a permission to a well-known contract. */
+function knownSpenderReason(k: KnownContract, viaPermit2: boolean, scope: string): string {
+  if (k.role === 'permit2') {
+    return `Standard ${k.protocol} flow: lets Permit2, ${k.protocol}'s shared approval contract, manage this token. An app still needs a separate Permit2 signature from you before it can spend it.`;
+  }
+  if (viaPermit2) return `Standard ${k.protocol} flow: lets ${k.protocol}'s ${k.name} spend this token through Permit2.`;
+  return `Standard ${k.protocol} flow: lets ${k.protocol}'s ${k.name} spend ${scope}. It only takes tokens from the wallet that calls it.`;
+}
 
 /** Which followed protocol publishes `addr` on `chainId` (any role: exit target, state view, LP token…). */
 export function protocolOf(addr: string, chainId: number, ctx: ClassifyCtx): string | undefined {
@@ -122,14 +140,21 @@ function classifyCall(method: string, call: Record<string, unknown>, chainId: nu
     if (!APPROVALS.has(s.name) && !/transfer/i.test(s.name)) continue;
     const who = s.counterparty;
     const whoProto = who ? protocolOf(who, chainId, ctx) : undefined;
+    // A Permit2 approve / permit only means something when it is sent to the real Permit2.
+    const viaPermit2 = s.name.startsWith('Permit2');
+    const whoKnown = viaPermit2 && !isPermit2At(target, chainId, ctx) ? undefined : wellKnown(who, chainId, ctx);
     const whoText = who ? short(who) : 'an address that could not be read';
     if (APPROVALS.has(s.name)) {
       let amount: bigint | null = null;
       if (s.name === 'approve' || s.name === 'increaseAllowance') amount = toBig(`0x${(data as string).slice(74, 138)}`);
       const all = s.name === 'setApprovalForAll' || amount === null || amount >= UNLIMITED;
       const scope = all ? 'ALL of this token in your wallet, now and later' : 'part of this token in your wallet';
-      if (whoProto) {
+      if (whoKnown) {
+        out.push({ verdict: 'known', method, protocol: whoKnown.protocol, counterparty: who, reasons: [knownSpenderReason(whoKnown, viaPermit2, scope)] });
+      } else if (whoProto) {
         out.push({ verdict: 'risky', method, protocol: whoProto, counterparty: who, reasons: [`This lets ${whoText} (published by ${whoProto}) spend ${scope}. Exits never need this.`] });
+      } else if (viaPermit2) {
+        out.push({ verdict: 'dangerous', method, counterparty: who, reasons: [`A Permit2 permission for a spender that is not Uniswap: ${NOT_UNISWAP}. It lets ${whoText} spend ${scope}.`] });
       } else {
         out.push({ verdict: 'dangerous', method, counterparty: who, reasons: [`This lets ${whoText} spend ${scope}. No protocol you follow publishes that address: this is how wallet drainers work.`] });
       }
@@ -145,6 +170,8 @@ function classifyCall(method: string, call: Record<string, unknown>, chainId: nu
 
   // 3. Known contract, ETH to strangers, everything else.
   if (protocol) return { verdict: 'known', method, protocol, reasons: [`A call to ${short(target)}, a contract published by ${protocol}.`] };
+  const k = wellKnown(target, chainId, ctx);
+  if (k) return { verdict: 'known', method, protocol: k.protocol, reasons: [`A call to ${k.protocol}'s ${k.name} (${short(target)}).`] };
   if (value > 0n) {
     return { verdict: 'risky', method, counterparty: target, reasons: [`This sends ETH to ${short(target)}, an address no protocol you follow publishes.`] };
   }
@@ -195,7 +222,16 @@ function classifyTyped(method: string, params: unknown[], chainId: number, ctx: 
   if (isPermit2 || pt === 'Permit' || spender) {
     const what = isPermit2 ? 'a Permit2 signature' : 'a permit signature';
     if (spender) {
+      // The signature is valid on the chain in its domain, so the spender is looked up there.
+      const dc = toBig(dom.chainId);
+      const sigChain = dc && dc > 0n && dc <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(dc) : chainId;
+      const realPermit2 = isPermit2At(dom.verifyingContract, sigChain, ctx);
+      const k = isPermit2 && !realPermit2 ? undefined : wellKnown(spender, sigChain, ctx);
+      if (k) return { verdict: 'known', method, protocol: k.protocol, counterparty: spender, reasons: [knownSpenderReason(k, isPermit2, 'this token')] };
       const p = protocolOf(spender, chainId, ctx);
+      if (isPermit2 && !p) {
+        return { verdict: 'dangerous', method, counterparty: spender, reasons: [`A Permit2 signature for a spender that is not Uniswap: ${NOT_UNISWAP}. It lets ${short(spender)} spend your tokens without another transaction.`] };
+      }
       if (p) return { verdict: 'risky', method, protocol: p, counterparty: spender, reasons: [`This is ${what} that lets ${short(spender)} (published by ${p}) spend your tokens without another transaction.`] };
       return { verdict: 'dangerous', method, counterparty: spender, reasons: [`This is ${what} that lets ${short(spender)} spend your tokens without another transaction. No protocol you follow publishes that address.`] };
     }

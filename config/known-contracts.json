@@ -1,0 +1,35 @@
+{
+  "v": 1,
+  "updated": "2026-11-07",
+  "sources": [
+    "https://developers.uniswap.org/docs/protocols/v4/deployments",
+    "https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments"
+  ],
+  "checked": "cast code returned bytecode for every address on mainnet (ethereum-rpc.publicnode.com) and Sepolia (ethereum-sepolia-rpc.publicnode.com), 2026-11-07",
+  "protocols": {
+    "Uniswap": {
+      "1": {
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+        "universalRouter211": "0x4c82d1fbfe28c977cbb58d8c7ff8fcf9f70a2cca",
+        "universalRouter212": "0x23617e59A5925b2A4Bf75d73ff6711cD0b29De85",
+        "v3PositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+        "swapRouter02": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+        "v4PoolManager": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "v4PositionManager": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+        "v4StateView": "0x7ffe42c4a5deea5b0fec41c94c136cf115597227"
+      },
+      "11155111": {
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+        "universalRouter211": "0x7dfd4f31be6814d2906bde155c3e1b146eac1468",
+        "universalRouter212": "0x7E4f6c5e954Da5c61B3423D81E2277431Ac043f3",
+        "v3PositionManager": "0x1238536071E1c677A632429e3655c799b22cDA52",
+        "swapRouter02": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+        "v4PoolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+        "v4PositionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
+        "v4StateView": "0xe1dd9c3fa50edb962e442f60dfbc432e24537e4c"
+      }
+    }
+  }
+}

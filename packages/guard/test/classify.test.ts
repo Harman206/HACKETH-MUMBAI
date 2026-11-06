@@ -4,7 +4,7 @@ import { encodeFunctionData, parseAbi, toHex, type Hex } from 'viem';
 import type { Address } from '@copeybara/core';
 import { classifyRequest, worstVerdict, type ClassifyCtx } from '../src/classify';
 import { ATTACKER, USER, approveData, collectData, decreaseData, multicallData } from './helpers';
-import { MANIFEST, NPM_SEPOLIA, POSM_SEPOLIA } from './manifest-fixture';
+import { AAVE_POOL, MANIFEST, NPM_SEPOLIA, POSM_SEPOLIA } from './manifest-fixture';
 
 const ctx: ClassifyCtx = { account: USER, chainId: 11155111, manifests: [{ name: 'demoswap-blackout.eth', manifest: MANIFEST }] };
 const TOKEN: Address = '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8';
@@ -40,7 +40,7 @@ describe('eth_sendTransaction', () => {
     expect(r.counterparty).toBe(ATTACKER);
   });
   test('approve to a followed protocol contract → risky (known spender, still a standing permission)', () => {
-    const r = classifyRequest(send(TOKEN, approveData(NPM_SEPOLIA)), ctx);
+    const r = classifyRequest(send(TOKEN, approveData(AAVE_POOL)), { ...ctx, chainId: 1 });
     expect(r.verdict).toBe('risky');
     expect(r.reasons.join(' ')).toMatch(/demoswap-blackout\.eth/);
   });
@@ -94,7 +94,11 @@ describe('signatures', () => {
     expect(classifyRequest(typed(permit(ATTACKER), false), ctx).verdict).toBe('dangerous');
   });
   test('EIP-2612 permit to a followed protocol contract → risky', () => {
-    expect(classifyRequest(typed(permit(POSM_SEPOLIA)), ctx).verdict).toBe('risky');
+    expect(classifyRequest(typed(permit(AAVE_POOL)), { ...ctx, chainId: 1 }).verdict).toBe('risky');
+  });
+  test('approve / permit to a well-known Uniswap contract → known, even when a followed manifest lists it too', () => {
+    expect(classifyRequest(send(TOKEN, approveData(NPM_SEPOLIA)), ctx).verdict).toBe('known');
+    expect(classifyRequest(typed(permit(POSM_SEPOLIA)), ctx).verdict).toBe('known');
   });
   test('Permit2 PermitSingle / PermitBatch / PermitTransferFrom to a stranger → dangerous', () => {
     const domain = { name: 'Permit2', chainId: 11155111, verifyingContract: PERMIT2 };

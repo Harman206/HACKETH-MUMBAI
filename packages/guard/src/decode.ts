@@ -158,6 +158,15 @@ export function decodeCall(data: Hex, depth = 0): Decoded {
       } catch {
         /* name alone is enough to reject */
       }
+    } else if (selector === SEL.permit2PermitSingle || selector === SEL.permit2PermitBatch) {
+      // permit(owner, (details, spender, sigDeadline), signature): the spender sits inside the struct.
+      try {
+        const { args } = decodeWith(parseAbi([fragment]), data);
+        const s = args[1] as { spender?: Address } | readonly unknown[];
+        counterparty = getAddress((Array.isArray(s) ? s[1] : (s as { spender?: Address }).spender) as Address);
+      } catch {
+        /* name alone is enough to reject */
+      }
     }
     return { ...base, name, counterparty };
   }

@@ -6,3 +6,4 @@ export * from './manifest';
 export * from './release';
 export * from './cid';
 export * from './records';
+export * from './known';
