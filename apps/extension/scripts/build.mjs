@@ -9,7 +9,7 @@
 import { build } from 'vite';
 import preact from '@preact/preset-vite';
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync, crc32 } from 'node:zlib';
@@ -73,6 +73,16 @@ cpSync(join(ROOT, 'public'), join(STAGE, 'icons'), { recursive: true });
 // licences of the bundled UI fonts (SIL OFL 1.1 asks for them to travel with the fonts)
 mkdirSync(join(STAGE, 'fonts'), { recursive: true });
 for (const f of readdirSync(join(ROOT, 'src/pages/fonts')).filter((x) => x.startsWith('OFL-'))) cpSync(join(ROOT, 'src/pages/fonts', f), join(STAGE, 'fonts', f));
+
+// Optional: the user's own celebration song (src/pages/audio/, gitignored). Releases are built from a clean checkout,
+// so they never contain it; a local build with it shows "Local build with your own audio" in the build proof.
+const AUDIO_SRC = join(ROOT, 'src/pages/audio');
+for (const f of ['copey-song.m4a', 'copey-song.mp3']) {
+  if (!existsSync(join(AUDIO_SRC, f))) continue;
+  mkdirSync(join(STAGE, 'audio'), { recursive: true });
+  cpSync(join(AUDIO_SRC, f), join(STAGE, 'audio', f));
+  console.log(`including your own audio/${f} (local build only: not for release)`);
+}
 
 const icons = Object.fromEntries([16, 32, 48, 128].map((s) => [String(s), `icons/icon-${s}.png`]));
 const contentScripts = [

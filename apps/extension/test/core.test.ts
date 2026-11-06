@@ -84,6 +84,7 @@ async function setup(over: Partial<CopeybaraRecords> = {}) {
     defaultKitUrl: 'https://kit.example/copeybara-kit.html',
     version: 'test',
     confirmTimeoutMs: 50,
+    celebrateMs: 30,
   });
   const page = { id: 'abc', url: `${EXT}src/pages/dashboard.html` };
   await core.handleMessage({ t: 'settings', patch: { account: USER } }, page);
@@ -255,15 +256,29 @@ describe('wallet requests', () => {
     expect(await p).toMatchObject({ decision: 'allow' });
     expect(core.publicState().stats.requestsAllowedAfterWarning).toBe(1);
   });
-  test('Cancel: the worker closes the confirm window itself (window.close() in the page is only a fallback)', async () => {
+  test('Cancel: the page is answered at once; the worker closes the confirm window itself after the "Saved by Copey" moment', async () => {
     const { core, calls, page } = await setup();
     const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(15, 'https://x.example/'));
     await new Promise((r) => setTimeout(r, 5));
     const id = new URL(calls.windows[0]!).searchParams.get('id')!;
     await core.handleMessage({ t: 'confirmDecision', id, allow: false }, page);
     expect(await p).toMatchObject({ decision: 'block' });
+    expect(calls.removed).toEqual([]); // the celebration is showing
+    await new Promise((r) => setTimeout(r, 40));
+    expect(calls.removed).toEqual([1]); // closed by the worker even if the page never says so
+  });
+  test('Done on the celebration (closeConfirm) closes the window at once, only once', async () => {
+    const { core, calls, page } = await setup();
+    const p = core.handleMessage({ t: 'request', id: '1', method: 'eth_sign', params: [USER, '0x' + 'aa'.repeat(32)], chainId: null }, tab(18, 'https://x.example/'));
     await new Promise((r) => setTimeout(r, 5));
+    const id = new URL(calls.windows[0]!).searchParams.get('id')!;
+    await core.handleMessage({ t: 'confirmDecision', id, allow: false }, page);
+    await p;
+    expect(await core.handleMessage({ t: 'closeConfirm', id }, page)).toEqual({ ok: true });
     expect(calls.removed).toEqual([1]);
+    await new Promise((r) => setTimeout(r, 40));
+    expect(calls.removed).toEqual([1]);
+    expect(await core.handleMessage({ t: 'closeConfirm', id }, tab(18, 'https://x.example/'))).toEqual({ error: 'bad message' }); // pages only
   });
   test('Continue: the window is closed at once', async () => {
     const { core, calls, page } = await setup();

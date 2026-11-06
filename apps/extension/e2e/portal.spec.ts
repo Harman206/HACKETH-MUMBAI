@@ -84,6 +84,11 @@ test('demo portal: scenarios 1, 2, 4, 5, 6 open the right targets and the extens
   await hijacked.waitForURL(/warning\.html\?reason=mismatch/, { timeout: 30_000 });
   await expect(hijacked.locator('[data-reason="mismatch"]')).toBeVisible();
   await expect(hijacked.locator('[data-unknown]')).toContainText('/inject.js');
+  await expect(hijacked.locator('[data-celebration-reason]')).toContainText('hijacked');
+  await expect(hijacked.locator('#celebrate-play')).toBeVisible(); // no gesture yet: the song waits for a tap
+  await hijacked.waitForTimeout(900);
+  await shot(hijacked, 'saved-warning');
+  await expect(hijacked.locator('[data-celebration]')).toHaveCount(0, { timeout: 10_000 }); // dismisses itself
   await expect(hijacked.getByRole('button', { name: /continue/i })).toHaveCount(0);
   await hijacked.close();
 
@@ -126,6 +131,13 @@ test('a look-alike scam page (demoswap-airdrop.localhost): the connect attempt o
   await shot(win, 'confirm-lookalike');
   await win.locator('#cancel').click();
   await expect(scam.locator('#result')).toHaveText('error 4001');
+  // "Saved by Copey!", then the window goes away by itself
+  await expect(win.locator('[data-celebration]')).toBeVisible();
+  await expect(win.getByRole('heading', { name: 'Saved by Copey!' })).toBeVisible();
+  await expect(win.locator('[data-celebration-reason]')).toHaveText(`You didn’t connect your wallet to a fake ${w.ensName} site.`);
+  await expect(win.locator('#celebrate-capybara')).toHaveText('Play the Capybara song ↗');
+  await win.waitForTimeout(900);
+  await shot(win, 'saved-confirm');
   await expect.poll(() => win.isClosed(), { timeout: 15_000 }).toBe(true); // the worker closes it (real Chrome ignored window.close())
   const calls = await scam.evaluate(() => (window as any).__walletCalls as string[]);
   expect(calls.filter((m) => m === 'eth_requestAccounts' || m === 'eth_sendTransaction')).toEqual([]);

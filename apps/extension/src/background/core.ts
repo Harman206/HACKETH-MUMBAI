@@ -7,7 +7,7 @@ import { hostMatches, type Address, type ReleaseRecord } from '@copeybara/core';
 import { normaliseName, type CopeybaraRecords } from '@copeybara/ens';
 import { classifyRequest, type Classification } from '@copeybara/guard';
 import { checkScripts, sha256Hex, type CodeItem } from '@copeybara/sitecheck';
-import { BUILD_FILES, parseBuildFiles, sha256Bytes, treeHash, type BuildProof } from '../shared/buildproof';
+import { BUILD_FILES, parseBuildFiles, sha256Bytes, treeHash, treeWithoutAudio, type BuildProof } from '../shared/buildproof';
 import { classifySender, parseContentMsg, parsePageMsg, type SenderLike } from '../shared/messages';
 import {
   emptyStats,
@@ -59,6 +59,8 @@ export interface CoreDeps {
   version: string;
   /** how long a page waits for the user in the confirm window */
   confirmTimeoutMs?: number;
+  /** after Cancel, the confirm window shows "Saved by Copey!"; the worker closes it after this long at the latest */
+  celebrateMs?: number;
 }
 
 export const FRESH_MS = 60_000;
@@ -144,6 +146,8 @@ export function createCore(deps: CoreDeps) {
   /** "tabId|origin" pairs where the user chose to connect anyway on a look-alike: not asked again for that page */
   const connectOk = new Set<string>();
   const confirms = new Map<string, { pending: PendingConfirm; resolve: (allow: boolean) => void; windowId?: number }>();
+  /** confirm windows showing the celebration after Cancel: closed by the page's Done, or by a timer */
+  const closing = new Map<string, () => void>();
   let loaded: Promise<void> | null = null;
   let seq = 0;
 
@@ -382,6 +386,7 @@ export function createCore(deps: CoreDeps) {
       entry.done = true;
       if (entry.windowId !== undefined) void chrome.windows.remove(entry.windowId).catch(() => {});
     };
+    let timedOut = false;
     const allow = await new Promise<boolean>((resolve) => {
       entry.resolve = resolve;
       confirms.set(id, entry);
@@ -392,10 +397,22 @@ export function createCore(deps: CoreDeps) {
           if (entry.done) close(); // decided (or timed out) before the window existed
         })
         .catch(() => resolve(false));
-      setTimeout(() => resolve(false), deps.confirmTimeoutMs ?? 180_000);
+      setTimeout(() => {
+        timedOut = true;
+        resolve(false);
+      }, deps.confirmTimeoutMs ?? 180_000);
     });
     confirms.delete(id);
-    close();
+    if (allow || timedOut) close();
+    else {
+      // Cancelled: the page is answered now; the window stays a moment for "Saved by Copey!", then closes.
+      const timer = setTimeout(() => closing.get(id)?.(), deps.celebrateMs ?? 12_000);
+      closing.set(id, () => {
+        clearTimeout(timer);
+        closing.delete(id);
+        close();
+      });
+    }
     if (allow && CONNECT_METHODS.has(msg.method)) connectOk.add(connectKey);
     if (allow) stats.requestsAllowedAfterWarning++;
     else stats.requestsBlocked++;
@@ -448,10 +465,11 @@ export function createCore(deps: CoreDeps) {
       }
     }
     const tree = await treeHash(entries);
+    const noAudio = await treeWithoutAudio(entries);
     const recs = protocols.flatMap((p) => (p.snapshot?.extension ? [{ name: p.name, rel: p.snapshot.extension }] : []));
-    const pick = recs.find((r) => r.rel.tree === tree) ?? recs.find((r) => r.rel.tree) ?? recs[0];
+    const pick = recs.find((r) => r.rel.tree === tree) ?? (noAudio ? recs.find((r) => r.rel.tree === noAudio) : undefined) ?? recs.find((r) => r.rel.tree) ?? recs[0];
     const ens = pick ? { name: pick.name, version: pick.rel.version, tree: pick.rel.tree ?? null, zip: pick.rel.sha256 } : null;
-    const verdict = !ens ? 'no-record' : !ens.tree ? 'old-record' : ens.tree === tree ? 'match' : 'mismatch';
+    const verdict = !ens ? 'no-record' : !ens.tree ? 'old-record' : ens.tree === tree ? 'match' : noAudio && ens.tree === noAudio ? 'local-audio' : 'mismatch';
     return { version: chrome.runtime.getManifest?.().version ?? deps.version, treeHash: tree, files: entries.length, ens, verdict };
   }
 
@@ -494,6 +512,11 @@ export function createCore(deps: CoreDeps) {
           return publicState();
         case 'getConfirm':
           return confirms.get(m.id)?.pending ?? null;
+        case 'closeConfirm': {
+          const f = closing.get(m.id);
+          f?.();
+          return { ok: !!f };
+        }
         case 'confirmDecision': {
           const c = confirms.get(m.id);
           c?.resolve(m.allow);

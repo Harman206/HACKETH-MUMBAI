@@ -4,6 +4,8 @@ import './ui.css';
 import { send } from './api';
 import { StatusMark, TopBar } from './components';
 import { Copey, Icon } from './icons';
+import { Celebration } from './celebrate';
+import { blockedReason } from './saved';
 
 const q = new URLSearchParams(location.search);
 const reason = q.get('reason') as 'compromised' | 'blocklist' | 'mismatch' | null;
@@ -30,6 +32,7 @@ const TEXT = {
 
 function Warning() {
   const [msg, setMsg] = useState<string | null>(null);
+  const [party, setParty] = useState(true); // "Saved by Copey!" once, on arrival (no gesture yet: the song needs a tap)
   const t = TEXT[reason ?? 'mismatch'] ?? TEXT.mismatch;
   return (
     <div class="wrap warn-wrap" data-reason={reason}>
@@ -94,6 +97,7 @@ function Warning() {
         )}
         <p class="muted policy"><Icon name="lock" size={15} /><span>There is no “continue anyway” button on purpose: nobody, including this page, can override the check.</span></p>
       </div>
+      {party && <Celebration reason={blockedReason(reason, name)} autoplay={false} onDone={() => setParty(false)} />}
     </div>
   );
 }

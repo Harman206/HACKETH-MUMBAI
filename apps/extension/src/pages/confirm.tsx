@@ -5,6 +5,8 @@ import type { PendingConfirm } from '../shared/types';
 import { send } from './api';
 import { Chip, TopBar } from './components';
 import { Copey, Icon } from './icons';
+import { Celebration } from './celebrate';
+import { savedReason } from './saved';
 
 const id = new URLSearchParams(location.search).get('id') ?? '';
 
@@ -14,9 +16,15 @@ function Confirm() {
   useEffect(() => {
     void send<PendingConfirm | null>({ t: 'getConfirm', id }).then(setP);
   }, []);
+  const [saved, setSaved] = useState(false);
   const decide = async (allow: boolean) => {
-    // the worker closes this window when the decision arrives; window.close() is the fallback
+    // The worker closes this window when the decision arrives (after "Saved by Copey!" on Cancel); window.close() is the fallback.
     await send({ t: 'confirmDecision', id, allow }).catch(() => undefined);
+    if (allow) window.close();
+    else setSaved(true);
+  };
+  const closeNow = async () => {
+    await send({ t: 'closeConfirm', id }).catch(() => undefined);
     window.close();
   };
   if (p === undefined) return <div class="wrap confirm muted" style="padding-top:20px">Loading…</div>;
@@ -72,6 +80,7 @@ function Confirm() {
           {connect ? 'Connect anyway' : 'Continue to my wallet anyway'}
         </button>
       </div>
+      {saved && <Celebration reason={savedReason(c)} autoplay onDone={closeNow} />}
     </div>
   );
 }

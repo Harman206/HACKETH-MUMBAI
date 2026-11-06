@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import type { CopeybaraRecords } from '@copeybara/ens';
 import type { ReleaseRecord } from '@copeybara/core';
 import { createCore, type ChromeLike } from '../src/background/core';
-import { BUILD_FILES, parseBuildFiles, treeHash, treeLines } from '../src/shared/buildproof';
+import { BUILD_FILES, parseBuildFiles, treeHash, treeLines, treeWithoutAudio } from '../src/shared/buildproof';
 import { parsePageMsg } from '../src/shared/messages';
 
 const EXT = 'chrome-extension://abc/';
@@ -155,6 +155,29 @@ describe("worker: {t:'buildProof'}", () => {
     });
     expect(await core.handleMessage({ t: 'buildProof' }, page)).toMatchObject({ ens: { name: NAME }, verdict: 'match' });
   });
+  test('a local build with the user\'s own song under audio/ → local-audio (grey), when everything else matches ENS', async () => {
+    const SONG = 'not really an m4a';
+    const withAudio: Record<string, string> = { ...FILES, 'audio/copey-song.m4a': SONG };
+    withAudio[BUILD_FILES] = JSON.stringify({ v: 1, files: [...Object.keys(FILES), 'audio/copey-song.m4a'].sort() }) + '\n';
+    const { core, page } = await setup({ extension: { [NAME]: { sha256: ZIP, version: 4, tree: goodTree } }, files: withAudio });
+    const r = (await core.handleMessage({ t: 'buildProof' }, page)) as { verdict: string; treeHash: string; files: number };
+    expect(r.verdict).toBe('local-audio');
+    expect(r.treeHash).not.toBe(goodTree);
+    expect(r.files).toBe(5);
+  });
+  test('audio/ plus any other changed file → still mismatch', async () => {
+    const withAudio: Record<string, string> = { ...FILES, 'background.js': 'evil()', 'audio/copey-song.mp3': 'x' };
+    withAudio[BUILD_FILES] = JSON.stringify({ v: 1, files: [...Object.keys(FILES), 'audio/copey-song.mp3'].sort() }) + '\n';
+    const { core, page } = await setup({ extension: { [NAME]: { sha256: ZIP, version: 4, tree: goodTree } }, files: withAudio });
+    expect(((await core.handleMessage({ t: 'buildProof' }, page)) as { verdict: string }).verdict).toBe('mismatch');
+  });
+  test('treeWithoutAudio: null without audio files; otherwise the tree the same build has without them', async () => {
+    const entries = Object.keys(FILES).map((path) => ({ path, sha256: hex(FILES[path]!) }));
+    expect(await treeWithoutAudio(entries)).toBeNull();
+    const list = JSON.stringify({ v: 1, files: [...Object.keys(FILES), 'audio/a.m4a'].sort() }) + '\n';
+    const more = [...entries.filter((e) => e.path !== BUILD_FILES), { path: BUILD_FILES, sha256: hex(list) }, { path: 'audio/a.m4a', sha256: hex('a') }];
+    expect(await treeWithoutAudio(more)).toBe(goodTree);
+  });
   test('a listed file that cannot be read → error, never a verdict', async () => {
     const { ['background.js']: _, ...missing } = FILES;
     const { core, page } = await setup({ extension: { [NAME]: { sha256: ZIP, version: 4, tree: goodTree } }, files: missing });
@@ -174,10 +197,14 @@ describe('pages/build-proof formatBuildProof', async () => {
     ['mismatch', { ...base, ens: { name: NAME, version: 4, tree: 'ee'.repeat(32), zip: ZIP }, verdict: 'mismatch' as const }, 'bad'],
     ['old-record', { ...base, ens: { name: NAME, version: 2, tree: null, zip: ZIP }, verdict: 'old-record' as const }, 'grey'],
     ['no-record', { ...base, ens: null, verdict: 'no-record' as const }, 'grey'],
+    ['local-audio', { ...base, ens: { name: NAME, version: 4, tree: 'ee'.repeat(32), zip: ZIP }, verdict: 'local-audio' as const }, 'grey'],
   ])('%s', (_, r, tone) => {
     const v = formatBuildProof(r);
     expect(v.tone).toBe(tone);
     expect(v.rows.find((x) => x.label === 'Tree hash')?.value).toBe(goodTree);
+  });
+  test('local-audio says so', () => {
+    expect(formatBuildProof({ ...base, ens: { name: NAME, version: 4, tree: 'ee'.repeat(32), zip: ZIP }, verdict: 'local-audio' }).title).toBe('Local build with your own audio');
   });
   test('error', () => {
     expect(formatBuildProof({ error: 'boom' })).toMatchObject({ tone: 'warn', detail: 'boom' });
