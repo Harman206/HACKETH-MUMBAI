@@ -25,6 +25,8 @@ const plan = (opts: { recipient?: Address; expected?: Address[] } = {}): ExitPla
 });
 
 interface StubOpts {
+  afterReadFails?: number;
+  receiptDisagree?: boolean;
   balances?: { before: Record<Address, bigint>; after: Record<Address, bigint> };
   receipt?: Partial<Receipt> | null;
   simRevert?: boolean;
@@ -43,12 +45,15 @@ function stub(o: StubOpts = {}) {
         return '0x';
       }
       decodeFunctionData({ abi: erc20Abi, data });
+      if (block >= 101n && o.afterReadFails && o.afterReadFails-- > 0) throw new QuorumError('TOO_FEW', 'Only 1 of 3 RPC paths answered eth_call; need 2.');
       const map = block >= 101n ? balances.after : balances.before;
       return encodeFunctionResult({ abi: erc20Abi, functionName: 'balanceOf', result: map[to] ?? 0n });
     },
     read: undefined as never,
-    getReceipt: async (hash: Hex) =>
-      !sent ? null : o.receipt === null ? null : { status: 'success', blockNumber: 101n, blockHash: '0xbb', gasUsed: 90_000n, transactionHash: hash, ...o.receipt },
+    getReceipt: async (hash: Hex) => {
+      if (sent && o.receiptDisagree) throw new QuorumError('DISAGREE', 'RPC paths disagree on the transaction receipt.');
+      return !sent ? null : o.receipt === null ? null : { status: 'success', blockNumber: 101n, blockHash: '0xbb', gasUsed: 90_000n, transactionHash: hash, ...o.receipt };
+    },
   };
   // read() via call() to share the balance map
   (q as unknown as Quorum).read = (async (p: Parameters<Quorum['read']>[0], b: bigint) => {
@@ -130,6 +135,28 @@ describe('runExit', () => {
     const r = await runExit(plan(), sender, ctx);
     expect(r.status).toBe('not-recovered');
     expect(r.reasons[0]).toMatch(/rejected the transaction in your wallet/);
+  });
+});
+
+describe('review I3: errors after sending keep the hash and say not-recovered', () => {
+  test('after-balance read flakes once → retried → recovered', async () => {
+    const { sender, ctx } = stub({ afterReadFails: 1 });
+    const r = await runExit(plan(), sender, ctx);
+    expect(r.status).toBe('recovered');
+  });
+  test('after-balance read keeps failing → not-recovered with the tx hash and the reason', async () => {
+    const { sender, ctx } = stub({ afterReadFails: 99 });
+    const r = await runExit(plan(), sender, ctx);
+    expect(r.status).toBe('not-recovered');
+    expect(r.txHashes).toEqual(['0xaa']);
+    expect(r.reasons.join(' ')).toMatch(/could not confirm balances.*RPC paths answered/i);
+  });
+  test('receipt disagreement → not-recovered with the tx hash (never "blocked")', async () => {
+    const { sender, ctx } = stub({ receiptDisagree: true });
+    const r = await runExit(plan(), sender, ctx);
+    expect(r.status).toBe('not-recovered');
+    expect(r.txHashes).toEqual(['0xaa']);
+    expect(r.reasons.join(' ')).toMatch(/disagree/);
   });
 });
 

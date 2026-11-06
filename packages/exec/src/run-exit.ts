@@ -22,7 +22,7 @@ export interface ExitResult {
   confirmedAt?: number;
 }
 
-export type RunCtx = Ctx & { pollMs?: number; timeoutMs?: number; now?: () => number };
+export type RunCtx = Ctx & { pollMs?: number; timeoutMs?: number; now?: () => number; balanceRetries?: number };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -83,7 +83,7 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
   // 3. Balances before
   res.before = await balances(ctx.q, tokens, ctx.account, block);
 
-  // 4–5. Send each call, wait for a quorum-confirmed receipt
+  // 4–5. Send each call, wait for a quorum-confirmed receipt. From here on, a sent tx is never reported as "blocked".
   let last: Receipt | null = null;
   for (const c of plan.calls) {
     let hash: Hex;
@@ -93,7 +93,12 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
       return { ...res, status: 'not-recovered', reasons: [walletMessage(e)] };
     }
     res.txHashes.push(hash);
-    const r = await waitReceipt(ctx.q, hash, ctx.pollMs ?? 2000, ctx.timeoutMs ?? 120_000, now);
+    let r: Receipt | null;
+    try {
+      r = await waitReceipt(ctx.q, hash, ctx.pollMs ?? 2000, ctx.timeoutMs ?? 120_000, now);
+    } catch (e) {
+      return { ...res, status: 'not-recovered', reasons: [`${(e as Error).message} Check ${hash} in your wallet or an explorer.`] };
+    }
     if (!r) return { ...res, status: 'not-recovered', reasons: [`no confirmed receipt for ${hash} yet; check it in your wallet before retrying`] };
     res.gasUsed += r.gasUsed;
     if (r.status !== 'success') return { ...res, status: 'not-recovered', reasons: ['transaction reverted'] };
@@ -101,8 +106,19 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
   }
   res.confirmedAt = now();
 
-  // 6–7. Balances after, at the receipt block
-  res.after = await balances(ctx.q, tokens, ctx.account, last!.blockNumber);
+  // 6–7. Balances after, at the receipt block. Lagging paths may not have that block yet: retry a few times.
+  const attempts = ctx.balanceRetries ?? 5;
+  for (let i = 0; ; i++) {
+    try {
+      res.after = await balances(ctx.q, tokens, ctx.account, last!.blockNumber);
+      break;
+    } catch (e) {
+      if (i + 1 >= attempts) {
+        return { ...res, status: 'not-recovered', reasons: [`The transaction confirmed, but the kit could not confirm balances: ${(e as Error).message}`] };
+      }
+      await sleep(ctx.pollMs ?? 2000);
+    }
+  }
   const missing = tokens.filter((t) => !(res.after[t]! > res.before[t]!));
   if (missing.length) {
     return { ...res, status: 'not-recovered', reasons: missing.map((t) => `no balance increase for ${t}`) };
