@@ -96,6 +96,7 @@ const signer = createServer((req, res) => {
   req.on('data', (c) => (body += c));
   req.on('end', async () => {
     const { id, method, params } = JSON.parse(body || '{}');
+    if (method !== 'eth_blockNumber' && method !== 'eth_call') log(`  wallet ← ${method} from ${req.headers.origin}`);
     try {
       const result = await rpcHandler(method, params ?? []);
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ jsonrpc: '2.0', id, result }));
@@ -106,26 +107,29 @@ const signer = createServer((req, res) => {
   });
 });
 await new Promise<void>((r) => signer.listen(signerPort, '127.0.0.1', r));
-await ctx.addInitScript((rpc: string) => {
-  let id = 1;
-  const provider = {
-    request: async ({ method, params }: { method: string; params?: unknown[] }) => {
-      const r = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: id++, method, params: params ?? [] }) });
-      const j = await r.json();
-      if (j.error) throw Object.assign(new Error(j.error.message), { code: j.error.code });
-      return j.result;
-    },
-  };
-  (window as unknown as { ethereum: unknown }).ethereum = provider;
-  window.addEventListener('eip6963:requestProvider', () =>
-    window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: { info: { name: 'Rehearsal Wallet', rdns: 'rehearsal.wallet', uuid: 'r', icon: 'data:,' }, provider } })),
-  );
-}, `http://127.0.0.1:${signerPort}`);
-await ctx.addInitScript(
-  (rpcProxy) => localStorage.setItem('blackout.settings.v1', JSON.stringify({ ensName: 'demoswap-blackout.eth', targetChainId: 11155111, userRpcs: { '11155111': [rpcProxy] }, slippageBps: 50, useDefaultRpcs: true, drillUrl: '' })),
-  `http://localhost:${ports.rpc}`,
-);
+// Injected as a string: tsx adds __name() helpers to functions, which do not exist inside the page.
+await ctx.addInitScript({
+  content: `(() => {
+    const rpc = ${JSON.stringify(`http://127.0.0.1:${signerPort}`)};
+    let id = 1;
+    const provider = {
+      request: async ({ method, params }) => {
+        const r = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: id++, method, params: params || [] }) });
+        const j = await r.json();
+        if (j.error) { const e = new Error(j.error.message); e.code = j.error.code; throw e; }
+        return j.result;
+      },
+    };
+    window.ethereum = provider;
+    window.addEventListener('eip6963:requestProvider', () =>
+      window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: { info: { name: 'Rehearsal Wallet', rdns: 'rehearsal.wallet', uuid: 'r', icon: 'data:,' }, provider } })));
+  })();`,
+});
+await ctx.addInitScript({
+  content: `localStorage.setItem('blackout.settings.v1', ${JSON.stringify(JSON.stringify({ ensName: 'demoswap-blackout.eth', targetChainId: 11155111, userRpcs: { '11155111': [`http://localhost:${ports.rpc}`] }, slippageBps: 50, useDefaultRpcs: true, drillUrl: '' }))});`,
+});
 
+ctx.on('page', (p) => p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') log(`  console[${new URL(p.url() || 'about:blank').host}] ${m.text().slice(0, 200)}`); }));
 const T = { timeout: 240_000 };
 try {
   const site = await ctx.newPage();
@@ -147,7 +151,9 @@ try {
   log('chapter 2: hijack + approve');
   await site.getByRole('button', { name: 'Hijack the domain' }).click();
   const [demo] = await Promise.all([ctx.waitForEvent('page'), site.getByRole('link', { name: /Open DemoSwap \(now fake\)/ }).click()]);
-  demo.on('console', (m) => log(`demoswap console: ${m.text()}`));
+  demo.on('response', (r) => { if (r.status() >= 400) log(`  demoswap ${r.status()} ${r.url()}`); });
+  await demo.waitForLoadState('load');
+  log(`  demoswap url=${demo.url()} ethereum=${await demo.evaluate(() => typeof (window as unknown as { ethereum?: unknown }).ethereum)} hijackReq=${await demo.evaluate(() => typeof (window as unknown as { __HIJACK_REQUEST__?: unknown }).__HIJACK_REQUEST__)} scripts=${await demo.evaluate(() => [...document.scripts].map((x) => x.src || 'inline').join(','))}`);
   await expect(demo.getByText('Approve to view your rewards')).toBeVisible(T);
   await demo.getByRole('button', { name: 'Connect wallet' }).click();
   log('clicked Connect on the hijacked DemoSwap');

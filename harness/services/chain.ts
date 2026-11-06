@@ -42,6 +42,11 @@ export function clients(rpcUrl: string, key: Hex) {
   };
 }
 
+/** What a victim still needs: 10,000 DUSD to lose, gas (0.003 ETH) to act, and one position to rescue. */
+export function fundingPlan(b: { dusd: bigint; positions: bigint; eth: bigint }) {
+  return { dusd: b.dusd < parseEther('10000'), eth: b.eth < parseEther('0.003'), mint: b.positions < 1n };
+}
+
 export function makePrepareVictim(o: { rpcUrl: string; deployerKey: Hex; dusd: Address; deth: Address }) {
   const { pub, wallet, account } = clients(o.rpcUrl, o.deployerKey);
   const [t0, t1] = o.dusd.toLowerCase() < o.deth.toLowerCase() ? [o.dusd, o.deth] : [o.deth, o.dusd];
@@ -52,7 +57,7 @@ export function makePrepareVictim(o: { rpcUrl: string; deployerKey: Hex; dusd: A
       pub.readContract({ address: NPM, abi: npmAbi, functionName: 'balanceOf', args: [victim] }),
       pub.getBalance({ address: victim }),
     ]);
-    if (dusdBal >= parseEther('10000') && npmBal >= 1n && ethBal >= parseEther('0.003')) return [];
+    const plan = fundingPlan({ dusd: dusdBal, positions: npmBal, eth: ethBal });
     const wait = async (h: Hex) => {
       const r = await pub.waitForTransactionReceipt({ hash: h });
       if (r.status === 'success') return h;
@@ -62,8 +67,9 @@ export function makePrepareVictim(o: { rpcUrl: string; deployerKey: Hex; dusd: A
       throw new Error(`prepare tx ${h} reverted: ${why} (gasUsed ${r.gasUsed} of limit ${t.gas}, block ${r.blockNumber})`);
     };
     const txs: Hex[] = [];
-    txs.push(await wait(await wallet.writeContract({ address: o.dusd, abi: parseAbi(['function transfer(address,uint256) returns (bool)']), functionName: 'transfer', args: [victim, parseEther('10000')], account, chain: wallet.chain })));
-    txs.push(await wait(await wallet.sendTransaction({ to: victim, value: parseEther('0.01'), account, chain: wallet.chain })));
+    if (plan.dusd) txs.push(await wait(await wallet.writeContract({ address: o.dusd, abi: parseAbi(['function transfer(address,uint256) returns (bool)']), functionName: 'transfer', args: [victim, parseEther('10000')], account, chain: wallet.chain })));
+    if (plan.eth) txs.push(await wait(await wallet.sendTransaction({ to: victim, value: parseEther('0.01'), account, chain: wallet.chain })));
+    if (!plan.mint) return txs;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const mintArgs = [{ token0: t0, token1: t1, fee: 3000, tickLower: -6000, tickUpper: 6000, amount0Desired: parseEther('1000'), amount1Desired: parseEther('1000'), amount0Min: 0n, amount1Min: 0n, recipient: victim, deadline }] as const;
     // Gas varies a lot (re-initialising ticks after LPs exit costs far more): estimate + 30 % headroom, never a fixed limit.
