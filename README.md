@@ -119,7 +119,7 @@ Trust boundaries:
 ### Uniswap v3 integration (for the Uniswap Foundation track)
 
 - Discovery: [`packages/adapters/src/uniswap-v3.ts#L34-L59`](packages/adapters/src/uniswap-v3.ts#L34-L59) calls `balanceOf`, then `tokenOfOwnerByIndex`, then `positions(id)`.
-- Exit: [`#L62-L98`](packages/adapters/src/uniswap-v3.ts#L62-L98) builds `multicall[decreaseLiquidity(min from simulation), collect(to user)]` in one transaction.
+- Exit: [`#L62-L102`](packages/adapters/src/uniswap-v3.ts#L62-L102) builds `multicall[decreaseLiquidity(min from simulation), collect(to user)]` in one transaction.
   - Positions with liquidity 0 that are still owed tokens get a `collect`-only exit ([`#L86`](packages/adapters/src/uniswap-v3.ts#L86)), because `decreaseLiquidity(0)` reverts.
   - Expected deltas list only tokens with a simulated amount > 0 ([`#L95`](packages/adapters/src/uniswap-v3.ts#L95)).
 - Live on Sepolia and replayed on mainnet forks.
@@ -142,9 +142,9 @@ Proven by a 26-case banned corpus (including the Curve 2022 victim's real callda
 
 | | How BLACKOUT meets it |
 |---|---|
-| **C**ensorship resistance (lead) | The exit needs no BLACKOUT server and no protocol server. The judge kills the website, the primary RPC and DNS live, and the exit still lands. Broadcast goes through the wallet's own RPC, which is a disclosed trusted dependency. |
-| **O**pen source | MIT. Builds from this repo. Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
-| **P**rivacy | No server and no analytics. The kit contacts only the RPC endpoints you configure plus the bundled public ones (Playwright-verified: 0 third-party requests). RPC providers see reads for your address. Anon-RPC: see [docs/crops.md](docs/crops.md). |
+| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead or lying RPC changes nothing;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works;<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no BLACKOUT server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
+| **O**pen source | MIT. Anyone can build and run it from this repo alone (`pnpm install && pnpm --filter @blackout/kit build`). Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
+| **P**rivacy | **What each third party learns:**<br>• **RPC providers** (publicnode, Tenderly, 1rpc, or your own): your address and the contracts you query, plus your IP;<br>• **your wallet's RPC**: the exit transaction you send;<br>• **the website host** (Vercel), only if you open the hosted copy: that the page and kit file were fetched, plus your IP. A downloaded kit contacts no host;<br>• **no BLACKOUT server, no analytics, no trackers**: Playwright-verified, 0 third-party requests from the kit.<br>Anon-RPC: see [docs/crops.md](docs/crops.md). |
 | **S**ecurity | Keys stay in the wallet. The only transaction methods the kit calls are `eth_estimateGas` and `eth_sendTransaction` (plus `eth_requestAccounts`, `eth_chainId` and `wallet_switchEthereumChain` to connect), and it never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. In this testnet demo all three Safe owner keys were generated on one machine; a real protocol must use independent signers. |
 
 More detail: [docs/crops.md](docs/crops.md).

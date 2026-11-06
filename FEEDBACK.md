@@ -5,7 +5,7 @@ What we built: **independent exit tooling for Uniswap v3 LPs** that keeps workin
 ## How we used Uniswap
 
 - `NonfungiblePositionManager` discovery: `balanceOf` → `tokenOfOwnerByIndex` → `positions(id)` ([adapter](packages/adapters/src/uniswap-v3.ts#L34-L59)).
-- One-transaction exit: `multicall[decreaseLiquidity, collect(recipient = user)]`. Minimums come from an `eth_call` simulation minus 0.5 % ([adapter](packages/adapters/src/uniswap-v3.ts#L62-L98)).
+- One-transaction exit: `multicall[decreaseLiquidity, collect(recipient = user)]`. Minimums come from an `eth_call` simulation minus 0.5 % ([adapter](packages/adapters/src/uniswap-v3.ts#L62-L102)).
 - Live on Sepolia (`0x1238…cDA52`) and replayed on mainnet forks at the 9 Aug 2022 Curve-hijack block. A real LP (#287037, USDC/USDT 0.01 %) exits through the kit's code at that block ([report](docs/replay/R1.md)).
 
 ## What worked well
