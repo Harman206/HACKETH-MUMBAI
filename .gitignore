@@ -20,3 +20,6 @@ replay/out/
 replay/cache/
 replay/out-replay/
 apps/hosted/dist/
+contracts/broadcast/
+contracts/cache/
+contracts/out/
