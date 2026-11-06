@@ -48,6 +48,19 @@ chrome.runtime.onMessage.addListener((m, sender, respond) => {
   core.handleMessage(m, sender as Parameters<typeof core.handleMessage>[1]).then(respond, (e) => respond({ error: String((e as Error)?.message ?? e) }));
   return true;
 });
+// The toolbar icon opens the side panel. Chrome: the sidePanel API does it natively. Firefox: toggle the sidebar on
+// click (a user action, which sidebarAction.toggle requires). Guarded: either API may be missing.
+const g = globalThis as {
+  chrome?: { sidePanel?: { setPanelBehavior?(o: { openPanelOnActionClick: boolean }): Promise<void> }; action?: { onClicked?: { addListener(f: () => void): void } } };
+  browser?: { sidebarAction?: { toggle?(): Promise<void> } };
+};
+if (g.chrome?.sidePanel?.setPanelBehavior) {
+  g.chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+} else if (g.browser?.sidebarAction?.toggle) {
+  const sidebar = g.browser.sidebarAction;
+  g.chrome?.action?.onClicked?.addListener(() => void sidebar.toggle!().catch(() => {}));
+}
+
 chrome.alarms.create('sync', { periodInMinutes: 1 });
 chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === 'sync') void core.sync();

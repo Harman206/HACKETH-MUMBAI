@@ -17,7 +17,7 @@ describe('extension build', () => {
   test('Chrome manifest: MV3, exactly the permissions the design names, shim in MAIN world at document_start', () => {
     const m = JSON.parse(readFileSync(join(DIST, 'chrome', 'manifest.json'), 'utf8'));
     expect(m.manifest_version).toBe(3);
-    expect(m.permissions).toEqual(['storage', 'alarms', 'tabs', 'declarativeNetRequestWithHostAccess']);
+    expect(m.permissions).toEqual(['storage', 'alarms', 'tabs', 'declarativeNetRequestWithHostAccess', 'sidePanel']);
     expect(m.background).toEqual({ service_worker: 'background.js', type: 'module' });
     expect(m.content_scripts.map((c: { js: string[]; world?: string; run_at: string }) => [c.js[0], c.world ?? 'ISOLATED', c.run_at])).toEqual([
       ['shim.js', 'MAIN', 'document_start'],
@@ -25,6 +25,19 @@ describe('extension build', () => {
     ]);
     expect(m.content_security_policy.extension_pages).toMatch(/^script-src 'self'/);
     expect(m.web_accessible_resources).toBeUndefined(); // nothing a web page can load or probe
+  });
+  test('the toolbar icon opens a side panel (Chrome side_panel, Firefox sidebar_action), not a popup', () => {
+    const c = JSON.parse(readFileSync(join(DIST, 'chrome', 'manifest.json'), 'utf8'));
+    const f = JSON.parse(readFileSync(join(DIST, 'firefox', 'manifest.json'), 'utf8'));
+    expect(c.side_panel).toEqual({ default_path: 'src/pages/sidepanel.html' });
+    expect(c.sidebar_action).toBeUndefined();
+    expect(f.sidebar_action.default_panel).toBe('src/pages/sidepanel.html');
+    expect(f.side_panel).toBeUndefined();
+    expect(f.permissions).not.toContain('sidePanel');
+    for (const m of [c, f]) expect(m.action.default_popup).toBeUndefined();
+    const html = readFileSync(join(DIST, 'chrome', 'src/pages/sidepanel.html'), 'utf8');
+    expect(html).toMatch(/<script type="module"[^>]+src="\/assets\/sidepanel-[\w-]+\.js"/);
+    expect(readFileSync(join(DIST, 'chrome', 'background.js'), 'utf8')).toContain('openPanelOnActionClick');
   });
   test('Firefox manifest uses background scripts and a gecko id', () => {
     const m = JSON.parse(readFileSync(join(DIST, 'firefox', 'manifest.json'), 'utf8'));

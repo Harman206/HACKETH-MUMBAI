@@ -36,7 +36,7 @@ await build({
     rollupOptions: {
       input: {
         background: join(ROOT, 'src/background/index.ts'),
-        popup: join(ROOT, 'src/pages/popup.html'),
+        sidepanel: join(ROOT, 'src/pages/sidepanel.html'),
         setup: join(ROOT, 'src/pages/setup.html'),
         dashboard: join(ROOT, 'src/pages/dashboard.html'),
         warning: join(ROOT, 'src/pages/warning.html'),
@@ -79,7 +79,8 @@ const base = {
   version: VERSION,
   description: 'Checks DeFi sites against the code their team published on ENS, stops wallet drainers, and gets you out when a site is down or hijacked.',
   icons,
-  action: { default_popup: 'src/pages/popup.html', default_title: 'Copeybara', default_icon: icons },
+  // no popup: the toolbar icon opens the side panel (Chrome: setPanelBehavior in the worker; Firefox: sidebarAction.toggle)
+  action: { default_title: 'Copeybara', default_icon: icons },
   permissions: ['storage', 'alarms', 'tabs', 'declarativeNetRequestWithHostAccess'],
   host_permissions: ['<all_urls>'],
   content_scripts: contentScripts,
@@ -89,10 +90,13 @@ const manifests = {
   chrome: {
     ...base,
     minimum_chrome_version: '116',
+    permissions: [...base.permissions, 'sidePanel'],
+    side_panel: { default_path: 'src/pages/sidepanel.html' },
     background: { service_worker: 'background.js', type: 'module' },
   },
   firefox: {
     ...base,
+    sidebar_action: { default_panel: 'src/pages/sidepanel.html', default_title: 'Copeybara', default_icon: icons, open_at_install: false },
     background: { scripts: ['background.js'], type: 'module' },
     browser_specific_settings: { gecko: { id: 'copeybara@copeybara.eth', strict_min_version: '128.0' } },
   },

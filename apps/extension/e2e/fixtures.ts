@@ -141,7 +141,7 @@ export const test = base.extend<{ w: World; ctx: BrowserContext; ext: Ext }>({
     if (!sw) sw = await ctx.waitForEvent('serviceworker');
     const id = new URL(sw.url()).host;
     const page = await ctx.newPage();
-    await page.goto(`chrome-extension://${id}/src/pages/popup.html`);
+    await page.goto(`chrome-extension://${id}/src/pages/sidepanel.html`);
     const ext = new Ext(id, page, sw);
     await ext.configure(w);
     await use(ext);

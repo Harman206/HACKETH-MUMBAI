@@ -181,7 +181,7 @@ Proven by a 39-case banned corpus (including the Curve 2022 victim's real callda
 - **Service worker = trust core.** The only writer of extension storage. It reads ENS through the 3-RPC quorum, computes every verdict, and checks each message's sender with Chrome's own `sender` data (extension id, tab, origin). It never trusts a verdict or data claimed by a page, and rate-limits each tab.
 - **Content script (isolated world)** observes every script a page runs from `document_start`, hashes it, and relays wallet requests to the worker. It has no storage access.
 - **MAIN-world shim** wraps `window.ethereum` and EIP-6963 providers (`eth_sendTransaction`, `eth_signTypedData*`, `personal_sign`, `eth_sign`, `wallet_sendCalls`) and waits for the worker's answer. It decides nothing; a blocked request is rejected with EIP-1193 code 4001.
-- **Trusted UI only:** the toolbar badge and popup, setup wizard, dashboard, warning page and confirm window are extension pages. Verdicts are never drawn inside the web page.
+- **Trusted UI only:** the toolbar badge and side panel (Chrome side panel, Firefox sidebar), setup wizard, dashboard, warning page and confirm window are extension pages. Verdicts are never drawn inside the web page.
 
 **What it checks.**
 - **Site fingerprint** = the set of sha256 hashes of every script the official site may run (`org.copeybara.site`, hashing shared with the watcher in [`packages/sitecheck`](packages/sitecheck/src/index.ts)). Any script outside the set is a mismatch, and the tab is replaced by the warning page. A script that cannot be re-read is "can't verify" (amber), never green.
