@@ -359,6 +359,15 @@ importers:
         specifier: workspace:*
         version: link:../fingerprint
 
+  packages/widget:
+    devDependencies:
+      '@copeybara/sitecheck':
+        specifier: workspace:*
+        version: link:../sitecheck
+      '@playwright/test':
+        specifier: 1.49.1
+        version: 1.49.1
+
   replay:
     dependencies:
       '@copeybara/adapters':

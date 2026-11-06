@@ -1,0 +1,20 @@
+{
+  "name": "@copeybara/widget",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "<copeybara-exit ens=\"protocol.eth\">: one dependency-free file that points users at the verified exit kit. No fetches, no wallet, no cookies.",
+  "main": "copeybara-exit.js",
+  "files": [
+    "copeybara-exit.js",
+    "copeybara-exit.js.sha256"
+  ],
+  "scripts": {
+    "hash": "node scripts/hash.mjs",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@copeybara/sitecheck": "workspace:*"
+  }
+}

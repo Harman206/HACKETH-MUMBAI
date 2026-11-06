@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../node_modules/.tsbuild/widget",
+    "types": [
+      "node"
+    ]
+  },
+  "references": [
+    {
+      "path": "../sitecheck"
+    }
+  ],
+  "include": [
+    "copeybara-exit.d.ts",
+    "test",
+    "e2e",
+    "playwright.config.ts"
+  ]
+}
