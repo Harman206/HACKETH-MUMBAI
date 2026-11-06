@@ -12,5 +12,5 @@ mkdir -p deploy/blackout && cp -R apps/site/dist/. deploy/blackout/
 [ -f deploy/blackout/vercel.json ] || cp scripts/vercel.site.json deploy/blackout/vercel.json
 ( cd deploy/blackout && vercel deploy --prod --yes --scope "$SCOPE" )
 # The hosted kit must still match the ENS release record.
-curl -s https://blackout-red.vercel.app/blackout-kit.html -o /tmp/blackout-hosted-kit.html
-scripts/verify-kit.sh /tmp/blackout-hosted-kit.html demoswap-blackout.eth
+curl -s https://blackout-red.vercel.app/copeybara-kit.html -o /tmp/copeybara-hosted-kit.html
+scripts/verify-kit.sh /tmp/copeybara-hosted-kit.html demoswap-blackout.eth
