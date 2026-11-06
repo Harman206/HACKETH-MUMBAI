@@ -26,6 +26,13 @@ beforeAll(async () => {
     primaryRpc: upstream.url, kitFile, ensName: 'x.eth', ensRpcs: ['http://127.0.0.1:1'], chainId: 11155111,
     universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', ports, mode: 'process',
     drainer: '0x00000000000000000000000000000000000d7a1e',
+    theater: {
+      network: 'sepolia',
+      prepareVictim: async () => ['0x01'],
+      readVictim: async () => ({ dusd: '10,000', positions: ['1'] }),
+      drains: () => [],
+      verifyKits: async () => ({ real: 'MATCH v=3', tampered: 'MISMATCH' }),
+    },
   });
 });
 afterAll(async () => { await h?.stop(); await upstream?.close(); });
@@ -103,5 +110,17 @@ describe('fire drill harness', () => {
     expect(html).not.toContain('inject.js');
     expect(html).not.toContain('Approve to view your rewards');
     expect(html).toContain('Your liquidity');
+  });
+
+  test('B4: theater endpoints — state, prepare (400 on bad victim), verify, hijack request', async () => {
+    const st = await (await fetch(`http://127.0.0.1:${ports.control}/theater/state`)).json();
+    expect(st).toMatchObject({ network: 'sepolia', chapter: 1, victim: null });
+    expect((await fetch(`http://127.0.0.1:${ports.control}/theater/prepare`, { method: 'POST', body: '{"victim":"nope"}' })).status).toBe(400);
+    const ok = await (await fetch(`http://127.0.0.1:${ports.control}/theater/prepare`, { method: 'POST', body: JSON.stringify({ victim: '0x1111111111111111111111111111111111111111' }) })).json();
+    expect(ok).toEqual({ txs: ['0x01'] });
+    expect(await (await fetch(`http://127.0.0.1:${ports.control}/theater/verify`, { method: 'POST' })).json()).toEqual({ real: 'MATCH v=3', tampered: 'MISMATCH' });
+    const after = await (await fetch(`http://127.0.0.1:${ports.control}/theater/state`)).json();
+    expect(after).toMatchObject({ victim: '0x1111111111111111111111111111111111111111', victimDusd: '10,000', verify: { real: 'MATCH v=3' } });
+    expect((await (await fetch(`http://127.0.0.1:${ports.control}/theater/hijack-request`)).json()).data.slice(0, 10)).toBe('0x095ea7b3');
   });
 });

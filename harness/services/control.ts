@@ -11,6 +11,8 @@ import { startHijack, tamperKit } from './hijack';
 import { hijackRequest } from './hijack-request';
 import { startRouter, type RouteState } from './router';
 import { assemble, checkHijackRequest, checkTamperedKit, drillReportHtml } from './drill-report';
+import { createTheater, type TheaterDeps } from './theater';
+import type { DrainRecord } from './drainer-bot';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -27,6 +29,14 @@ export interface HarnessOpts {
   ports?: Partial<{ control: number; router: number; site: number; hijack: number; rpc: number }>;
   /** 'process' closes the in-process server; 'docker' runs `docker stop <service>`. */
   mode?: 'process' | 'docker';
+  /** Attack Theater chain access (prepare victims, read balances, drains). Omit to disable /theater/*. */
+  theater?: {
+    network: TheaterDeps['network'];
+    prepareVictim: TheaterDeps['prepareVictim'];
+    readVictim: TheaterDeps['readVictim'];
+    drains: () => DrainRecord[];
+    verifyKits?: TheaterDeps['verifyKits'];
+  };
 }
 
 export async function startHarness(o: HarnessOpts) {
@@ -93,6 +103,20 @@ export async function startHarness(o: HarnessOpts) {
     },
   };
 
+  const theater = o.theater
+    ? createTheater({
+        network: o.theater.network,
+        prepareVictim: o.theater.prepareVictim,
+        readVictim: o.theater.readVictim,
+        drains: o.theater.drains,
+        verifyKits:
+          o.theater.verifyKits ??
+          (async () => ({ real: checkTamperedKit(o.kitFile, o.ensName, o.ensRpcs[0]!).output, tampered: checkTamperedKit(tamperedFile, o.ensName, o.ensRpcs[0]!).output })),
+        switches: () => ({ site: route.siteUp ? 'up' : 'down', rpc: mode === 'docker' || rpc ? 'up' : 'down', hijack: route.hijack }),
+        rescue: () => kitReport,
+      })
+    : null;
+
   const control = await serve(p.control, async (req, res, body) => {
     // (bound to 0.0.0.0 in docker so the judge's browser can reach it)
     const path = (req.url ?? '/').split('?')[0]!;
@@ -110,6 +134,22 @@ export async function startHarness(o: HarnessOpts) {
       return json(res, { site: siteUp ? 'up' : 'down', rpc: rpcUp ? 'up' : 'down', hijack: route.hijack, failures });
     }
     if (path === '/failures') return json(res, failures);
+    if (path.startsWith('/theater/')) {
+      if (!theater) return json(res, { error: 'theater not configured' }, 404);
+      if (path === '/theater/state') return json(res, { ...(await theater.state()), failures });
+      if (path === '/theater/hijack-request') return json(res, hijackRequest(o.token, o.drainer));
+      if (req.method === 'POST' && path === '/theater/verify') return json(res, await theater.verify());
+      if (req.method === 'POST' && path === '/theater/prepare') {
+        try {
+          const { victim } = JSON.parse(body || '{}');
+          return json(res, await theater.prepare(victim));
+        } catch (e) {
+          const m = (e as Error).message;
+          return json(res, { error: m }, /cap reached/.test(m) ? 429 : /address/.test(m) ? 400 : 500);
+        }
+      }
+      return json(res, { error: 'unknown theater route' }, 404);
+    }
     if (req.method === 'POST' && path === '/kit-report') {
       kitReport = JSON.parse(body);
       return json(res, { ok: true });

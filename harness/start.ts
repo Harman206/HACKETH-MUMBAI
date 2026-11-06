@@ -1,31 +1,57 @@
 /**
- * Fire Drill launcher: control page + router + site + hijack + primary RPC proxy + the kit on http://localhost.
- *   PRIMARY_RPC=… ENS_NAME=demoswap-blackout.eth pnpm --filter @blackout/harness start
- * Then open http://localhost:8090 (control), http://demoswap.localhost:8080 (site), http://localhost:8000 (kit).
+ * Fire Drill + Attack Theater launcher.
+ *   pnpm --filter @blackout/harness start
+ * Then open: website ?booth=http://localhost:8090 · control http://localhost:8090 · DemoSwap http://demoswap.localhost:8080 · kit http://localhost:8000
+ * Env (or contracts/.env): DEPLOYER_KEY, ATTACKER_KEY, ENS_NAME, THEATER_RPC (default public Sepolia), THEATER_NETWORK=sepolia|local-fork
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { Address, Hex } from 'viem';
 import networks from '../config/networks.json';
+import { createQuorum } from '@blackout/quorum';
 import { serve } from './services/http';
 import { startHarness } from './services/control';
+import { createDrainerBot } from './services/drainer-bot';
+import { loadEnv, makePrepareVictim, makeReadVictim, makeSender } from './services/chain';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
-const kitFile = process.env.KIT_FILE ?? join(REPO, 'apps', 'kit', 'dist', 'blackout-kit.html');
-const ensRpcs = (process.env.ENS_RPCS ?? networks.defaultRpcs['11155111'].join(',')).split(',');
+const env = loadEnv();
+const kitFile = env.KIT_FILE ?? join(REPO, 'apps', 'kit', 'dist', 'blackout-kit.html');
+const theaterRpc = env.THEATER_RPC ?? networks.defaultRpcs['11155111'][0]!;
+const ensRpcs = (env.ENS_RPCS ?? (env.THEATER_NETWORK === 'local-fork' ? [theaterRpc, theaterRpc, theaterRpc] : networks.defaultRpcs['11155111']).join(',')).split(',');
+const attackFile = join(REPO, 'contracts', 'deployments', env.ATTACK_FILE ?? 'sepolia-attack.json');
+const attack = existsSync(attackFile) ? (JSON.parse(readFileSync(attackFile, 'utf8')) as { drainer: Address; DUSD: Address; DETH: Address }) : null;
+
+let theater;
+if (attack && env.DEPLOYER_KEY && env.ATTACKER_KEY) {
+  const q = createQuorum({ urls: env.THEATER_NETWORK === 'local-fork' ? [theaterRpc, theaterRpc] : networks.defaultRpcs['11155111'], expectedChainId: 11155111 });
+  const bot = createDrainerBot({ q, send: makeSender(theaterRpc, env.ATTACKER_KEY as Hex), drainer: attack.drainer, tokens: [attack.DUSD], fromBlock: (await q.pinBlock()) - 5n });
+  bot.start();
+  theater = {
+    network: (env.THEATER_NETWORK === 'local-fork' ? 'local-fork' : 'sepolia') as 'sepolia' | 'local-fork',
+    prepareVictim: makePrepareVictim({ rpcUrl: theaterRpc, deployerKey: env.DEPLOYER_KEY as Hex, dusd: attack.DUSD, deth: attack.DETH }),
+    readVictim: makeReadVictim({ q, dusd: attack.DUSD }),
+    drains: bot.records,
+  };
+} else {
+  console.warn('Attack Theater disabled: needs contracts/deployments/sepolia-attack.json, DEPLOYER_KEY and ATTACKER_KEY.');
+}
 
 const h = await startHarness({
-  primaryRpc: process.env.PRIMARY_RPC ?? networks.defaultRpcs['11155111'][0]!,
+  primaryRpc: env.PRIMARY_RPC ?? theaterRpc,
   kitFile,
-  ensName: process.env.ENS_NAME ?? 'demoswap-blackout.eth',
+  ensName: env.ENS_NAME ?? 'demoswap-blackout.eth',
   ensRpcs,
-  universalResolver: networks.ens.universalResolver as `0x${string}`,
-  token: (process.env.HIJACK_TOKEN ?? '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8') as `0x${string}`,
+  universalResolver: networks.ens.universalResolver as Address,
+  token: (attack?.DUSD ?? env.HIJACK_TOKEN ?? '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8') as Address,
+  drainer: attack?.drainer,
   chainId: 11155111,
+  theater,
 });
-const kitPort = Number(process.env.KIT_PORT ?? 8000);
+const kitPort = Number(env.KIT_PORT ?? 8000);
 await serve(kitPort, (_req, res) => res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(readFileSync(kitFile)));
-console.log(`control  http://localhost:${h.ports.control}
+console.log(`control  http://localhost:${h.ports.control}${theater ? '   (Attack Theater on)' : ''}
 site     http://demoswap.localhost:${h.ports.router}
 rpc      http://localhost:${h.ports.rpc}   (primary RPC proxy)
 kit      http://localhost:${kitPort}`);
