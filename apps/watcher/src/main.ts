@@ -49,7 +49,12 @@ const watcher = createWatcher({
   names,
   candidates,
   readRecords: (name) => readCopeybaraRecords(name, q, { universalResolver: networks.ens.universalResolver as Address }),
-  fetchText: (url) => fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(8000) }),
+  fetchText: (url) => {
+    // RFC 6761: *.localhost is loopback. Browsers resolve it; Node's resolver may not (booth demo URLs).
+    const u = new URL(url);
+    if (u.hostname.endsWith('.localhost')) u.hostname = '127.0.0.1';
+    return fetch(u.href, { redirect: 'manual', signal: AbortSignal.timeout(8000) });
+  },
   writeText: async (name, resolver, k, value) => {
     const hash = await wallet.writeContract({ address: resolver, abi: setText, functionName: 'setText', args: [toHex(packetToBytes(name)), k, value] });
     const r = await pub.waitForTransactionReceipt({ hash });
