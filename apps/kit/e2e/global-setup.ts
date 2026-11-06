@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-import { startFork } from '@blackout/testkit';
+import { FORK_RPCS, startFork, type Fork } from '@blackout/testkit';
 import { createServer as netServer } from 'node:net';
 import { startHarness } from '../../../harness/services/control';
 
@@ -39,7 +39,22 @@ export default async function globalSetup() {
   const kitFile = join(KIT, 'dist', 'blackout-kit.html');
   const sha = createHash('sha256').update(readFileSync(kitFile)).digest('hex');
 
-  const fork = await startFork({ chainId: 11155111 });
+  // Public fork sources flake mid-setup ("header for hash not found"): rebuild the whole world on the next source.
+  let lastErr: unknown;
+  for (const src of FORK_RPCS[11155111]) {
+    let fork: Fork | null = null;
+    try {
+      fork = await startFork({ chainId: 11155111, forkUrl: src });
+      return await buildWorld(fork, kitFile, sha);
+    } catch (e) {
+      lastErr = e;
+      await fork?.stop().catch(() => {});
+    }
+  }
+  throw lastErr;
+}
+
+async function buildWorld(fork: Fork, kitFile: string, sha: string) {
   const label = `blackout-e2e-${Date.now()}`;
   const env = {
     ...process.env,
