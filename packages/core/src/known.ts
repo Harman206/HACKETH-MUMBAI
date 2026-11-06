@@ -5,7 +5,7 @@
  * This table only lowers false alarms. It never lets the Exit Guard accept anything: exits still come from the ENS manifest.
  */
 import { getAddress, isAddress } from 'viem';
-import table from '../../../config/known-contracts.json';
+import table from '../../../config/known-contracts.json' with { type: 'json' };
 import type { Address } from './types';
 
 /** protocol → decimal chain id → role → address */
