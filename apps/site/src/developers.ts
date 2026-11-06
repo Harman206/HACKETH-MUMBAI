@@ -81,10 +81,10 @@ export const CLI = [
 
 /** Captured from `pnpm copeybara verify` in examples/demoswap (kit v7) against Sepolia, 7 Nov 2026. */
 export const VERIFY_OUTPUT = `$ pnpm copeybara verify
-demoswap-blackout.eth at Sepolia block 12079453 (3 RPCs, ≥2 agreeing):
+demoswap-blackout.eth at Sepolia block 12079624 (3 RPCs, ≥2 agreeing):
 ✓ resolver     0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82
 ✓ owner        the Safe owns demoswap-blackout.eth
-✓ release      MATCH v=7 301d3e86cd7ba9de29b2925394a1bb6ab24a52b5652edb25ffa54858ae66b2b3
+✓ release      MATCH v=8 fc634a590f3290f42bad8694877a6c6d806bfbc6b71b6a9b78f5917f6b778cc9
 ✓ manifest     MATCH
 ✓ exits        none (no declarative exits)
 ✓ site         3 scripts published (run copeybara fingerprint to compare with a build)

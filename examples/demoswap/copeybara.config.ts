@@ -10,7 +10,7 @@ export default defineConfig({
   websiteKey: '0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182',
   watcher: { key: '0xeBbcD4fC4265dbb7Fc7b2df00f1fD7B89FA1EfF8', candidates: [] },
 
-  kit: { file: 'copeybara-kit.html', version: 6 },
+  kit: { file: 'copeybara-kit.html', version: 8 },
 
   chains: {
     '1': {
