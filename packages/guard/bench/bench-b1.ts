@@ -3,37 +3,26 @@
  *   ../../node_modules/.bin/tsx bench/bench-b1.ts
  * Scenarios (what the extension knows):
  *   S0  fresh install, built-in well-known table OFF, follows nothing
- *   S1  fresh install (shipped default): built-in well-known table (Uniswap), follows nothing
+ *   S1  fresh install (shipped default): built-in well-known table, follows nothing
  *   S2  S1 + follows the published mainnet manifest (config/manifest.json: Aave v3, Curve 3pool, Uniswap v3/v4 exit targets)
- *   S3  WHAT-IF (not shipped): S2 + the well-known table extended with 1inch, 0x, CoW, Aave, Lido, OpenSea spenders (ctx.known)
+ *   S3  S2 with only the old Uniswap-only table (what the first run called S2), to show what the table extension buys
  * Alarm thresholds: "red" = dangerous; "any" = dangerous or risky (the extension stops and explains both).
+ * The first run (before the gap fixes) is kept in data/b1-results-before.json and shown as a before → after table.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { KNOWN_CONTRACTS, parseManifest, type KnownTable } from '@copeybara/core';
 import { classifyRequest, type ClassifyCtx, type RequestVerdict } from '../src/index';
-import { readJson, REPO, sha256File, writeJson } from './lib';
+import { DATA, readJson, REPO, sha256File, writeJson } from './lib';
 
 const manifest = parseManifest(readFileSync(join(REPO, 'config', 'manifest.json'), 'utf8'));
-/** What-if only (not shipped): the built-in table extended with the other big spenders seen in the benign set. Uses the existing ctx.known option. */
-const EXTENDED: KnownTable = {
-  v: 1,
-  protocols: {
-    ...KNOWN_CONTRACTS.protocols,
-    '1inch': { '1': { aggregationRouterV6: '0x111111125421cA6dc452d289314280a0f8842A65' } },
-    '0x': { '1': { allowanceHolder: '0x0000000000001fF3684f28c67538d4D072C22734' } },
-    CoW: { '1': { vaultRelayer: '0xC92E8bdf79f0507f65a392b0ab4667716BFE0110' } },
-    Aave: { '1': { poolV3: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2' } },
-    Lido: { '1': { withdrawalQueue: '0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1', stETH: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84' } },
-    OpenSea: { '1': { conduit: '0x1E0049783F008A0085193E00003D00cd54003c71', seaport16: '0x0000000000000068F116a894984e2DB1123eB395' } },
-  },
-};
+const UNISWAP_ONLY: KnownTable = { v: 1, protocols: { Uniswap: KNOWN_CONTRACTS.protocols.Uniswap! } };
 const SCEN: Record<string, (account: string) => ClassifyCtx> = {
   S0: (a) => ({ account: a as any, chainId: 1, manifests: [], known: { v: 1, protocols: {} } }),
   S1: (a) => ({ account: a as any, chainId: 1, manifests: [] }),
   S2: (a) => ({ account: a as any, chainId: 1, manifests: [{ name: 'copeybara mainnet manifest', manifest }] }),
-  S3: (a) => ({ account: a as any, chainId: 1, manifests: [{ name: 'copeybara mainnet manifest', manifest }], known: EXTENDED }),
+  S3: (a) => ({ account: a as any, chainId: 1, manifests: [{ name: 'copeybara mainnet manifest', manifest }], known: UNISWAP_ONLY }),
 };
 const red = (v: RequestVerdict) => v === 'dangerous';
 const any = (v: RequestVerdict) => v === 'dangerous' || v === 'risky';
@@ -99,7 +88,7 @@ const misses = (rows: Row[], s: string) =>
   rows.filter((r) => r.malicious && !any(r.verdicts[s]!)).map((r) => `| ${r.label ?? r.set} | ${r.category} | ${r.verdicts[s]} | [${r.tx.slice(0, 12)}…](https://etherscan.io/tx/${r.tx}) | ${r.reason.replace(/\|/g, '/')} |`);
 const fps = (rows: Row[], s: string) => {
   const g = new Map<string, number>();
-  for (const r of rows.filter((x) => !x.malicious && any(x.verdicts[s]!))) g.set(`${r.category} → ${r.verdicts[s]} — ${r.reason.replace(/0x[0-9a-fA-F]{4}…[0-9a-fA-F]{4}/g, '0x…').replace(/\|/g, '/')}`, (g.get(`${r.category} → ${r.verdicts[s]} — ${r.reason.replace(/0x[0-9a-fA-F]{4}…[0-9a-fA-F]{4}/g, '0x…').replace(/\|/g, '/')}`) ?? 0) + 1);
+  for (const r of rows.filter((x) => !x.malicious && any(x.verdicts[s]!))) g.set(`${r.category} → ${r.verdicts[s]} — ${r.reason.replace(/0x[0-9a-fA-F]{4}…[0-9a-fA-F]{4}/g, '0x…').replace(/sending [\d,]+ units/, 'sending N units').replace(/sends \d+ NFTs/, 'sends N NFTs').replace(/\|/g, '/')}`, (g.get(`${r.category} → ${r.verdicts[s]} — ${r.reason.replace(/0x[0-9a-fA-F]{4}…[0-9a-fA-F]{4}/g, '0x…').replace(/sending [\d,]+ units/, 'sending N units').replace(/sends \d+ NFTs/, 'sends N NFTs').replace(/\|/g, '/')}`) ?? 0) + 1);
   return [...g.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `- ${n}× ${k}`);
 };
 const prov = (rows: Row[]) => {
@@ -108,16 +97,38 @@ const prov = (rows: Row[]) => {
   return Object.entries(g).map(([k, v]) => `${k}: ${v}`).join(', ');
 };
 
+/** Before (first run, data/b1-results-before.json) → after (this run), for the shipped default S1. */
+function beforeAfter(): string {
+  const f = join(DATA, 'b1-results-before.json');
+  if (!existsSync(f)) return '';
+  const b = JSON.parse(readFileSync(f, 'utf8'));
+  const cell = (c: any, pos: boolean) => (pos ? `${c.tp}/${c.tp + c.fn} (${pct(c.tp, c.tp + c.fn)})` : `${c.fp}/${c.fp + c.tn} (${pct(c.fp, c.fp + c.tn)})`);
+  const row = (name: string, set: 'A' | 'B', s: string) =>
+    `| ${name} | ${cell(b[set][s].red, true)} → **${cell(results[set][s].red, true)}** | ${cell(b[set][s].any, true)} → **${cell(results[set][s].any, true)}** | ${cell(b[set][s].red, false)} → **${cell(results[set][s].red, false)}** | ${cell(b[set][s].any, false)} → **${cell(results[set][s].any, false)}** |`;
+  return [
+    `### Before → after the gap fixes (first run: git ${b.meta.gitHead}, ${b.meta.ranAt.slice(0, 10)})`,
+    '',
+    '| set, scenario | drainers caught: red | drainers caught: any | benign alarmed: red | benign alarmed: any |',
+    '|---|---|---|---|---|',
+    row('Set A, S1 (shipped default)', 'A', 'S1'),
+    row('Set A, S2 (following the manifest)', 'A', 'S2'),
+    row('Set B (PTXPhish), S1', 'B', 'S1'),
+    row('Set B (PTXPhish), S2', 'B', 'S2'),
+  ].join('\n');
+}
+
 const md = `# B1 — Drainer-request detection (classifyRequest on real mainnet requests)
 
 Generated by \`packages/guard/bench/bench-b1.ts\` at ${meta.ranAt} against git ${meta.gitHead}
 (classify.ts sha256 \`${meta.classifySha256.slice(0, 16)}…\`, decode.ts \`${meta.decodeSha256.slice(0, 16)}…\`, known-contracts.json \`${meta.knownContractsSha256.slice(0, 16)}…\`).
 Everything below is computed by the product's own \`classifyRequest\`; nothing about the classifier is mocked.
 
-Scenarios: **S0** follows nothing, built-in well-known table off · **S1** shipped default (Uniswap well-known table, follows nothing) ·
-**S2** S1 + follows the published mainnet manifest (\`config/manifest.json\`). "red" = \`dangerous\`; "any" = \`dangerous\` or \`risky\`
-(both stop the request in the extension with an explanation). **S3** is a what-if, not shipped: S2 plus the well-known table extended with the
-other big spenders in the benign set (1inch v6, 0x AllowanceHolder, CoW relayer, Aave v3 Pool, Lido, OpenSea conduit/Seaport), via the existing \`ctx.known\` option.
+Scenarios: **S0** follows nothing, built-in well-known table off · **S1** shipped default (built-in well-known table: Uniswap, 1inch, 0x,
+CoW Protocol, Aave, Lido, OpenSea/Seaport, Safe MultiSend; follows nothing) · **S2** S1 + follows the published mainnet manifest
+(\`config/manifest.json\`) · **S3** S2 with the old Uniswap-only table, to show what the table extension buys.
+"red" = \`dangerous\`; "any" = \`dangerous\` or \`risky\` (both stop the request in the extension with an explanation).
+
+${beforeAfter()}
 
 ## Set A — ScamSniffer-listed drainer spenders vs. recent benign dapp traffic
 
@@ -147,7 +158,7 @@ ${table(rowsA.filter((r) => !r.malicious), (r) => `${r.category} — ${r.id.spli
 
 ${table(rowsA.filter((r) => !r.malicious), (r) => `${r.category} — ${r.id.split(':')[1] ?? ''}`, 'S2', false)}
 
-### Benign, scenario S3 (what-if: extended well-known table)
+### Benign, scenario S3 (old Uniswap-only table, for comparison)
 
 ${table(rowsA.filter((r) => !r.malicious), (r) => `${r.category} — ${r.id.split(':')[1] ?? ''}`, 'S3', false)}
 
@@ -181,7 +192,7 @@ ${table(rowsB.filter((r) => !r.malicious), (r) => r.category, 'S1', false)}
 ${(() => {
   const g = new Map<string, Row[]>();
   for (const r of rowsB.filter((x) => x.malicious && !any(x.verdicts.S1!))) {
-    const k = `${r.label} · ${r.category} · ${r.verdicts.S1} · "${r.reason.replace(/0x[0-9a-fA-F]{4}…[0-9a-fA-F]{4}/g, '0x…')}"`;
+    const k = `${r.label} · ${r.category} · ${r.verdicts.S1} · "${r.reason.replace(/0x[0-9a-fA-F]{4}…[0-9a-fA-F]{4}/g, '0x…').replace(/sending [\d,]+ units/, 'sending N units').replace(/sends \d+ NFTs/, 'sends N NFTs')}"`;
     g.set(k, [...(g.get(k) ?? []), r]);
   }
   return [...g.entries()].sort((a, b) => b[1].length - a[1].length).map(([k, rs]) => `- ${rs.length}× ${k} — e.g. ${rs.slice(0, 3).map((r) => `[${r.tx.slice(0, 10)}](https://etherscan.io/tx/${r.tx})`).join(', ')}`).join('\n') || '- none';
