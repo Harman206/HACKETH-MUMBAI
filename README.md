@@ -1,6 +1,6 @@
 # BLACKOUT
 
-**Live: https://blackout-red.vercel.app** · open the kit: https://blackout-red.vercel.app/blackout-kit.html
+**Live: https://blackout-red.vercel.app** · try the kit on the demo protocol: https://blackout-red.vercel.app/blackout-kit.html?ens=demoswap-blackout.eth (Sepolia wallet)
 
 **A saved, verifiable emergency exit for DeFi positions.** It keeps working when the protocol's website, domain, company or RPC provider fails or is hijacked.
 
@@ -20,7 +20,7 @@ pnpm --filter @blackout/kit build        # → apps/kit/dist/blackout-kit.html (
 
 # Verify the file yourself, OUTSIDE the kit, against the ENS release record:
 scripts/verify-kit.sh apps/kit/dist/blackout-kit.html demoswap-blackout.eth
-#   MATCH v=2 <sha256>   or   MISMATCH expected … got …   (exit 1)
+#   MATCH v=<release> <sha256>   or   MISMATCH expected … got …   (exit 1)
 
 # Serve it on localhost (wallets do not inject into file:// pages):
 npx serve apps/kit/dist      # or: python3 -m http.server -d apps/kit/dist
@@ -32,6 +32,8 @@ Open `http://localhost:3000/blackout-kit.html`, then:
 3. Press **Exit** on each position.
 
 "Recovered" appears only after a confirmed receipt **and** a positive balance change for every expected token.
+
+While an exit runs, the kit shows each stage live (Exit Guard check → rehearsal on the RPC quorum → waiting for your wallet → waiting for a block, with the transaction link → balance check). Errors are explained in plain language with one fix: switch or add the network, get Sepolia ETH for fees, add your own RPC, or check the ENS name.
 
 The **Check a transaction** tab runs the same Exit Guard on anything a live site asks you to sign.
 
@@ -142,10 +144,10 @@ Proven by a 26-case banned corpus (including the Curve 2022 victim's real callda
 
 | | How BLACKOUT meets it |
 |---|---|
-| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead or lying RPC changes nothing;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works;<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no BLACKOUT server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
+| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead or lying RPC changes nothing;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works. After one visit, the page and the kit keep opening from the browser's cache when the host is down (same-origin service worker, e2e-tested by switching a copy of the site off);<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no BLACKOUT server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
 | **O**pen source | MIT. Anyone can build and run it from this repo alone (`pnpm install && pnpm --filter @blackout/kit build`). Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
 | **P**rivacy | **What each third party learns:**<br>• **RPC providers** (publicnode, Tenderly, 1rpc, or your own): your address and the contracts you query, plus your IP;<br>• **your wallet's RPC**: the exit transaction you send;<br>• **the website host** (Vercel), only if you open the hosted copy: that the page and kit file were fetched, plus your IP. A downloaded kit contacts no host;<br>• **no BLACKOUT server, no analytics, no trackers**: Playwright-verified, 0 third-party requests from the kit.<br>Anon-RPC: see [docs/crops.md](docs/crops.md). |
-| **S**ecurity | Keys stay in the wallet. The only transaction methods the kit calls are `eth_estimateGas` and `eth_sendTransaction` (plus `eth_requestAccounts`, `eth_chainId` and `wallet_switchEthereumChain` to connect), and it never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. In this testnet demo all three Safe owner keys were generated on one machine; a real protocol must use independent signers. |
+| **S**ecurity | Keys stay in the wallet. The only transaction methods the kit calls are `eth_estimateGas` and `eth_sendTransaction` (plus `eth_requestAccounts`, `eth_chainId`, `wallet_switchEthereumChain`, and `wallet_addEthereumChain` only when the wallet does not know the network, to connect), and it never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. In this testnet demo all three Safe owner keys were generated on one machine; a real protocol must use independent signers. |
 
 More detail: [docs/crops.md](docs/crops.md).
 
@@ -209,6 +211,7 @@ Wallets: the e2e uses an injected EIP-6963 test wallet. Manual checks with MetaM
 - Still trusted: the user's wallet and its broadcast RPC, Ethereum itself, ENS, the release Safe's signers, and `sha256sum`. In this testnet demo the Safe's three owner keys sit on one machine (`contracts/.env`), so the 2-of-3 property is demonstrated, not independent.
 - The MVP covers Uniswap v3 NFTs held directly, Aave v3 supply-only, and Curve 3pool LP. It does not cover Uniswap v4, vaults or staked positions. Aave positions with debt are flagged "manual", because repaying needs an approval.
 - The user must save or fetch the kit, and must know the ENS name from a source other than the kit.
+- The website's offline copy (service worker) covers the website going **down**, not being **hijacked**: a hijacked host can replace it. Check the kit's sha256 against ENS (`scripts/verify-kit.sh`) or keep your own downloaded copy.
 - ENSv2 resolver roles are per resolver, not per name. We deploy one resolver per protocol name, so the web key's `url` grant covers exactly that one name.
 - The kit warns when it sees a lower release version than one seen before in this browser. On-chain monotonicity is not enforced. Serving an older record needs either the release Safe or a majority of the kit's RPC paths lying together (a single path reporting an old block is ignored: heads more than 16 blocks from the median are dropped).
 - Replays are labelled **mainnet fork**, **impersonated account** and **counterfactual**. None is a live mainnet rescue.
