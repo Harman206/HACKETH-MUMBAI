@@ -294,7 +294,7 @@ Our deployment (`demoswap-blackout.eth`: Safe, resolver, must-revert transaction
 | Release Safe (2-of-3, name owner) | [`0x3ae03951044Ced07F7fa12072CfE7F95827A057F`](https://sepolia.etherscan.io/address/0x3ae03951044Ced07F7fa12072CfE7F95827A057F) |
 | PermissionedResolver (per app) | [`0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82`](https://sepolia.etherscan.io/address/0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82) |
 | Website key (url only) | [`0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182`](https://sepolia.etherscan.io/address/0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182) |
-| Published kit sha256 (`org.copeybara.release` v7) | `301d3e86cd7ba9de29b2925394a1bb6ab24a52b5652edb25ffa54858ae66b2b3` |
+| Published kit sha256 (`org.copeybara.release` v8) | `fc634a590f3290f42bad8694877a6c6d806bfbc6b71b6a9b78f5917f6b778cc9` |
 
 Must-revert checks, sent on chain from the website key:
 
