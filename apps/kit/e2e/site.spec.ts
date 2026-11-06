@@ -17,8 +17,8 @@ test('website public mode: explains, reads ENS live, zero third-party requests',
   const origins = new Set<string>();
   page.on('request', (r) => { if (/^https?:/.test(r.url())) origins.add(new URL(r.url()).origin); });
   await page.goto(url);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('you can still get your money out');
-  for (const h of ['The contracts were fine. The websites were not.', 'How BLACKOUT works', 'Live demo', 'Download and verify', 'For protocol teams']) {
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('An exit of your own.');
+  for (const h of ['When the website is the attack', 'How the kit works', 'Live demo', 'Download and verify', 'Give your users a backup exit']) {
     await expect(page.getByRole('heading', { name: h })).toBeVisible();
   }
   await expect(page.getByText('400,227.23 USDC').first()).toBeVisible();
@@ -41,7 +41,7 @@ test('website: keyboard reaches the main actions; no horizontal scroll at 360 px
     await page.keyboard.press('Tab');
     reached.add((await page.evaluate(() => document.activeElement?.textContent?.trim() ?? '')) || '');
   }
-  expect([...reached]).toEqual(expect.arrayContaining(['See the attack live', 'Download the kit']));
+  expect([...reached]).toEqual(expect.arrayContaining(['See the demo ↗', 'Get the exit kit ↓']));
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
@@ -73,6 +73,9 @@ test('after one visit, the site and the hosted kit keep opening when the website
   await expect(page.getByRole('link', { name: 'Try the kit on the demo protocol' }).first()).toHaveAttribute('href', 'blackout-kit.html?ens=demoswap-blackout.eth');
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
   await expect(page.locator('[data-offline-ready]')).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Download the kit' }).click();
+  expect((await download).suggestedFilename()).toBe('blackout-kit.html');
 
   server.closeAllConnections();
   await new Promise((r) => server.close(r));
@@ -83,5 +86,5 @@ test('after one visit, the site and the hosted kit keep opening when the website
   const want = readFileSync(join(SITE_DIST, 'blackout-kit.html.sha256'), 'utf8').split(' ')[0];
   expect(createHash('sha256').update(served).digest('hex'), 'offline copy is byte-identical to the verified kit').toBe(want);
   await page.goto(url);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('you can still get your money out');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('An exit of your own.');
 });

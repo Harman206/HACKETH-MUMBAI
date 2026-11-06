@@ -14,15 +14,17 @@ export function LiveDemo({ onLive }: { onLive(s: string): void }) {
   return (
     <section id="demo">
       <div class="wrap">
-        <h2>{reachable ? 'Attack Theater: live' : 'Live demo'}</h2>
-        <p class="lede">
-          {reachable
-            ? 'A real attack and a real rescue, on the Sepolia testnet, in four chapters. Every number below is read from the chain.'
-            : 'Everything below is read from the blockchain as you look at it. At the booth, this section becomes the interactive Attack Theater.'}
-        </p>
+        <header class="section-head">
+          <h2>{reachable ? 'Attack Theater: live' : 'Live demo'}</h2>
+          <p class="lede">
+            {reachable
+              ? 'Follow a test wallet through a site hijack, an outage, and a withdrawal using the saved kit.'
+              : 'Check the kit’s release on Sepolia, inspect the transactions that tested a stolen website key, and review the last recorded attack and recovery.'}
+          </p>
+        </header>
         {asked && reachable === false && (
           <div class="card notice" role="status" style="margin-bottom:16px">
-            {booth ? `The booth harness at ${booth} is not reachable` : 'The booth address must be http://localhost or 127.0.0.1'}, so you are seeing the public live proof instead.
+            {booth ? `The booth harness at ${booth} is not reachable` : 'The booth address must be http://localhost or 127.0.0.1'}, so this page shows the public demo.
           </div>
         )}
         {reachable ? <Theater base={booth!} /> : reachable === false ? <LiveProof onLive={onLive} /> : <div class="card">Connecting to the booth…</div>}

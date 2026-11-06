@@ -1,19 +1,29 @@
 import { HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL } from '../content';
-import { Icons } from './Icons';
+import { BrandMark, ExitIllustration } from './Icons';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
 
 export function Hero({ live }: { live: string | null }) {
   return (
-    <section class="hero" id="top">
+    <section class="hero" aria-labelledby="hero-title">
       <div class="wrap">
-        <p class="chip"><span class="dot" aria-hidden="true" />{live ?? 'Live on Sepolia testnet'}</p>
-        <h1>{HERO.title}</h1>
-        <p>{HERO.sub}</p>
-        <div class="cta">
-          <a class="btn" href="#demo">See the attack live</a>
-          <a class="btn ghost" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol</a>
-          <a class="btn ghost" href="#download">Download the kit</a>
+        <div class="hero-layout">
+          <div class="hero-copy">
+            <h1 id="hero-title">{HERO.title}</h1>
+            <p class="hero-summary">{HERO.sub}</p>
+            <div class="cta">
+              <a class="btn" href="#download">Get the exit kit <span aria-hidden="true">↓</span></a>
+              <a class="text-link" href="#demo">See the demo <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+          <a class="hero-art" href="#how">
+            <ExitIllustration />
+            <span class="art-link-label">How the kit works</span>
+          </a>
+        </div>
+        <div class="hero-meta">
+          <span><i aria-hidden="true" />{live ?? 'Sepolia testnet demo'}</span>
+          <a class="text-link" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </section>
@@ -22,29 +32,36 @@ export function Hero({ live }: { live: string | null }) {
 
 export function Problem() {
   return (
-    <section id="problem">
+    <section id="problem" class="section evidence">
       <div class="wrap">
-        <h2>The contracts were fine. The websites were not.</h2>
-        <p class="lede">In each of these attacks nobody broke the smart contracts. Attackers took over the website people use to reach them, and asked for one innocent-looking signature.</p>
-        <div class="grid">
-          {INCIDENTS.map((i) => (
-            <article class="card">
-              <p class="muted" style="margin:0 0 4px;font-size:14px">{i.date}{i.unverified && <> · <span class="tag">unverified</span></>}</p>
-              <h3>{i.name}</h3>
-              <p>{i.what}</p>
-              <p style="margin-top:10px">Loss: <span class="loss">{i.loss}</span></p>
-            </article>
-          ))}
-        </div>
-        <div class="card" style="margin-top:24px">
-          <p style="margin:0 0 8px">{REPLAY_R1.labels.map((l) => <span class="tag label" style="margin-right:6px">{l}</span>)}</p>
-          <h3>{REPLAY_R1.title}</h3>
-          <p>{REPLAY_R1.body}</p>
-          <div class="replay">
-            <div><p class="muted" style="margin:0">Without BLACKOUT</p><p class="big bad">{REPLAY_R1.lostWithout} {REPLAY_R1.token}</p><p class="muted" style="margin:0">lost by one victim (<a href={etherscan(REPLAY_R1.approveTx)}>approve</a> → <a href={etherscan(REPLAY_R1.drainTx)}>drain</a>)</p></div>
-            <div><p class="muted" style="margin:0">With BLACKOUT</p><p class="big ok">{REPLAY_R1.lostWith} {REPLAY_R1.token}</p><p class="muted" style="margin:0">the Guard rejects the approval; the drain moves nothing</p></div>
+        <header class="section-head">
+          <h2>When the website is the attack</h2>
+          <p class="lede">A look-alike site can ask your wallet for permission to spend your tokens while the protocol’s contracts keep running.</p>
+        </header>
+        <article class="replay-sheet">
+          <div class="replay-copy">
+            <p class="case-label">Curve Finance · August 2022</p>
+            <h3>{REPLAY_R1.title}</h3>
+            <p>{REPLAY_R1.body}</p>
+            <p class="case-links"><a href={etherscan(REPLAY_R1.approveTx)}>Approval transaction ↗</a><a href={etherscan(REPLAY_R1.drainTx)}>Drain transaction ↗</a></p>
           </div>
-        </div>
+          <dl class="replay-figures">
+            <div><dt>Actual loss for one victim</dt><dd class="bad">{REPLAY_R1.lostWithout} <small>{REPLAY_R1.token}</small></dd></div>
+            <div><dt>Simulated loss with Copeybara</dt><dd class="ok">{REPLAY_R1.lostWith} <small>{REPLAY_R1.token}</small></dd></div>
+          </dl>
+        </article>
+        <details class="incidents">
+          <summary>More about frontend attacks</summary>
+          <ul class="incident-list">
+            {INCIDENTS.map((incident) => (
+              <li key={incident.name}>
+                <p class="muted">{incident.date}{incident.unverified && ' · Unverified report'}</p>
+                <h3>{incident.name}</h3>
+                <p>{incident.what} {incident.loss === 'not collected' ? 'Loss unknown.' : `Reported loss: ${incident.loss}.`}</p>
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
     </section>
   );
@@ -52,20 +69,20 @@ export function Problem() {
 
 export function How() {
   return (
-    <section id="how">
-      <div class="wrap">
-        <h2>How BLACKOUT works</h2>
-        <p class="lede">Four simple ideas. Together they mean a dead or fake website can neither block your exit nor trick it.</p>
-        <div class="grid">
-          {HOW.map((h, i) => (
-            <article class="card">
-              {Icons[i]}
-              <p class="num">0{i + 1}</p>
-              <h3>{h.title}</h3>
-              <p>{h.body}</p>
-            </article>
+    <section id="how" class="section">
+      <div class="wrap section-split">
+        <header class="section-head">
+          <h2>How the kit works</h2>
+          <p class="lede">You’ll need the saved file, your wallet, and the protocol’s official ENS name.</p>
+        </header>
+        <dl class="feature-list">
+          {HOW.map((item) => (
+            <div key={item.title}>
+              <dt>{item.title}</dt>
+              <dd>{item.body}</dd>
+            </div>
           ))}
-        </div>
+        </dl>
       </div>
     </section>
   );
@@ -73,14 +90,17 @@ export function How() {
 
 export function Trust() {
   return (
-    <section id="trust">
+    <section id="trust" class="section boundaries">
       <div class="wrap">
-        <h2>What you still trust, and what you don’t</h2>
-        <div class="cols">
-          <div class="card"><h3>Trusted</h3><ul class="ticks">{TRUSTED.map((t) => <li>{t}</li>)}</ul></div>
-          <div class="card"><h3>Not trusted at all</h3><ul class="crosses">{NOT_TRUSTED.map((t) => <li>{t}</li>)}</ul></div>
+        <header class="section-head">
+          <h2>What the kit can protect</h2>
+          <p class="lede">The kit gives you a second way to reach supported contracts when the usual website is down or compromised.</p>
+        </header>
+        <div class="cols trust-cols">
+          <div><h3>You still rely on</h3><ul class="plain-list">{TRUSTED.map((item) => <li key={item}>{item}</li>)}</ul></div>
+          <div><h3>The kit can work around</h3><ul class="plain-list">{NOT_TRUSTED.map((item) => <li key={item}>{item}</li>)}</ul></div>
         </div>
-        <div class="card" style="margin-top:16px"><h3>Honest limits</h3><ul>{LIMITS.map((l) => <li>{l}</li>)}</ul></div>
+        <div class="limits"><h3>Limits and coverage</h3><ul>{LIMITS.map((item) => <li key={item}>{item}</li>)}</ul></div>
       </div>
     </section>
   );
@@ -88,30 +108,23 @@ export function Trust() {
 
 export function Download({ sha, offline }: { sha: string | null; offline: boolean }) {
   return (
-    <section id="download">
-      <div class="wrap">
-        <h2>Download and verify</h2>
-        <p class="lede">Keep a copy before you need it. Any mirror is fine: the fingerprint on ENS is what you check, not this website.</p>
-        <div class="cols">
-          <div class="card">
-            <h3>1. Use it now, or keep a copy</h3>
-            <p class="cta"><a class="btn" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol</a><a class="btn ghost" href="blackout-kit.html" target="_blank" rel="noopener">Open the kit</a><a class="btn ghost" href="blackout-kit.html" download>Download blackout-kit.html</a></p>
-            <p class="muted" style="margin-top:8px;font-size:14px">The demo link fills in <b>{ENS_NAME}</b> for you; connect a Sepolia wallet. For a real protocol, type its name from its official docs.</p>
-            {offline ? (
-              <p class="ok" style="margin-top:8px;font-size:14px" data-offline-ready>✓ Saved in this browser: this page and the kit keep opening even if this website goes down. Your own downloaded copy is still the strongest backup.</p>
-            ) : (
-              <p class="muted" style="margin-top:8px;font-size:14px">Opening it here works while this site is up. Keep a downloaded copy for the day it isn’t.</p>
-            )}
-            <p style="margin-top:12px">sha256 of this copy:</p>
-            <p class="mono">{sha ?? 'see blackout-kit.html.sha256'}</p>
-          </div>
-          <div class="card">
-            <h3>2. Verify it yourself</h3>
-            <p>Compare the fingerprint with the release record on <b>{ENS_NAME}</b> (read live in the demo section above):</p>
-            <pre>{`sha256sum blackout-kit.html\n# or: shasum -a 256 blackout-kit.html`}</pre>
-            <h3 style="margin-top:12px">3. Run it</h3>
-            <pre>{`python3 -m http.server   # then open\nhttp://localhost:8000/blackout-kit.html`}</pre>
-          </div>
+    <section id="download" class="section">
+      <div class="wrap download-layout">
+        <div class="download-callout">
+          <h2>Download and verify</h2>
+          <p>Save the HTML file where you can find it during an outage.</p>
+          <a class="btn" href="blackout-kit.html" download="blackout-kit.html">Download the kit <span aria-hidden="true">↓</span></a>
+          <a class="text-link" href="blackout-kit.html" target="_blank" rel="noopener">Open in browser <span aria-hidden="true">↗</span></a>
+          {offline && <p class="offline-status" data-offline-ready>✓ This browser has an offline copy of the site and kit.</p>}
+        </div>
+        <div class="download-steps">
+          <h3>Check your copy</h3>
+          <p>Run either command in the download folder. Compare the result with the fingerprint on the protocol’s official ENS name before opening the kit. For the demo, check <a href="#demo">{ENS_NAME}</a>.</p>
+          <pre>{`sha256sum blackout-kit.html\nshasum -a 256 blackout-kit.html`}</pre>
+          <p class="checksum">Checksum from this site</p>
+          <p class="mono">{sha ?? <a href="blackout-kit.html.sha256">Open the checksum file</a>}</p>
+          <h3>Open the saved kit</h3>
+          <p>In the folder where you saved the file, run <code>python3 -m http.server</code>. Then open <a href="http://localhost:8000/blackout-kit.html">localhost:8000/blackout-kit.html</a> so your wallet can connect.</p>
         </div>
       </div>
     </section>
@@ -120,15 +133,41 @@ export function Download({ sha, offline }: { sha: string | null; offline: boolea
 
 export function Protocols() {
   return (
-    <section id="protocols">
-      <div class="wrap">
-        <h2>For protocol teams</h2>
-        <p class="lede">Ten minutes of setup gives every one of your users a verified exit that survives your website.</p>
-        <div class="grid">
-          {PROTOCOL_STEPS.map((p, i) => (
-            <article class="card"><p class="num">STEP {i + 1}</p><h3>{p.title}</h3><p>{p.body}</p></article>
+    <section id="protocols" class="section">
+      <div class="wrap section-split">
+        <header class="section-head">
+          <h2>Give your users a backup exit</h2>
+          <p class="lede">For protocol teams setting up a release, ENS gives users a place to check the kit and its supported contracts.</p>
+        </header>
+        <ol class="protocol-steps">
+          {PROTOCOL_STEPS.map((step) => (
+            <li key={step.title}><h3>{step.title}</h3><p>{step.body}</p></li>
           ))}
-        </div>
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+export function Roadmap() {
+  return (
+    <section id="roadmap" class="section">
+      <div class="wrap section-split">
+        <header class="section-head">
+          <h2>Browser protection is planned</h2>
+          <p class="lede">The exit kit is available today. The next phase adds a way to spot compromised sites before you try to withdraw.</p>
+          <p class="roadmap-link"><a href="https://github.com/Harman206/HACKETH-MUMBAI/blob/4940792/docs/superpowers/specs/2026-11-06-copeybara-extension-design.md">Read the extension and watcher design</a></p>
+        </header>
+        <dl class="feature-list">
+          <div>
+            <dt>Browser extension</dt>
+            <dd>The design calls for checking a protocol site’s scripts against fingerprints published on ENS, warning about risky wallet requests, and opening the exit kit when a site goes down.</dd>
+          </div>
+          <div>
+            <dt>Protocol watcher</dt>
+            <dd>A separate service would check protocol sites for script changes and publish warnings on ENS. Those warnings would only affect website access. Users could still open the exit kit directly.</dd>
+          </div>
+        </dl>
       </div>
     </section>
   );
@@ -137,12 +176,12 @@ export function Protocols() {
 /** Scan-to-open card (booth visitors take the site with them). The SVG is generated at build time. */
 export function QrCard({ big }: { big?: boolean }) {
   return (
-    <figure class={`qr ${big ? 'big' : ''}`} data-qr>
-      <img src="qr.svg" alt={`QR code for ${SITE_URL}`} width={big ? 168 : 112} height={big ? 168 : 112} />
+    <figure class={`qr ${big ? 'qr-large' : ''}`} data-qr>
+      <img src="qr.svg" alt={`QR code for ${SITE_URL}`} width={big ? 168 : 96} height={big ? 168 : 96} />
       <figcaption>
-        Scan to open on your phone
+        Open the public site on your phone
         <br />
-        <span class="mono">{SITE_URL.replace(/^https:\/\//, '')}</span>
+        <a href={SITE_URL}>{SITE_URL.replace(/^https:\/\//, '')}</a>
       </figcaption>
     </figure>
   );
@@ -152,7 +191,10 @@ export function Footer() {
   return (
     <footer>
       <div class="wrap foot">
-        <p>BLACKOUT · open source (MIT) · no analytics, no trackers, no server · built at ETHGlobal with ENSv2, Uniswap v3 and the CROPS principles.</p>
+        <div>
+          <a class="brand" href="#top"><BrandMark />Copeybara</a>
+          <p>Open source under the MIT license. Built at ETHGlobal.</p>
+        </div>
         <QrCard />
       </div>
     </footer>
