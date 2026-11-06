@@ -50,7 +50,7 @@ test('attack theater: prepare → hijack (real drain) → outage → verify + re
   const [check] = await Promise.all([context.waitForEvent('page'), site.getByRole('link', { name: 'Show the attacker’s request in the kit' }).click()]);
   await check.locator('#acct').fill(t.victim);
   await check.getByRole('button', { name: 'Check', exact: true }).click();
-  await expect(check.locator('[data-verdict]')).toHaveAttribute('data-verdict', 'blocked', { timeout: 30_000 });
+  await expect(check.locator('[data-verdict]')).toHaveAttribute('data-verdict', 'dangerous', { timeout: 30_000 });
   await check.close();
 
   const [kit] = await Promise.all([context.waitForEvent('page'), site.getByRole('link', { name: 'Open the kit and exit' }).click()]);

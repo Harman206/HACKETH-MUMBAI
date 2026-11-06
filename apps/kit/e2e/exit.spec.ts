@@ -50,7 +50,7 @@ test('check a transaction: the hijacked site’s approve(attacker, max) is block
   await page.locator('#pasted').fill(JSON.stringify({ from: s.wallet, to: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', data: approve, value: '0x0' }));
   await page.locator('#acct').fill(s.wallet);
   await page.getByRole('button', { name: 'Check', exact: true }).click();
-  await expect(page.locator('[data-verdict]')).toHaveAttribute('data-verdict', 'blocked', { timeout: 30_000 });
+  await expect(page.locator('[data-verdict]')).toHaveAttribute('data-verdict', 'dangerous', { timeout: 30_000 });
   await expect(page.getByText('Do not sign this.')).toBeVisible();
   await expect(page.getByText(/Exits never need approvals/)).toBeVisible();
 });

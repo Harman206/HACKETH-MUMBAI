@@ -23,9 +23,9 @@ const exit = encodeFunctionData({
 });
 
 describe('checkPasted', () => {
-  test('a hijacked site asking approve(attacker, max) is blocked and says why', () => {
+  test('a hijacked site asking approve(attacker, max) is DANGEROUS and says why', () => {
     const r = checkPasted({ to: USDC, data: approve, chainId: 11155111 }, ctx);
-    expect(r.verdict).toBe('blocked');
+    expect(r.verdict).toBe('dangerous');
     expect(r.sentences.join(' ')).toMatch(/approve/);
     expect(r.sentences.join(' ')).toMatch(/0x9999…9999/);
   });
@@ -36,16 +36,16 @@ describe('checkPasted', () => {
 
   test('garbage hex is blocked: could not be decoded', () => {
     const r = checkPasted({ to: NPM, data: '0xzz', chainId: 11155111 }, ctx);
-    expect(r.verdict).toBe('blocked');
+    expect(r.verdict).toBe('not-exit');
     expect(r.sentences.join(' ')).toMatch(/could not be decoded/);
   });
 
   test('an invalid "to" address is blocked, not a crash', () => {
-    expect(checkPasted({ to: 'nope', data: exit, chainId: 11155111 }, ctx).verdict).toBe('blocked');
+    expect(checkPasted({ to: 'nope', data: exit, chainId: 11155111 }, ctx).verdict).toBe('not-exit');
   });
 
   test('value in hex or decimal is honoured', () => {
-    expect(checkPasted({ to: NPM, data: exit, value: '0x1', chainId: 11155111 }, ctx).verdict).toBe('blocked');
+    expect(checkPasted({ to: NPM, data: exit, value: '0x1', chainId: 11155111 }, ctx).verdict).toBe('not-exit');
     expect(checkPasted({ to: NPM, data: exit, value: '0', chainId: 11155111 }, ctx).verdict).toBe('safe-exit');
   });
 });
@@ -69,13 +69,13 @@ describe('review C1: the pasted transaction must never choose whose account is c
 
   test('pasted from = attacker, collect pays attacker, user address given → blocked', () => {
     const r = checkPasted({ to: NPM, data: collectTo(ATTACKER), from: ATTACKER, chainId: 11155111 }, ctx);
-    expect(r.verdict).toBe('blocked');
+    expect(r.verdict).toBe('dangerous'); // collect pays the attacker
     expect(r.sentences.join(' ')).toMatch(/not your (connected )?(account|address)/);
   });
 
   test('no user address entered → blocked, asks for it (never falls back to pasted from)', () => {
     const r = checkPastedText({ text: JSON.stringify({ from: ATTACKER, to: NPM, data: collectTo(ATTACKER) }), to: '', account: '', chainId: 11155111, manifest });
-    expect(r.verdict).toBe('blocked');
+    expect(r.verdict).toBe('not-exit');
     expect(r.sentences.join(' ')).toMatch(/Enter your address/);
   });
 
@@ -85,11 +85,19 @@ describe('review C1: the pasted transaction must never choose whose account is c
   });
 });
 
+describe('three verdicts: an ordinary transaction is "not an exit", not "dangerous"', () => {
+  test('a call to a contract that is not an exit → not-exit, explained calmly', () => {
+    const r = checkPasted({ to: ATTACKER, data: '0xd0e30db0', chainId: 11155111 }, ctx);
+    expect(r.verdict).toBe('not-exit');
+    expect(r.sentences[0]).toMatch(/not a withdrawal/);
+  });
+});
+
 describe('A6: chain comes from the pasted transaction when present', () => {
   test('pasted chainId 0x1 is checked against chain 1 (not listed here) → blocked', () => {
     const exit1 = JSON.stringify({ chainId: '0x1', to: NPM, data: encodeFunctionData({ abi: npmAbi, functionName: 'collect', args: [{ tokenId: 1n, recipient: USER, amount0Max: maxUint128, amount1Max: maxUint128 }] }) });
     const r = checkPastedText({ text: exit1, to: '', account: USER, chainId: 11155111, manifest });
-    expect(r.verdict).toBe('blocked');
+    expect(r.verdict).toBe('not-exit');
     expect(r.sentences.join(' ')).toMatch(/chain 1/);
   });
 });

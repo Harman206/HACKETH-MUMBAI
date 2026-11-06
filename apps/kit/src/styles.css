@@ -55,7 +55,8 @@ ul.reasons { margin: 6px 0 0; padding-left: 18px; }
 .result-not-recovered, .result-rejected { border-color: var(--bad); }
 .result-unsimulated { border-color: var(--warn); }
 .verdict { border-width: 2px; }
-.verdict-blocked { border-color: var(--bad); }
+.verdict-dangerous { border-color: var(--bad); }
+.verdict-not-exit { border-color: var(--warn, #b45309); }
 .verdict-safe-exit { border-color: var(--ok); }
 .verdict-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
 a.btn { display: inline-block; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 600; text-decoration: none; }

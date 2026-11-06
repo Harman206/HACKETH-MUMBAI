@@ -32,7 +32,7 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
       const rec = await readCopeybaraRecords(settings.ensName, props.quorumFor(ENS_CONFIG.chainId), ENS_CONFIG);
       setResult(checkPastedText({ text: pasted, to, account, chainId: settings.targetChainId, manifest: rec.manifest }));
     } catch (e) {
-      setResult({ verdict: 'blocked', sentences: [`Could not check: ${(e as Error).message}`] });
+      setResult({ verdict: 'not-exit', sentences: [`Could not check: ${(e as Error).message}`] });
     } finally {
       setBusy(false);
     }
@@ -74,7 +74,9 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
       )}
       {result && (
         <div class={`card verdict verdict-${result.verdict}`} role="status" data-verdict={result.verdict}>
-          <div class="verdict-title">{result.verdict === 'blocked' ? '⛔ Do not sign this.' : '✅ Safe exit.'}</div>
+          <div class="verdict-title">
+            {result.verdict === 'dangerous' ? '⛔ Do not sign this.' : result.verdict === 'not-exit' ? 'ℹ️ Not an exit.' : '✅ Safe exit.'}
+          </div>
           <ul class="reasons">
             {result.sentences.map((s) => (
               <li>{s}</li>

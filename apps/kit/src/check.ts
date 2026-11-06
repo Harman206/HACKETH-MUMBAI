@@ -1,7 +1,7 @@
 import { normaliseBundle, scriptHash } from '@copeybara/sitecheck';
 import { isAddress } from 'viem';
 import type { Address, Hex, Manifest } from '@copeybara/core';
-import { explain, guard, type GuardCtx } from '@copeybara/guard';
+import { classifyRequest, explain, guard, type GuardCtx } from '@copeybara/guard';
 
 export interface PastedTx {
   chainId?: number;
@@ -12,7 +12,9 @@ export interface PastedTx {
 }
 
 export interface CheckResult {
-  verdict: 'safe-exit' | 'blocked';
+  /** safe-exit: the Guard would send it · not-exit: the kit would refuse it, but it is not a drainer pattern ·
+   *  dangerous: approvals, permits, transfers or payouts to someone else */
+  verdict: 'safe-exit' | 'not-exit' | 'dangerous';
   sentences: string[];
 }
 
@@ -54,7 +56,7 @@ function parseValue(v: string | undefined): bigint | null {
  * Always fail-closed; never throws.
  */
 export function checkPasted(input: { to: string; data: string; value?: string; from?: string; chainId: number }, ctx: GuardCtx): CheckResult {
-  const blocked = (s: string): CheckResult => ({ verdict: 'blocked', sentences: [s] });
+  const blocked = (s: string): CheckResult => ({ verdict: 'not-exit', sentences: [s] });
   if (!isAddress(input.to ?? '', { strict: false })) return blocked('The "to" address is missing or not a valid address, so this cannot be checked.');
   if (!/^0x[0-9a-fA-F]*$/.test(input.data ?? '')) return blocked('This transaction could not be decoded, so it is blocked (the data is not hex).');
   const value = parseValue(input.value);
@@ -62,10 +64,20 @@ export function checkPasted(input: { to: string; data: string; value?: string; f
   const from = (input.from && isAddress(input.from, { strict: false }) ? input.from : ctx.account) as Address;
   const r = guard({ chainId: input.chainId, from, to: input.to as Address, data: input.data as Hex, value }, ctx);
   const sentences = explain(r);
-  if (from.toLowerCase() !== ctx.account.toLowerCase()) {
-    return { verdict: 'blocked', sentences: [`This request is for ${from.slice(0, 6)}…${from.slice(-4)}, not your address.`, ...(r.ok ? [] : sentences)] };
-  }
-  return { verdict: r.ok ? 'safe-exit' : 'blocked', sentences };
+  const notYou = from.toLowerCase() !== ctx.account.toLowerCase();
+  if (r.ok && !notYou) return { verdict: 'safe-exit', sentences };
+  // Not an exit. Is it one of the drainer patterns, or just some other transaction?
+  const c = classifyRequest(
+    { method: 'eth_sendTransaction', params: [{ from: ctx.account, to: input.to, data: input.data, value: `0x${value.toString(16)}` }] },
+    { account: ctx.account, chainId: input.chainId, manifests: [{ name: 'this protocol', manifest: ctx.manifest }] },
+  );
+  const paysSomeoneElse = r.reasons.some((x) => x.code === 'BANNED' || x.code === 'RECIPIENT' || x.code === 'CALLER');
+  const head = notYou ? [`This request is for ${from.slice(0, 6)}…${from.slice(-4)}, not your address.`] : [];
+  if (c.verdict === 'dangerous' || paysSomeoneElse) return { verdict: 'dangerous', sentences: [...head, ...c.reasons.filter(() => c.verdict === 'dangerous'), ...sentences] };
+  return {
+    verdict: 'not-exit',
+    sentences: [...head, 'This is not a withdrawal from the protocol’s published exits, so this kit would not send it. That alone does not make it malicious; it is simply not an exit.', ...sentences],
+  };
 }
 
 /**
@@ -74,7 +86,7 @@ export function checkPasted(input: { to: string; data: string; value?: string; f
  */
 export function checkPastedText(input: { text: string; to: string; account: string; chainId: number; manifest: Manifest }): CheckResult {
   if (!isAddress(input.account.trim(), { strict: false })) {
-    return { verdict: 'blocked', sentences: ['Enter your address first: the check compares where the funds would go with your own address.'] };
+    return { verdict: 'not-exit', sentences: ['Enter your address first: the check compares where the funds would go with your own address.'] };
   }
   const p = parsePasted(input.text);
   const account = input.account.trim() as Address;
