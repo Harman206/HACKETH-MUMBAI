@@ -90,12 +90,10 @@ const manifests = {
     ...base,
     minimum_chrome_version: '116',
     background: { service_worker: 'background.js', type: 'module' },
-    web_accessible_resources: [{ resources: ['src/pages/warning.html', 'assets/*'], matches: ['<all_urls>'], use_dynamic_url: true }],
   },
   firefox: {
     ...base,
     background: { scripts: ['background.js'], type: 'module' },
-    web_accessible_resources: [{ resources: ['src/pages/warning.html', 'assets/*'], matches: ['<all_urls>'] }],
     browser_specific_settings: { gecko: { id: 'copeybara@copeybara.eth', strict_min_version: '128.0' } },
   },
 };

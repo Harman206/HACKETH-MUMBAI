@@ -467,6 +467,27 @@ export function createCore(deps: CoreDeps) {
     sync,
     handleMessage,
     publicState,
+    /** Every top-level navigation (tabs.onUpdated): a blocked or flagged site is moved to the warning page at once. */
+    async onNavigate(tabId: number, url: string) {
+      await load();
+      let origin: string;
+      let host: string;
+      try {
+        const u = new URL(url);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return;
+        origin = u.origin;
+        host = u.hostname;
+      } catch {
+        return;
+      }
+      const flagged = blocklistHit(host) || protocolFor(origin)?.snapshot?.status?.state === 'compromised';
+      if (!flagged) return;
+      const prev = tabs.get(tabId);
+      if (prev?.url === url && prev.blocked) return;
+      const t: TabState = { url, origin, site: { kind: 'none' }, items: new Map(), done: false, counted: false, blocked: false };
+      tabs.set(tabId, t);
+      await evaluateNavigation(tabId, t);
+    },
     onTabRemoved(tabId: number) {
       tabs.delete(tabId);
       confirmTimes.delete(tabId);

@@ -1,7 +1,8 @@
 /**
- * declarativeNetRequest rules: the block a page cannot evade. Navigations to a followed protocol's site while its
- * ENS status says "compromised", and to any domain on a followed protocol's blocklist, go to the warning page
- * before a single byte of the site loads.
+ * declarativeNetRequest rules: the block a page cannot evade. Requests to a followed protocol's site while its
+ * ENS status says "compromised", and to any domain on a followed protocol's blocklist, are cancelled before a single
+ * byte of the site loads; the worker then moves the tab to the warning page (core.onNavigate). Blocking instead of
+ * redirecting means no extension page has to be web-accessible, so pages cannot probe for Copeybara.
  */
 import type { ProtocolState } from '../shared/types';
 
@@ -11,7 +12,7 @@ export const WARNING_PATH = '/src/pages/warning.html';
 export interface DnrRule {
   id: number;
   priority: number;
-  action: { type: 'redirect'; redirect: { extensionPath: string } };
+  action: { type: 'block' };
   condition: { requestDomains: string[]; resourceTypes: ('main_frame' | 'sub_frame')[] };
 }
 
@@ -36,7 +37,7 @@ export function buildRules(protocols: ProtocolState[]): DnrRule[] {
     .map((e, i) => ({
       id: RULE_ID_BASE + i,
       priority: 1,
-      action: { type: 'redirect', redirect: { extensionPath: e.path } },
+      action: { type: 'block' },
       condition: { requestDomains: [e.domain], resourceTypes: ['main_frame', 'sub_frame'] },
     }));
 }

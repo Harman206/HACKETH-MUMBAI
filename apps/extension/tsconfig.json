@@ -15,5 +15,5 @@
     { "path": "../../packages/adapters" },
     { "path": "../../packages/sitecheck" }
   ],
-  "include": ["src", "test", "e2e", "scripts/*.ts"]
+  "include": ["src", "test"]
 }

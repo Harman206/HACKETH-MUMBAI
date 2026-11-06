@@ -151,7 +151,9 @@ export type SenderKind = { kind: 'page' } | { kind: 'content'; tabId: number; fr
 export function classifySender(s: SenderLike, extensionId: string, extensionOrigin: string): SenderKind {
   if (s.id !== extensionId) return { kind: 'foreign' };
   const url = s.url ?? '';
-  if (url.startsWith(extensionOrigin)) return { kind: 'page' };
+  // Our own pages (any extension URL of ours: Chrome sets sender.id, which no web page can forge). A content script's
+  // sender.url is always the web page it runs in, never an extension URL.
+  if (url.startsWith(extensionOrigin) || /^(chrome|moz)-extension:\/\//.test(url)) return { kind: 'page' };
   if (s.tab?.id === undefined || s.tab.id < 0) return { kind: 'foreign' };
   let origin: string;
   try {

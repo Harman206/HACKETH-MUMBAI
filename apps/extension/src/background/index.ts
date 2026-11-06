@@ -12,7 +12,10 @@ declare const chrome: ChromeLike & {
     getManifest(): { version: string };
   };
   alarms: { create(n: string, o: { periodInMinutes: number }): void; onAlarm: { addListener(f: (a: { name: string }) => void): void } };
-  tabs: ChromeLike['tabs'] & { onRemoved: { addListener(f: (id: number) => void): void } };
+  tabs: ChromeLike['tabs'] & {
+    onRemoved: { addListener(f: (id: number) => void): void };
+    onUpdated: { addListener(f: (id: number, info: { url?: string }) => void): void };
+  };
   windows: ChromeLike['windows'] & { onRemoved: { addListener(f: (id: number) => void): void } };
 };
 
@@ -50,6 +53,9 @@ chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === 'sync') void core.sync();
 });
 chrome.tabs.onRemoved.addListener((id) => core.onTabRemoved(id));
+chrome.tabs.onUpdated.addListener((id, info) => {
+  if (info.url) void core.onNavigate(id, info.url);
+});
 chrome.windows.onRemoved.addListener((id) => core.onWindowRemoved(id));
 chrome.runtime.onInstalled.addListener(async (d) => {
   await core.load();

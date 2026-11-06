@@ -24,6 +24,7 @@ describe('extension build', () => {
       ['content.js', 'ISOLATED', 'document_start'],
     ]);
     expect(m.content_security_policy.extension_pages).toMatch(/^script-src 'self'/);
+    expect(m.web_accessible_resources).toBeUndefined(); // nothing a web page can load or probe
   });
   test('Firefox manifest uses background scripts and a gecko id', () => {
     const m = JSON.parse(readFileSync(join(DIST, 'firefox', 'manifest.json'), 'utf8'));

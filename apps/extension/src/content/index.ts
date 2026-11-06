@@ -35,7 +35,7 @@ export function startContent(win: Window & typeof globalThis, runtime: Runtime) 
       const url = new URL(src, doc.baseURI).href;
       try {
         // Same page, same cache partition: the bytes the page itself got (cache-first).
-        const r = await fetch(url, { cache: 'force-cache', credentials: 'include' });
+        const r = await fetch(url, { cache: 'force-cache' }); // default credentials: CDNs answer ACAO * (no cookies allowed)
         return { kind: 'src', label: url, hash: r.ok ? await scriptHash(await r.text()) : null };
       } catch {
         return { kind: 'src', label: url, hash: null };

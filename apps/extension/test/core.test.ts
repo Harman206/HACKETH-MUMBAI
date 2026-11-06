@@ -204,10 +204,10 @@ describe('ENS status + blocklist (authoritative blocks)', () => {
     await core.handleMessage({ t: 'hello' }, tab());
     records.status = { state: 'compromised', at: 5, note: 'Site serves unknown scripts' };
     await core.sync();
-    const rules = calls.rules.at(-1) as { condition: { requestDomains: string[] }; action: { redirect: { extensionPath: string } } }[];
+    const rules = calls.rules.at(-1) as { condition: { requestDomains: string[] }; action: { type: string } }[];
     expect(rules).toHaveLength(1);
     expect(rules[0]!.condition.requestDomains).toEqual(['demoswap.localhost']);
-    expect(rules[0]!.action.redirect.extensionPath).toMatch(/reason=compromised/);
+    expect(rules[0]!.action).toEqual({ type: 'block' });
     expect(calls.tabsUpdate.at(-1)!.url).toMatch(/reason=compromised/);
     expect(core.publicState().stats.pagesBlocked.compromised).toBe(1);
   });
@@ -217,6 +217,16 @@ describe('ENS status + blocklist (authoritative blocks)', () => {
     await core.handleMessage({ t: 'hello' }, tab(9, 'http://app.rewards-demoswap.localhost:8082/'));
     expect(calls.tabsUpdate.at(-1)!.url).toMatch(/reason=blocklist/);
     expect(core.publicState().stats.pagesBlocked.blocklist).toBe(1);
+  });
+  test('a navigation to a flagged site (request cancelled by the rule) moves the tab to the warning page, counted once', async () => {
+    const { core, calls } = await setup({ status: { state: 'compromised', note: 'hijacked' } });
+    await core.onNavigate(30, `${SITE}/pools`);
+    await core.onNavigate(30, `${SITE}/pools`);
+    expect(calls.tabsUpdate).toHaveLength(1);
+    expect(calls.tabsUpdate[0]!.url).toMatch(/reason=compromised.*note=hijacked/);
+    expect(core.publicState().stats.pagesBlocked.compromised).toBe(1);
+    await core.onNavigate(31, 'https://fine.example/');
+    expect(calls.tabsUpdate).toHaveLength(1);
   });
   test('unfollowing removes the rules', async () => {
     const { core, calls, page } = await setup({ blocklist: ['x.example'] });
