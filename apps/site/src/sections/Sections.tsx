@@ -1,4 +1,5 @@
-import { HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL } from '../content';
+import { useEffect, useState } from 'preact/hooks';
+import { EXTENSION, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL } from '../content';
 import { BrandMark, ExitIllustration } from './Icons';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
@@ -14,6 +15,7 @@ export function Hero({ live }: { live: string | null }) {
             <div class="cta">
               <a class="btn" href="#download">Get the exit kit <span aria-hidden="true">↓</span></a>
               <a class="text-link" href="#demo">See the demo <span aria-hidden="true">↗</span></a>
+              <a class="text-link" href="#extension">Get the extension <span aria-hidden="true">↓</span></a>
             </div>
           </div>
           <a class="hero-art" href="#how">
@@ -24,6 +26,54 @@ export function Hero({ live }: { live: string | null }) {
         <div class="hero-meta">
           <span><i aria-hidden="true" />{live ?? 'Sepolia testnet demo'}</span>
           <a class="text-link" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** sha256 of a file this site serves, read from its .sha256 sidecar (same origin, so the CSP allows it). */
+export function useSha(file: string): string | null {
+  const [sha, setSha] = useState<string | null>(null);
+  useEffect(() => {
+    fetch(`${file}.sha256`)
+      .then((r) => (r.ok ? r.text() : null))
+      .then((t) => {
+        const h = t?.split(' ')[0];
+        if (h && /^[0-9a-f]{64}$/.test(h)) setSha(h);
+      })
+      .catch(() => {});
+  }, [file]);
+  return sha;
+}
+
+export function Extension() {
+  const chrome = useSha(EXTENSION.chromeZip);
+  const firefox = useSha(EXTENSION.firefoxZip);
+  return (
+    <section id="extension" class="section" aria-labelledby="extension-title">
+      <div class="wrap download-layout">
+        <div class="download-callout">
+          <h2 id="extension-title">{EXTENSION.title}</h2>
+          <p>{EXTENSION.lede}</p>
+          <a class="btn" href={EXTENSION.chromeZip} download={EXTENSION.chromeZip}>Download for Chrome <span aria-hidden="true">↓</span></a>
+          <a class="text-link" href={EXTENSION.firefoxZip} download={EXTENSION.firefoxZip}>Firefox build (zip) <span aria-hidden="true">↓</span></a>
+          <p class="checksum">sha256 of {EXTENSION.chromeZip}</p>
+          <p class="mono" data-ext-sha>{chrome ?? <a href={`${EXTENSION.chromeZip}.sha256`}>Open the checksum file</a>}</p>
+          <p class="checksum">Firefox zip</p>
+          <p class="mono">{firefox ?? <a href={`${EXTENSION.firefoxZip}.sha256`}>Open the checksum file</a>}</p>
+        </div>
+        <div class="download-steps">
+          <h3>What it does</h3>
+          <dl class="feature-list">
+            {EXTENSION.bullets.map((b) => (
+              <div key={b.title}><dt>{b.title}</dt><dd>{b.body}</dd></div>
+            ))}
+          </dl>
+          <h3>Install in four steps</h3>
+          <ol class="protocol-steps install-steps">{EXTENSION.steps.map((s) => <li key={s}><p>{s}</p></li>)}</ol>
+          <p>{EXTENSION.note}</p>
+          <p class="roadmap-link"><a href="https://github.com/Harman206/HACKETH-MUMBAI/blob/4940792/docs/superpowers/specs/2026-11-06-copeybara-extension-design.md">Read the extension and watcher design</a></p>
         </div>
       </div>
     </section>
@@ -144,30 +194,6 @@ export function Protocols() {
             <li key={step.title}><h3>{step.title}</h3><p>{step.body}</p></li>
           ))}
         </ol>
-      </div>
-    </section>
-  );
-}
-
-export function Roadmap() {
-  return (
-    <section id="roadmap" class="section">
-      <div class="wrap section-split">
-        <header class="section-head">
-          <h2>Browser protection is planned</h2>
-          <p class="lede">The exit kit is available today. The next phase adds a way to spot compromised sites before you try to withdraw.</p>
-          <p class="roadmap-link"><a href="https://github.com/Harman206/HACKETH-MUMBAI/blob/4940792/docs/superpowers/specs/2026-11-06-copeybara-extension-design.md">Read the extension and watcher design</a></p>
-        </header>
-        <dl class="feature-list">
-          <div>
-            <dt>Browser extension</dt>
-            <dd>The design calls for checking a protocol site’s scripts against fingerprints published on ENS, warning about risky wallet requests, and opening the exit kit when a site goes down.</dd>
-          </div>
-          <div>
-            <dt>Protocol watcher</dt>
-            <dd>A separate service would check protocol sites for script changes and publish warnings on ENS. Those warnings would only affect website access. Users could still open the exit kit directly.</dd>
-          </div>
-        </dl>
       </div>
     </section>
   );

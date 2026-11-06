@@ -18,6 +18,25 @@ export const HERO = {
   sub: 'Save the Copeybara exit kit to withdraw from supported DeFi positions if the protocol’s website goes down or gets hijacked.',
 };
 
+export const EXTENSION = {
+  title: 'Get the Copeybara extension',
+  lede: 'The kit gets you out after something goes wrong. The extension watches while you use DeFi, so you can see it go wrong before you sign.',
+  bullets: [
+    { title: 'Checks the site you are on', body: 'Every protocol site you open is compared with the script fingerprints the protocol published on ENS. Code the protocol never published gets a warning.' },
+    { title: 'Stops drainer requests', body: 'Approvals, permits and blind signatures that would hand your tokens to an unknown address are stopped before your wallet shows them.' },
+    { title: 'One click to exit', body: 'When a site is down or hijacked, the extension opens the verified exit kit and you withdraw straight from the contracts.' },
+  ],
+  chromeZip: 'copeybara-extension-chrome.zip',
+  firefoxZip: 'copeybara-extension-firefox.zip',
+  steps: [
+    'Unzip copeybara-extension-chrome.zip into a folder you will keep.',
+    'Open chrome://extensions in Chrome, Brave or Edge.',
+    'Turn on Developer mode (top right).',
+    'Click Load unpacked and choose the unzipped folder. The setup wizard opens by itself.',
+  ],
+  note: 'Sepolia testnet preview, installed unpacked; it is not in any extension store. Checks inside a web page are best effort, because a hostile page can get around code running in it. The blocks you can rely on are the ones applied before a flagged site loads.',
+} as const;
+
 export interface Incident { name: string; date: string; what: string; loss: string; source?: string; unverified?: boolean }
 export const INCIDENTS: Incident[] = [
   { name: 'Curve Finance DNS hijack', date: '9 Aug 2022', what: 'A cloned site asked users to approve an unverified contract; USDC and DAI were drained.', loss: '~$612k, 7 users', source: 'CertiK incident write-up; replayed on chain below' },

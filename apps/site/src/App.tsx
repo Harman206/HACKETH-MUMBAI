@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { Download, Footer, Hero, How, Problem, Protocols, Roadmap, Trust } from './sections/Sections';
+import { Download, Extension, Footer, Hero, How, Problem, Protocols, Trust } from './sections/Sections';
 import { BrandMark } from './sections/Icons';
 import { LiveDemo } from './sections/LiveDemo';
 
@@ -21,6 +21,7 @@ export function App() {
           <a class="brand" href="#top"><BrandMark />Copeybara</a>
           <ul>
             <li><a href="#how">How it works</a></li>
+            <li><a href="#extension">Extension</a></li>
             <li><a href="#demo">Live demo</a></li>
             <li><a href="#protocols">For protocols</a></li>
           </ul>
@@ -29,13 +30,13 @@ export function App() {
       </header>
       <main id="main" tabIndex={-1}>
         <Hero live={live} />
+        <Extension />
         <How />
         <Problem />
         <LiveDemo onLive={setLive} />
         <Trust />
         <Download sha={sha} offline={offline} />
         <Protocols />
-        <Roadmap />
       </main>
       <Footer />
     </>

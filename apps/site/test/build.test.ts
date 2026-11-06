@@ -1,5 +1,6 @@
 import { beforeAll, expect, test } from 'vitest';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -57,3 +58,42 @@ test('CSP connect-src allows exactly the origins of the default Sepolia RPCs the
   for (const u of networks.defaultRpcs['11155111']!) expect(csp, u).toContain(new URL(u).origin);
 });
 
+
+test('ships the extension zips (Chrome + Firefox) with matching sha256 files, precached for offline use', () => {
+  const sw = readFileSync(join(SITE, 'dist', 'sw.js'), 'utf8');
+  for (const browser of ['chrome', 'firefox']) {
+    const zip = `copeybara-extension-${browser}.zip`;
+    const bytes = readFileSync(join(SITE, 'dist', zip));
+    expect(bytes.subarray(0, 4).toString('hex'), zip).toBe('504b0304'); // a real zip
+    const sha = createHash('sha256').update(bytes).digest('hex');
+    expect(readFileSync(join(SITE, 'dist', `${zip}.sha256`), 'utf8')).toBe(`${sha}  ${zip}\n`);
+    expect(sw).toContain(`"${zip}"`);
+  }
+});
+
+test('the extension section shows the Chrome zip sha256 the site serves, with download links and install steps', async () => {
+  const { h, render } = await import('preact');
+  const { Extension } = await import('../src/sections/Sections');
+  const served = (f: string) => readFileSync(join(SITE, 'dist', f), 'utf8');
+  const sha = served('copeybara-extension-chrome.zip.sha256').split(' ')[0]!;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (u: string) => new Response(served(String(u)), { status: 200 })) as typeof fetch;
+  try {
+    const root = document.createElement('div');
+    render(h(Extension, {}), root);
+    for (let i = 0; i < 100 && root.querySelector('[data-ext-sha]')!.textContent !== sha; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(root.querySelector('[data-ext-sha]')!.textContent).toBe(sha);
+    expect(root.textContent).toContain(served('copeybara-extension-firefox.zip.sha256').split(' ')[0]!);
+    const links = Array.from(root.querySelectorAll('a[download]')).map((a) => a.getAttribute('href'));
+    expect(links).toEqual(['copeybara-extension-chrome.zip', 'copeybara-extension-firefox.zip']);
+    expect(root.querySelectorAll('ol.install-steps li')).toHaveLength(4);
+    expect(root.textContent).toMatch(/chrome:\/\/extensions.*Developer mode.*Load unpacked/s);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('the built page includes the extension section near the top', () => {
+  expect(js).toContain('copeybara-extension-chrome.zip');
+  expect(js).toContain('Get the Copeybara extension');
+});
