@@ -1,0 +1,44 @@
+[
+  {
+    "check": "web key writes org.blackout.release",
+    "tx": "0x1b1a7bc4b7f678a357b0d1993452a1ce105b7db892f8cae3caeb8c75090bd300",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key swaps resolver on registry",
+    "tx": "0x9bb6e55ffe8aa145355aacd41183170629eaa11b55bf6b5ef3a61a768e4b974f",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key upgrades resolver proxy",
+    "tx": "0x3129c6369ea6997a8b81b7657f1e7863622d332a5b8a596e3a200d7524b963d6",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key grants itself the release setter",
+    "tx": "0x6cbc3b4dc02366fad33e1cb4ed0bccd19c9435bcede24e6a64e36770877a2b97",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key grants itself root text role",
+    "tx": "0xd8c7b6e7459f0a808c83d670a278841b9dcab535ebec52cb1b75ba0496beb9ed",
+    "status": "revert",
+    "expected": "revert",
+    "pass": true
+  },
+  {
+    "check": "web key writes url",
+    "tx": "0xe36172b98a22910e241c11119a940e813c9f436c5dee03a99fb7fa6e9db0ecec",
+    "status": "success",
+    "expected": "success",
+    "pass": true
+  }
+]
