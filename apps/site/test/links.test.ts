@@ -12,7 +12,7 @@ beforeAll(() => {
   }) as typeof fetch;
   Element.prototype.scrollIntoView ??= function () {};
   window.scrollTo = () => {};
-  globalThis.requestAnimationFrame ??= ((f: FrameRequestCallback) => setTimeout(() => f(0), 0)) as typeof requestAnimationFrame;
+  globalThis.requestAnimationFrame ??= ((f: FrameRequestCallback) => setTimeout(() => f(0), 0)) as unknown as typeof requestAnimationFrame;
 });
 afterAll(() => {
   globalThis.fetch = realFetch;

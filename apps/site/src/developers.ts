@@ -23,6 +23,44 @@ export const CAPABILITIES = [
   { pkg: 'copeybara certify', title: 'Copeybara certified', body: 'verify, the certified rules and a passing drill, in one report. Certified protocols get a tick that this site re-checks live from ENS.' },
 ];
 
+export interface Step { title: string; body: string; code?: string }
+export const QUICKSTART: Step[] = [
+  {
+    title: 'Get the CLI',
+    body: 'The packages are not on npm yet; run them from the repository. Node 22 and pnpm 9.',
+    code: `git clone ${REPO_URL} copeybara && cd copeybara\ncorepack enable && pnpm install\npnpm copeybara init          # writes copeybara.config.ts`,
+  },
+  {
+    title: 'Describe your protocol',
+    body: 'Your ENS name, the Safe that owns it, the two scoped keys and your exit contracts. Built-in adapters cover Uniswap v3/v4, Aave v3 and Curve 3pool; anything ERC-4626-shaped needs only a declarative exit.',
+  },
+  {
+    title: 'Build the records',
+    body: 'Each command refuses what the Exit Guard could not check: a function missing from the ABI or bytecode, a banned selector like approve, or an exit that needs ETH or a signature.',
+    code: 'pnpm copeybara manifest --onchain   # org.copeybara.manifest + org.copeybara.exits\npnpm copeybara release              # kit (+ extension) sha256 → org.copeybara.release\npnpm copeybara fingerprint --dist dist   # org.copeybara.site; fails on unpinned third-party scripts',
+  },
+  {
+    title: 'Propose one Safe batch',
+    body: 'Open Safe{Wallet} → Transaction Builder → drag in .copeybara/safe-batch.json. Or post it to the Safe Transaction Service with a signature made elsewhere. The batch can only touch Copeybara records and the two scoped grants; anything else is refused before the file is written.',
+    code: 'pnpm copeybara propose                       # → .copeybara/safe-batch.json + safe-tx.json (safeTxHash)\npnpm copeybara propose --api --sender 0x… --signature 0x…',
+  },
+  {
+    title: 'Prove it',
+    body: 'verify reads every record back through three RPCs. roles-check sends each forbidden write as the website and watcher keys (it must revert) next to the same write as the Safe (it must succeed). The drill exits a real position on a fork with your site and primary RPC off.',
+    code: 'pnpm copeybara verify\npnpm copeybara roles-check --live\npnpm copeybara drill',
+  },
+  {
+    title: 'Ship it to users',
+    body: 'Add the build plugin, put the widget on your site, and start the watcher.',
+    code: 'pnpm copeybara watcher --up    # docker compose, healthcheck, key from a gitignored watcher.env',
+  },
+  {
+    title: 'Get certified',
+    body: 'certify runs verify, the certified rules and checks the last drill used this exact kit. Send us the report to be listed.',
+    code: 'pnpm copeybara certify        # → .copeybara/certification.json',
+  },
+];
+
 export const CONFIG_SAMPLE = `import { defineConfig } from '@copeybara/protocol-cli';
 import { erc4626Kind } from '@copeybara/core';
 
@@ -79,19 +117,19 @@ export const CLI = [
   ['adapter new <name>', 'Scaffolds a code adapter with a fork test, Guard corpus cases and a property test.', 'packages/adapters/…'],
 ] as const;
 
-/** Captured from `pnpm copeybara verify` in examples/demoswap (kit v7) against Sepolia, 7 Nov 2026. */
+/** Captured from `pnpm copeybara verify` in examples/demoswap against Sepolia, 7 Nov 2026. */
 export const VERIFY_OUTPUT = `$ pnpm copeybara verify
-demoswap-blackout.eth at Sepolia block 12079453 (3 RPCs, ≥2 agreeing):
+demoswap-blackout.eth at Sepolia block 12079041 (3 RPCs, ≥2 agreeing):
 ✓ resolver     0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82
 ✓ owner        the Safe owns demoswap-blackout.eth
-✓ release      MATCH v=7 301d3e86cd7ba9de29b2925394a1bb6ab24a52b5652edb25ffa54858ae66b2b3
+✓ release      MATCH v=6 d0ff737b1b2d67bc1888da9e65d974c526d16aecf04708d2c80229adc04c3a4a
 ✓ manifest     MATCH
 ✓ exits        none (no declarative exits)
 ✓ site         3 scripts published (run copeybara fingerprint to compare with a build)
 ✓ website key  0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182 may write url only
 ✓ watcher key  0xeBbcD4fC4265dbb7Fc7b2df00f1fD7B89FA1EfF8 may write status + blocklist only
 ✓ safe         2 of 3 signers
-✓ status       v=1;state=ok;at=1793998799
+✓ status       v=1;state=ok;at=1793995840
 ✓ kit view     the kit reads every record without a problem
 
 verify: OK`;
@@ -134,8 +172,7 @@ export const NON_GOALS = [
   'No signing: the SDK proposes; your Safe signers decide.',
 ];
 
-/* ---------- "Add your protocol": the guided onboarding on the Developers page ---------- */
-
+// Guided "Add your protocol" onboarding (#/developers/onboarding).
 export interface Cmd { code: string; note?: string }
 export interface OnbStep {
   id: string;
