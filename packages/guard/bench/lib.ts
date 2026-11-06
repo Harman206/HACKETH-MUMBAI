@@ -64,7 +64,8 @@ export async function rpc<T = any>(method: string, params: unknown[], cache = tr
   const run = async () => {
     let err: unknown;
     for (let attempt = 0; attempt < 6; attempt++) {
-      const url = RPCS[attempt % RPCS.length]!;
+      // publicnode refuses historical eth_getLogs without a token; drpc serves 10k-block windows.
+      const url = RPCS[(attempt + (method === 'eth_getLogs' ? 1 : 0)) % RPCS.length]!;
       const wait = lastRpc + 120 - Date.now();
       if (wait > 0) await sleep(wait);
       lastRpc = Date.now();
