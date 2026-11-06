@@ -8,7 +8,8 @@ import {
     IPermissionedRegistry,
     IPermissionedResolver,
     ENSName,
-    ENSv2Roles
+    ENSv2Roles,
+    IUniversalResolverV2
 } from "../src/interfaces/IENSv2.sol";
 
 /// The spec's must-revert checks: a stolen website key can write `url` and nothing else.
@@ -91,5 +92,21 @@ contract PermissionsForkTest is BlackoutForkFixture {
 
     function safeSetTextExternal(uint256[] memory keys) external {
         safeSetText(safe, resolver, label, "org.blackout.release", RELEASE_V2, keys);
+    }
+
+    // The kit on IPFS: its CIDv1 (raw) is multihash(sha256 of the kit), so contenthash = 0xe301 01551220 <sha256>.
+    bytes internal constant KIT_CONTENTHASH = hex"e30101551220cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd";
+
+    function test_safe_setsContenthash_readableThroughUniversalResolver() public {
+        safeSetContenthash(safe, resolver, label, KIT_CONTENTHASH, ownerKeys);
+        bytes memory inner = abi.encodeWithSignature("contenthash(bytes32)", node);
+        (bytes memory out,) = IUniversalResolverV2(c.universalResolver).resolve(ENSName.dnsEncodeEth(label), inner);
+        assertEq(abi.decode(out, (bytes)), KIT_CONTENTHASH);
+    }
+
+    function test_webKey_cannotWriteContenthash() public {
+        vm.prank(webKey);
+        vm.expectPartialRevert(IEnhancedAccessControl.EACUnauthorizedAccountRoles.selector);
+        resolver.setContenthash(ENSName.dnsEncodeEth(label), KIT_CONTENTHASH);
     }
 }

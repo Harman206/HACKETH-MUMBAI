@@ -113,4 +113,12 @@ abstract contract BlackoutSetup is Script {
         bytes memory call_ = abi.encodeCall(IPermissionedResolver.setText, (ENSName.dnsEncodeEth(label), key, value));
         require(SafeExec.exec(safe, address(resolver), call_, keys), "setText failed");
     }
+
+    /// ENSIP-7 contenthash (the kit on IPFS), written by the Safe like every release record.
+    function safeSetContenthash(ISafe safe, IPermissionedResolver resolver, string memory label, bytes memory hash, uint256[] memory keys)
+        internal
+    {
+        bytes memory call_ = abi.encodeCall(IPermissionedResolver.setContenthash, (ENSName.dnsEncodeEth(label), hash));
+        require(SafeExec.exec(safe, address(resolver), call_, keys), "setContenthash failed");
+    }
 }

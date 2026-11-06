@@ -56,6 +56,16 @@ if [ "$(jq -r '.kitRelease // empty' "$DF")" != "$KIT_SHA" ]; then
   env -u MANIFEST_FILE RELEASE="sha256:$KIT_SHA;v=$KIT_VERSION" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
   jq --arg s "$KIT_SHA" --argjson v "$KIT_VERSION" '.kitRelease=$s | .kitReleaseVersion=$v' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
 fi
+# ENS-hosted kit: its IPFS CIDv1 (raw) is multihash(sha256), so contenthash = 0xe30101551220<sha256>.
+# Only after the kit file is pinned on IPFS (IPFS_PINNED=1): never point ENS at content nobody serves.
+CH="0xe30101551220$KIT_SHA"
+if [ "${IPFS_PINNED:-0}" = "1" ] && [ "$(jq -r '.contenthash // empty' "$DF")" != "$CH" ]; then
+  echo "publishing contenthash $CH"
+  env -u RELEASE -u MANIFEST_FILE -u SITE_HASH CONTENTHASH="$CH" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  jq --arg s "$CH" '.contenthash=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
+elif [ "${IPFS_PINNED:-0}" != "1" ]; then
+  echo "contenthash not published: pin apps/kit/dist/blackout-kit.html on IPFS (CIDv1, raw leaves), then rerun with IPFS_PINNED=1"
+fi
 # Publish the exit manifest whenever config/manifest.json changed since the last publish (same Safe 2-of-3 path).
 MF_SHA=$(shasum -a 256 "$MANIFEST_FILE" | cut -d' ' -f1)
 if [ "$(jq -r '.manifestSha // empty' "$DF")" != "$MF_SHA" ]; then

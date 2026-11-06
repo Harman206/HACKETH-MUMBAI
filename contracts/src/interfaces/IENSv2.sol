@@ -25,6 +25,7 @@ interface IPermissionedResolver is IEnhancedAccessControl {
 
     function initialize(Grant[] calldata grants, bytes[] calldata calls) external;
     function setText(bytes calldata name, string calldata key, string calldata value) external;
+    function setContenthash(bytes calldata name, bytes calldata hash) external;
     function grantSetterRoles(bytes calldata setter, address account) external returns (bool);
     function revokeRoles(uint256 resource, uint256 roleBitmap, address account) external returns (bool);
     function resolve(bytes calldata name, bytes calldata data) external view returns (bytes memory);
