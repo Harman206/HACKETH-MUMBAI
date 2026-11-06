@@ -123,4 +123,17 @@ describe('fire drill harness', () => {
     expect(after).toMatchObject({ victim: '0x1111111111111111111111111111111111111111', victimDusd: '10,000', verify: { real: 'MATCH v=3' } });
     expect((await (await fetch(`http://127.0.0.1:${ports.control}/theater/hijack-request`)).json()).data.slice(0, 10)).toBe('0x095ea7b3');
   });
+
+  test('review #1: control actions refuse requests from other websites (Origin allow-list, no wildcard CORS)', async () => {
+    const evil = await fetch(`http://127.0.0.1:${ports.control}/switch/site-down`, { method: 'POST', headers: { origin: 'https://evil.example' } });
+    expect(evil.status).toBe(403);
+    expect(evil.headers.get('access-control-allow-origin')).toBeNull();
+    const prep = await fetch(`http://127.0.0.1:${ports.control}/theater/prepare`, { method: 'POST', headers: { origin: 'http://attacker.localhost.evil.com' }, body: '{"victim":"0x2222222222222222222222222222222222222222"}' });
+    expect(prep.status).toBe(403);
+    const status = await (await fetch(`http://127.0.0.1:${ports.control}/status`)).json();
+    expect(status.site).toBe('up');
+    const ok = await fetch(`http://127.0.0.1:${ports.control}/switch/reset`, { method: 'POST', headers: { origin: 'http://localhost:4173' } });
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get('access-control-allow-origin')).toBe('http://localhost:4173');
+  });
 });
