@@ -34,6 +34,7 @@ const HELP = `copeybara <command> [--config copeybara.config.ts]
   certify                  verify + the Copeybara certified checks; writes certification.json
   roles-check [--live]     prove the website and watcher keys cannot write anything else (fork by default)
   drill [--sample]         fork the chain, switch off the site + primary RPC, exit a seeded position headlessly
+  watcher [--up]           docker compose for the watcher (status + blocklist key only), with a healthcheck
   adapter new <name>       scaffold a code adapter with fork tests, Guard corpus cases and property tests
 
 Nothing here signs. Owners approve the Safe batch on their own devices.`;
@@ -227,6 +228,7 @@ async function main() {
       live: { type: 'boolean' },
       force: { type: 'boolean' },
       sample: { type: 'boolean' },
+      up: { type: 'boolean' },
     },
   });
   if (cmd === 'init') {
@@ -256,6 +258,8 @@ async function main() {
       return (await import('./fingerprint')).fingerprintCmd(l, { dist: o.dist, url: o.url, write: (f, b) => writeOut(l, f, b) });
     case 'roles-check':
       return (await import('./roles')).rolesCheckCmd(l, { live: !!o.live });
+    case 'watcher':
+      return (await import('./watcher')).watcherCmd(l, { up: !!o.up });
     case 'drill':
       return (await import('./drill')).drillCmd(l, { write: (f, b) => writeOut(l, f, b) });
     default:
