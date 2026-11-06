@@ -4,6 +4,7 @@ import type { Quorum } from '@copeybara/quorum';
 import type { Settings } from '../settings';
 import { checkPastedText, prefillFromUrl, siteHashCheck, type CheckResult, type SiteCheck } from '../check';
 import { ENS_CONFIG } from '../config';
+import { IconCheckCircle, IconFingerprint, IconInfo, IconSearch, IconStop } from './Icons';
 
 /** Paste what a live site asks you to sign; the Exit Guard explains whether it is a safe exit. */
 export function CheckScreen(props: { settings: Settings; quorumFor(chainId: number): Quorum }) {
@@ -38,52 +39,81 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
     }
   }
 
+  const VerdictIcon = result ? { dangerous: IconStop, 'not-exit': IconInfo, 'safe-exit': IconCheckCircle }[result.verdict] : null;
   return (
-    <div class="card">
-      <h2>Check a transaction</h2>
-      <p class="muted">
-        Paste what a website asks your wallet to sign. The Exit Guard compares it with {settings.ensName || 'the protocol'}’s published exits.
-      </p>
-      <label for="pasted">Transaction (wallet JSON or calldata)</label>
-      <textarea id="pasted" value={pasted} onInput={(e) => setPasted((e.target as HTMLTextAreaElement).value)} placeholder='{"to":"0x…","data":"0x…","value":"0x0"}' />
-      <label for="to">
-        To <span class="hint">(only if you pasted bare calldata)</span>
-      </label>
-      <input id="to" value={to} onInput={(e) => setTo((e.target as HTMLInputElement).value)} placeholder="0x…" />
-      <label for="acct">
-        Your address <span class="hint">(required: where the funds must go)</span>
-      </label>
-      <input id="acct" value={account} onInput={(e) => setAccount((e.target as HTMLInputElement).value)} placeholder="0x…" />
-      <div style="margin-top:16px">
-        <button disabled={busy || !settings.ensName} onClick={run}>
-          {busy ? 'Checking…' : 'Check'}
-        </button>
-        {!settings.ensName && <span class="muted" style="margin-left:8px">Enter the ENS name on the Exit tab first.</span>}
-      </div>
-      <h2 style="margin-top:24px">Is this the official site?</h2>
-      <p class="muted">Paste the site's main script (view-source → main bundle). Its fingerprint is compared with the protocol's <code>org.copeybara.site</code> record.</p>
-      <textarea id="bundle" value={bundle} onInput={(e) => setBundle((e.target as HTMLTextAreaElement).value)} />
-      <div style="margin-top:8px">
-        <button class="secondary" disabled={!bundle || !settings.ensName} onClick={runSite}>Compare with ENS</button>
-      </div>
-      {site && (
-        <p data-site={site.verdict} class={site.verdict === 'match' ? 'ok' : 'bad'} style="margin-top:8px">
-          {site.verdict === 'match' ? 'Matches the published site bundle.' : site.verdict === 'mismatch' ? 'Does NOT match the published site bundle. The site may be hijacked: use this kit to exit.' : 'The protocol has not published a site fingerprint.'}{' '}
-          <span class="mono">{site.sha256}</span>
-        </p>
-      )}
-      {result && (
-        <div class={`card verdict verdict-${result.verdict}`} role="status" data-verdict={result.verdict}>
-          <div class="verdict-title">
-            {result.verdict === 'dangerous' ? '⛔ Do not sign this.' : result.verdict === 'not-exit' ? 'ℹ️ Not an exit.' : '✅ Safe exit.'}
+    <>
+      <div class="card">
+        <div class="card-head">
+          <span class="badge-icon"><IconSearch /></span>
+          <div>
+            <div class="label">Before you sign</div>
+            <h2>Check a transaction</h2>
           </div>
-          <ul class="reasons">
-            {result.sentences.map((s) => (
-              <li>{s}</li>
-            ))}
-          </ul>
         </div>
-      )}
-    </div>
+        <p class="muted">
+          Paste what a website asks your wallet to sign. The Exit Guard compares it with {settings.ensName || 'the protocol'}’s published exits.
+        </p>
+        <div class="field">
+          <label for="pasted">Transaction <span class="hint">Wallet JSON or calldata</span></label>
+          <textarea id="pasted" spellcheck={false} class="tall" value={pasted} onInput={(e) => setPasted((e.target as HTMLTextAreaElement).value)} placeholder='{"to":"0x…","data":"0x…","value":"0x0"}' />
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="to">
+              To <span class="hint">Only if you pasted bare calldata</span>
+            </label>
+            <input id="to" spellcheck={false} class="mono-input" value={to} onInput={(e) => setTo((e.target as HTMLInputElement).value)} placeholder="0x…" />
+          </div>
+          <div class="field">
+            <label for="acct">
+              Your address <span class="hint">Required: where the funds must go</span>
+            </label>
+            <input id="acct" spellcheck={false} class="mono-input" value={account} onInput={(e) => setAccount((e.target as HTMLInputElement).value)} placeholder="0x…" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary lg" disabled={busy || !settings.ensName} onClick={run}>
+            {busy ? 'Checking…' : 'Check'}
+          </button>
+          {!settings.ensName && <span class="muted small">Enter the ENS name on the Exit tab first.</span>}
+        </div>
+        {result && VerdictIcon && (
+          <div class={`verdict verdict-${result.verdict}`} role="status" data-verdict={result.verdict}>
+            <div class="verdict-title">
+              <VerdictIcon size={22} />
+              <span>{result.verdict === 'dangerous' ? 'Do not sign this.' : result.verdict === 'not-exit' ? 'Not an exit.' : 'Safe exit.'}</span>
+            </div>
+            <ul class="reasons">
+              {result.sentences.map((s) => (
+                <li>{s}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="badge-icon"><IconFingerprint /></span>
+          <div>
+            <div class="label">Site fingerprint</div>
+            <h2>Is this the official site?</h2>
+          </div>
+        </div>
+        <p class="muted">Paste the site's main script (view-source → main bundle). Its fingerprint is compared with the protocol's <code>org.copeybara.site</code> record.</p>
+        <textarea id="bundle" spellcheck={false} aria-label="Site script" value={bundle} onInput={(e) => setBundle((e.target as HTMLTextAreaElement).value)} />
+        <div class="actions">
+          <button class="secondary" disabled={!bundle || !settings.ensName} onClick={runSite}>Compare with ENS</button>
+        </div>
+        {site && (
+          <p data-site={site.verdict} class={`notice ${site.verdict === 'match' ? 'ok-notice' : 'bad-notice'}`}>
+            {site.verdict === 'match' ? <IconCheckCircle /> : <IconStop />}
+            <span>
+              {site.verdict === 'match' ? 'Matches the published site bundle.' : site.verdict === 'mismatch' ? 'Does NOT match the published site bundle. The site may be hijacked: use this kit to exit.' : 'The protocol has not published a site fingerprint.'}{' '}
+              <span class="mono">{site.sha256}</span>
+            </span>
+          </p>
+        )}
+      </div>
+    </>
   );
 }

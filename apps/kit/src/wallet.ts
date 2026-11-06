@@ -41,8 +41,64 @@ export async function discoverWallets(waitMs = 300): Promise<{ info: WalletInfo;
   return [...found.values()];
 }
 
-export async function connect(p: Eip1193): Promise<{ account: Address; chainId: number }> {
-  const accounts = (await p.request({ method: 'eth_requestAccounts' })) as Address[];
+/** EIP-1193 -32002: the wallet already has a connect request open for this page (MetaMask: wallet_requestPermissions). */
+export const isRequestPending = (e: unknown) => {
+  const err = e as { code?: number; message?: unknown } | null;
+  return err?.code === -32002 || (typeof err?.message === 'string' && /already pending/i.test(err.message));
+};
+
+export class ConnectCancelled extends Error {
+  override name = 'ConnectCancelled';
+  constructor() {
+    super('Connection cancelled. Nothing was sent and nothing happened to your funds.');
+  }
+}
+
+export interface ConnectOptions {
+  /** Called once when the wallet says a connect request is already open (-32002); the kit then waits for it. */
+  onPending?(): void;
+  /** Stops waiting (the Cancel button). */
+  signal?: AbortSignal;
+  pollMs?: number;
+  timeoutMs?: number;
+}
+
+const sleep = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(new ConnectCancelled());
+    const t = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(new ConnectCancelled());
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+
+/**
+ * eth_requestAccounts. If the wallet already has a connect request open (-32002, e.g. a MetaMask popup the user
+ * lost behind the window), don't fail: tell the UI, then poll eth_accounts (read-only) until the user approves it
+ * in the wallet, up to `timeoutMs`, or until `signal` aborts.
+ */
+export async function connect(p: Eip1193, opts: ConnectOptions = {}): Promise<{ account: Address; chainId: number }> {
+  let accounts: Address[];
+  try {
+    accounts = (await p.request({ method: 'eth_requestAccounts' })) as Address[];
+  } catch (e) {
+    if (!isRequestPending(e)) throw e;
+    opts.onPending?.();
+    const pollMs = opts.pollMs ?? 1000;
+    const deadline = Date.now() + (opts.timeoutMs ?? 120_000);
+    accounts = [];
+    while (!accounts[0]) {
+      if (Date.now() >= deadline) throw e;
+      await sleep(pollMs, opts.signal);
+      accounts = ((await p.request({ method: 'eth_accounts' }).catch(() => [])) as Address[] | null) ?? [];
+    }
+  }
+  if (opts.signal?.aborted) throw new ConnectCancelled();
   if (!accounts?.[0]) throw new Error('The wallet returned no account.');
   const chainId = Number(await p.request({ method: 'eth_chainId' }));
   return { account: accounts[0], chainId };

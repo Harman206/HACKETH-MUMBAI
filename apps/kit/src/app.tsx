@@ -15,6 +15,7 @@ import type { ExitProgress } from '@copeybara/exec';
 import { formatAmount, type TokenMeta } from './tokens';
 import { CheckScreen } from './screens/Check';
 import { ReleaseScreen } from './screens/Release';
+import { BrandMark, IconAlert, IconCheckCircle, IconChevron, IconDownload, IconExit, IconExternal, IconFingerprint, IconInfo, IconLayers, IconLock, IconSearch, IconShield, IconStop, IconWallet } from './screens/Icons';
 import './styles.css';
 
 function download(name: string, text: string, type: string) {
@@ -32,6 +33,8 @@ function useFlowState(flow: ReturnType<typeof createFlow>): FlowState {
   return s;
 }
 
+const envFor = (chainId: number) => ({ protocol: typeof location !== 'undefined' ? location.protocol : undefined, chainId });
+
 const copeybaraConnect = typeof location !== 'undefined' && /(^|[#&])connect=copeybara(&|$)/.test(location.hash.slice(1));
 
 /**
@@ -41,30 +44,58 @@ const copeybaraConnect = typeof location !== 'undefined' && /(^|[#&])connect=cop
 function CopeybaraHandoff() {
   const [sent, setSent] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [pending, setPending] = useState<AbortController | null>(null);
   const go = async () => {
     setErr(null);
+    const ac = new AbortController();
     try {
       const ws = await discoverWallets();
       if (!ws[0]) throw new Error('No browser wallet found. Install MetaMask or Rabby, then reload this page.');
-      const { account } = await connect(ws[0].provider);
+      const { account } = await connect(ws[0].provider, { signal: ac.signal, onPending: () => setPending(ac) });
       window.postMessage({ tag: 'copeybara:kit-address', address: account }, location.origin === 'null' ? '*' : location.origin);
       setSent(account);
     } catch (e) {
-      setErr((e as Error).message);
+      if (!ac.signal.aborted) setErr((e as Error).message);
+    } finally {
+      setPending(null);
     }
   };
   return (
-    <div class="card" data-copeybara-handoff>
-      <h2>Connect your wallet to Copeybara</h2>
+    <div class="card handoff" data-copeybara-handoff>
+      <div class="card-head">
+        <span class="badge-icon"><IconWallet /></span>
+        <div>
+          <div class="label">Extension setup</div>
+          <h2>Connect your wallet to Copeybara</h2>
+        </div>
+      </div>
       {sent ? (
-        <p>Sent <span class="mono">{sent}</span> to the Copeybara extension. Go back to its setup tab and confirm it.</p>
+        <p class="notice ok-notice"><IconCheckCircle /> <span>Sent <span class="mono">{sent}</span> to the Copeybara extension. Go back to its setup tab and confirm it.</span></p>
+      ) : pending ? (
+        <PendingNotice onCancel={() => pending.abort()} />
       ) : (
         <>
           <p class="muted">Copeybara only receives your address, to find your positions. It never signs.</p>
-          <button onClick={go}>Use this wallet in Copeybara</button>
+          <button class="primary lg" onClick={go}><IconWallet /> <span>Use this wallet in Copeybara</span></button>
         </>
       )}
-      {err && <p class="bad">{err}</p>}
+      {err && <p class="bad" role="alert">{humanize(err, envFor(11155111)).text}</p>}
+    </div>
+  );
+}
+
+/** The wallet already has a connect request open (-32002): say where it is, keep waiting, offer Cancel. */
+function PendingNotice({ onCancel }: { onCancel(): void }) {
+  return (
+    <div class="notice pending" role="status" aria-live="polite" data-connect-pending>
+      <span class="spinner" aria-hidden="true" />
+      <div class="notice-body">
+        <b>{COPY.connectPending}</b>
+        <span class="muted">{COPY.connectPendingWait}</span>
+      </div>
+      <button class="ghost" onClick={onCancel}>
+        {COPY.cancel}
+      </button>
     </div>
   );
 }
@@ -91,7 +122,7 @@ export function App() {
       ens: ENS_CONFIG,
       adapters: ADAPTERS,
       wallet: {
-        connect: async () => {
+        connect: async (opts) => {
           let p = provider;
           if (!p) {
             const ws = await discoverWallets();
@@ -100,7 +131,7 @@ export function App() {
             setProvider(p);
           }
           (window as { __copeybaraProvider?: Eip1193 }).__copeybaraProvider = p;
-          return connect(p);
+          return connect(p, opts);
         },
         ensureChain: (id) => ensureChain((window as { __copeybaraProvider?: Eip1193 }).__copeybaraProvider!, id),
         sender: (account) => senderFrom((window as { __copeybaraProvider?: Eip1193 }).__copeybaraProvider!, account),
@@ -126,34 +157,67 @@ export function App() {
     saveSettings(next);
   };
 
+  const chainLabel = settings.targetChainId === 11155111 ? 'Sepolia testnet' : (CHAIN_NAMES[settings.targetChainId] ?? `Chain ${settings.targetChainId}`);
   return (
-    <main>
-      <h1>{COPY.title}</h1>
-      <p class="muted">{COPY.tagline}</p>
-      {ensFromLink && settings.ensName === ensFromLink && (
-        <div class="card banner warn" role="alert" data-ens-from-link>
-          The protocol name <b>{ensFromLink}</b> was filled in from the link you opened. Before you continue, confirm it matches the name in the protocol’s official docs. Links can be faked.
+    <>
+      <header class="topbar">
+        <div class="topbar-in">
+          <span class="brand">
+            <BrandMark size={30} />
+            <span class="wordmark">Copeybara</span>
+            <span class="brand-sub">Exit kit</span>
+          </span>
+          <span class="chip net" title="The network your positions are read from">
+            <span class="dot" aria-hidden="true" /> {chainLabel}
+          </span>
         </div>
-      )}
-      {copeybaraConnect && <CopeybaraHandoff />}
-      <nav aria-label="Mode">
-        <button aria-pressed={tab === 'exit'} onClick={() => setTab('exit')}>Exit my positions</button>
-        <button aria-pressed={tab === 'check'} onClick={() => setTab('check')}>Check a transaction</button>
-        <button aria-pressed={tab === 'release'} onClick={() => setTab('release')}>Release &amp; exits</button>
-      </nav>
-      {tab === 'release' ? (
-        <ReleaseScreen settings={settings} update={update} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS), expectedChainId: id })} />
-      ) : tab === 'check' ? (
-        <CheckScreen settings={settings} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS), expectedChainId: id })} />
-      ) : (
-        <ExitTab state={state} settings={settings} update={update} flow={flow} />
-      )}
-      <p class="muted" style="font-size:13px;margin-top:32px">{COPY.trusted} No Copeybara server, no analytics.</p>
-    </main>
+      </header>
+      <main>
+        <section class="hero">
+          <div class="label">Emergency withdrawal</div>
+          <h1>{COPY.title}</h1>
+          <p class="lede">{COPY.tagline}</p>
+          <ul class="hero-points">
+            <li><IconShield size={16} /> Exit Guard checks every transaction</li>
+            <li><IconLayers size={16} /> 3 independent RPC providers must agree</li>
+            <li><IconLock size={16} /> No server, no analytics, no signatures</li>
+          </ul>
+        </section>
+        {ensFromLink && settings.ensName === ensFromLink && (
+          <div class="notice warn-notice" role="alert" data-ens-from-link>
+            <IconAlert />
+            <span>
+              The protocol name <b>{ensFromLink}</b> was filled in from the link you opened. Before you continue, confirm it matches the name in the protocol’s official docs. Links can be faked.
+            </span>
+          </div>
+        )}
+        {copeybaraConnect && <CopeybaraHandoff />}
+        <nav class="tabs" aria-label="Mode">
+          <button aria-pressed={tab === 'exit'} onClick={() => setTab('exit')}>
+            <IconExit size={16} /> <span>Exit my positions</span>
+          </button>
+          <button aria-pressed={tab === 'check'} onClick={() => setTab('check')}>
+            <IconSearch size={16} /> <span>Check a transaction</span>
+          </button>
+          <button aria-pressed={tab === 'release'} onClick={() => setTab('release')}>
+            <IconFingerprint size={16} /> <span>Release &amp; exits</span>
+          </button>
+        </nav>
+        {tab === 'release' ? (
+          <ReleaseScreen settings={settings} update={update} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS), expectedChainId: id })} />
+        ) : tab === 'check' ? (
+          <CheckScreen settings={settings} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS), expectedChainId: id })} />
+        ) : (
+          <ExitTab state={state} settings={settings} update={update} flow={flow} />
+        )}
+        <footer class="foot">
+          <IconShield size={16} />
+          <span>{COPY.trusted} No Copeybara server, no analytics.</span>
+        </footer>
+      </main>
+    </>
   );
 }
-
-const envFor = (chainId: number) => ({ protocol: typeof location !== 'undefined' ? location.protocol : undefined, chainId });
 
 function ExitTab(props: { state: FlowState; settings: Settings; update(p: Partial<Settings>): void; flow: ReturnType<typeof createFlow> }) {
   const { state, settings, update, flow } = props;
@@ -162,9 +226,21 @@ function ExitTab(props: { state: FlowState; settings: Settings; update(p: Partia
     return (
       <>
         {stepper}
-        <div class="card big-status" role="status">
-          <span class="spinner" aria-hidden="true" /> {state.what}
-        </div>
+        {state.pending ? (
+          <div class="card">
+            <PendingNotice onCancel={() => flow.cancel()} />
+          </div>
+        ) : (
+          <div class="card big-status" role="status">
+            <span class="spinner" aria-hidden="true" />
+            <span class="grow">{state.what}</span>
+            {state.stage === 2 && (
+              <button class="ghost" onClick={() => flow.cancel()}>
+                {COPY.cancel}
+              </button>
+            )}
+          </div>
+        )}
       </>
     );
   if (state.step === 'positions')
@@ -186,19 +262,24 @@ function ExitTab(props: { state: FlowState; settings: Settings; update(p: Partia
 function StoppedCard({ message, chainId, onRetry }: { message: string; chainId: number; onRetry(): void }) {
   const h = humanize(message, envFor(chainId));
   return (
-    <div class="card error" role="alert" data-error>
-      <b class="bad">Stopped.</b> {h.text}
-      {h.text !== message && (
-        <details style="margin-top:6px">
-          <summary class="muted" style="font-size:13px">Technical detail</summary>
-          <pre>{message}</pre>
-        </details>
-      )}
-      {h.fix && (
-        <div style="margin-top:10px">
-          <FixHelp h={h} chainId={chainId} onRetry={onRetry} />
+    <div class="card alert bad-alert" role="alert" data-error>
+      <span class="alert-icon"><IconStop /></span>
+      <div class="alert-body">
+        <div>
+          <b class="bad">Stopped.</b> {h.text}
         </div>
-      )}
+        {h.text !== message && (
+          <details class="tech">
+            <summary>Technical detail</summary>
+            <pre>{message}</pre>
+          </details>
+        )}
+        {h.fix && (
+          <div class="actions">
+            <FixHelp h={h} chainId={chainId} onRetry={onRetry} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -216,129 +297,222 @@ function NoWalletHint({ chainId }: { chainId: number }) {
   if (!none) return null;
   const h = humanize('No browser wallet found', envFor(chainId));
   return (
-    <div class="card banner warn" role="status" data-no-wallet>
-      <b>{COPY.noWallet}</b> {h.text}
-      <div style="margin-top:10px">
-        <FixHelp h={h} chainId={chainId} />
+    <div class="card alert warn-alert" role="status" data-no-wallet>
+      <span class="alert-icon"><IconWallet /></span>
+      <div class="alert-body">
+        <div>
+          <b>{COPY.noWallet}</b> {h.text}
+        </div>
+        <div class="actions">
+          <FixHelp h={h} chainId={chainId} />
+        </div>
       </div>
     </div>
+  );
+}
+
+function HowItWorks() {
+  return (
+    <ol class="how" aria-label="How this works">
+      {COPY.how.map((h, i) => (
+        <li>
+          <span class="how-n">{i + 1}</span>
+          <span>
+            <b>{h.title}</b>
+            <span class="muted"> {h.body}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
 function Setup(props: { settings: Settings; update(p: Partial<Settings>): void; onStart(): void; walletHint: boolean }) {
   const { settings, update } = props;
   const cid = String(settings.targetChainId);
+  const ownRpcs = settings.userRpcs[cid] ?? [];
   return (
     <>
-    {props.walletHint && <NoWalletHint chainId={settings.targetChainId} />}
-    <div class="card">
-      <h2>1. Which protocol?</h2>
-      <label for="ens">
-        ENS name <span class="hint">({COPY.nameHint})</span>
-      </label>
-      <input id="ens" placeholder="protocol.eth" value={settings.ensName} onInput={(e) => update({ ensName: (e.target as HTMLInputElement).value })} />
-      <label for="chain">Network your position is on</label>
-      <select id="chain" value={cid} onChange={(e) => update({ targetChainId: Number((e.target as HTMLSelectElement).value) })}>
-        {Object.entries(CHAIN_NAMES).map(([id, n]) => (
-          <option value={id}>{n}</option>
-        ))}
-      </select>
-      <label for="rpcs">
-        Your own RPC endpoints <span class="hint">(optional, one per line; used first, checked against public providers)</span>
-      </label>
-      <textarea
-        id="rpcs"
-        value={(settings.userRpcs[cid] ?? []).join('\n')}
-        onInput={(e) => update({ userRpcs: { ...settings.userRpcs, [cid]: (e.target as HTMLTextAreaElement).value.split(/\s+/).filter(Boolean) } })}
-      />
-      <label style="font-weight:400;display:flex;gap:8px;align-items:center">
-        <input type="checkbox" style="width:auto" checked={settings.useDefaultRpcs} onChange={(e) => update({ useDefaultRpcs: (e.target as HTMLInputElement).checked })} />
-        Also check answers against public RPC providers (recommended)
-      </label>
-      <div style="margin-top:16px">
-        <button onClick={props.onStart}>Connect wallet and find my positions</button>
-      </div>
-    </div>
-    </>
-  );
-}
-
-function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positions' }>; flow: ReturnType<typeof createFlow> }) {
-  const { records } = state;
-  const anyResult = Object.keys(state.results).length > 0;
-  return (
-    <>
-      {state.rollbackWarning && <div class="card banner warn" role="alert">{COPY.rollback}</div>}
-      {state.fees?.low && (
-        <div class="card banner warn" role="status" data-low-fees>
-          {COPY.lowFees(formatAmount(state.fees.balance, 18))}
-          {state.chainId === 11155111 && (
-            <div style="margin-top:10px">
-              <a class="btn" href={FAUCET_URL} target="_blank" rel="noreferrer noopener">
-                {COPY.faucet}
-              </a>
-            </div>
-          )}
+      {props.walletHint && <NoWalletHint chainId={settings.targetChainId} />}
+      <section class="how-wrap">
+        <div class="label">How this works</div>
+        <HowItWorks />
+      </section>
+      <div class="card form">
+        <div class="field">
+          <label for="ens">
+            Protocol ENS name <span class="hint">{COPY.nameHint}</span>
+          </label>
+          <div class="input-icon">
+            <IconSearch size={18} />
+            <input id="ens" class="lg" placeholder="protocol.eth" autoComplete="off" spellcheck={false} value={settings.ensName} onInput={(e) => update({ ensName: (e.target as HTMLInputElement).value })} />
+          </div>
         </div>
-      )}
-      <div class="card">
-        <h2>{records.name}</h2>
-        <p class="muted">
-          Release v{records.release.version} · read at block {records.block.toString()} · wallet <span class="mono">{state.account}</span>
-        </p>
-        <details>
-          <summary>{COPY.verifyTitle}</summary>
-          <p style="margin-top:8px">{COPY.verifyBody}</p>
-          <pre>{`sha256sum copeybara-kit.html\n# must equal: ${records.release.sha256}\n\nscripts/verify-kit.sh copeybara-kit.html ${records.name}`}</pre>
+        <div class="field">
+          <label for="chain">Network your position is on</label>
+          <select id="chain" value={cid} onChange={(e) => update({ targetChainId: Number((e.target as HTMLSelectElement).value) })}>
+            {Object.entries(CHAIN_NAMES).map(([id, n]) => (
+              <option value={id}>{n}</option>
+            ))}
+          </select>
+        </div>
+        <details class="advanced" open={ownRpcs.length > 0 || !settings.useDefaultRpcs}>
+          <summary>
+            <IconChevron size={16} cls="chev" /> Advanced: your own RPC endpoints <span class="hint">(optional)</span>
+          </summary>
+          <div class="field">
+            <label for="rpcs">
+              Your own RPC endpoints <span class="hint">One per line. Used first, checked against public providers.</span>
+            </label>
+            <textarea
+              id="rpcs"
+              spellcheck={false}
+              value={ownRpcs.join('\n')}
+              onInput={(e) => update({ userRpcs: { ...settings.userRpcs, [cid]: (e.target as HTMLTextAreaElement).value.split(/\s+/).filter(Boolean) } })}
+            />
+          </div>
+          <label class="check">
+            <input type="checkbox" checked={settings.useDefaultRpcs} onChange={(e) => update({ useDefaultRpcs: (e.target as HTMLInputElement).checked })} />
+            <span>Also check answers against public RPC providers (recommended)</span>
+          </label>
         </details>
+        <button class="primary xl cta" onClick={props.onStart}>
+          <IconWallet size={20} /> <span>Connect wallet and find my positions</span>
+        </button>
+        <p class="reassure">
+          <IconLock size={14} /> Your wallet only shares your address. Nothing moves until you confirm a withdrawal in your wallet.
+        </p>
       </div>
-      <div class="card">
-        <div class="row">
-          <h2 style="margin:0">2. Your positions on {CHAIN_NAMES[state.chainId] ?? `chain ${state.chainId}`}</h2>
-          {state.positions.some((p) => !p.manual) && (
-            <button class="secondary" disabled={!!state.busy} onClick={() => flow.exitAll()}>
-              {state.batch ? COPY.exitingBatch(state.batch.done + 1, state.batch.total) : COPY.exitAll}
-            </button>
-          )}
-        </div>
-        {state.discoveryErrors.map((e) => (
-          <p class="warn" role="alert" style="margin-top:12px">{e}</p>
-        ))}
-        {state.notes.map((n) => (
-          <p class="muted" style="margin-top:12px;font-size:14px" data-note>{n}</p>
-        ))}
-        {state.positions.length === 0 && <p class="muted" style="margin-top:12px">{COPY.noPositions}</p>}
-        {state.positions.map((p) => (
-          <PositionRow
-            p={p}
-            result={state.results[p.id]}
-            busy={state.busy}
-            progress={state.progress[p.id]}
-            chainId={state.chainId}
-            preview={state.previews[p.id] ?? []}
-            meta={state.meta}
-            onExit={() => flow.exit(p.id)}
-          />
-        ))}
-      </div>
-      {state.addable.map((a) => (
-        <AddById adapter={a} flow={flow} busy={!!state.busy} />
-      ))}
-      {anyResult && (
-        <div class="card row">
-          <button class="secondary" onClick={() => download('copeybara-exit-report.json', reportToJson(flow.report()), 'application/json')}>
-            {COPY.downloadJson}
-          </button>
-          <button class="secondary" onClick={() => download('copeybara-exit-report.html', reportToHtml(flow.report()), 'text/html')}>
-            {COPY.downloadHtml}
-          </button>
-        </div>
-      )}
     </>
   );
 }
 
 const ADAPTER_NAMES: Record<string, string> = { 'uniswap-v3': 'Uniswap v3', 'uniswap-v4': 'Uniswap v4', 'aave-v3': 'Aave v3', 'curve-3pool': 'Curve 3pool' };
+const ADAPTER_SHORT: Record<string, string> = { 'uniswap-v3': 'U3', 'uniswap-v4': 'U4', 'aave-v3': 'AV', 'curve-3pool': 'CV' };
+
+function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positions' }>; flow: ReturnType<typeof createFlow> }) {
+  const { records } = state;
+  const anyResult = Object.keys(state.results).length > 0;
+  const exitable = state.positions.filter((p) => !p.manual);
+  const recovered = Object.values(state.results).filter((r) => r.status === 'recovered').length;
+  return (
+    <>
+      {state.rollbackWarning && (
+        <div class="notice warn-notice" role="alert">
+          <IconAlert /> <span>{COPY.rollback}</span>
+        </div>
+      )}
+      {state.fees?.low && (
+        <div class="card alert warn-alert" role="status" data-low-fees>
+          <span class="alert-icon"><IconAlert /></span>
+          <div class="alert-body">
+            <div>{COPY.lowFees(formatAmount(state.fees.balance, 18))}</div>
+            {state.chainId === 11155111 && (
+              <div class="actions">
+                <a class="btn" href={FAUCET_URL} target="_blank" rel="noreferrer noopener">
+                  {COPY.faucet} <IconExternal size={14} />
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      <div class="card summary">
+        <div class="summary-head">
+          <div>
+            <div class="label">Protocol</div>
+            <h2 class="serif">{records.name}</h2>
+          </div>
+          <span class="chip ok-chip">
+            <IconCheckCircle size={14} /> Verified on ENS
+          </span>
+        </div>
+        <dl class="stats">
+          <div>
+            <dt>Kit release</dt>
+            <dd><span class="chip">Release v{records.release.version}</span></dd>
+          </div>
+          <div>
+            <dt>ENS block</dt>
+            <dd class="num">{records.block.toString()}</dd>
+          </div>
+          <div class="wide">
+            <dt>Wallet</dt>
+            <dd class="mono">{state.account}</dd>
+          </div>
+        </dl>
+        <details class="tech">
+          <summary>{COPY.verifyTitle}</summary>
+          <p>{COPY.verifyBody}</p>
+          <pre>{`sha256sum copeybara-kit.html\n# must equal: ${records.release.sha256}\n\nscripts/verify-kit.sh copeybara-kit.html ${records.name}`}</pre>
+        </details>
+      </div>
+      <div class="card positions">
+        <div class="positions-head">
+          <div>
+            <div class="label">
+              Your positions · {CHAIN_NAMES[state.chainId] ?? `chain ${state.chainId}`}
+            </div>
+            <h2>
+              {state.positions.length === 0 ? 'Nothing to withdraw' : `${exitable.length} position${exitable.length === 1 ? '' : 's'} found`}
+              {recovered > 0 && <span class="muted num"> · {recovered} recovered</span>}
+            </h2>
+          </div>
+          {state.positions.some((p) => !p.manual) && (
+            <button class="primary lg" disabled={!!state.busy} onClick={() => flow.exitAll()}>
+              {state.batch ? COPY.exitingBatch(state.batch.done + 1, state.batch.total) : COPY.exitAll}
+            </button>
+          )}
+        </div>
+        {exitable.length > 0 && !anyResult && <p class="muted small">{COPY.exitHelp}</p>}
+        {state.discoveryErrors.map((e) => (
+          <p class="notice warn-notice" role="alert">
+            <IconAlert /> <span>{e}</span>
+          </p>
+        ))}
+        {state.notes.map((n) => (
+          <p class="notice info-notice" data-note>
+            <IconInfo /> <span>{n}</span>
+          </p>
+        ))}
+        {state.positions.length === 0 && <p class="empty muted">{COPY.noPositions}</p>}
+        <div class="plist">
+          {state.positions.map((p) => (
+            <PositionRow
+              p={p}
+              result={state.results[p.id]}
+              busy={state.busy}
+              progress={state.progress[p.id]}
+              chainId={state.chainId}
+              preview={state.previews[p.id] ?? []}
+              meta={state.meta}
+              onExit={() => flow.exit(p.id)}
+            />
+          ))}
+        </div>
+      </div>
+      {state.addable.map((a) => (
+        <AddById adapter={a} flow={flow} busy={!!state.busy} />
+      ))}
+      {anyResult && (
+        <div class="card reports">
+          <div>
+            <div class="label">Receipt</div>
+            <p class="muted small">Keep a record of what was withdrawn, with transaction links.</p>
+          </div>
+          <div class="row-btns">
+            <button class="secondary" onClick={() => download('copeybara-exit-report.json', reportToJson(flow.report()), 'application/json')}>
+              <IconDownload size={16} /> <span>{COPY.downloadJson}</span>
+            </button>
+            <button class="secondary" onClick={() => download('copeybara-exit-report.html', reportToHtml(flow.report()), 'text/html')}>
+              <IconDownload size={16} /> <span>{COPY.downloadHtml}</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 /** For positions discovery cannot list exhaustively (Uniswap v4 NFTs): the user types the ID, the kit checks ownership. */
 function AddById({ adapter, flow, busy }: { adapter: import('@copeybara/core').AdapterId; flow: ReturnType<typeof createFlow>; busy: boolean }) {
@@ -355,20 +529,22 @@ function AddById({ adapter, flow, busy }: { adapter: import('@copeybara/core').A
     else setId('');
   };
   return (
-    <div class="card" data-add-by-id={adapter}>
-      <label for={`add-${adapter}`} style="margin-top:0">
+    <div class="card addid" data-add-by-id={adapter}>
+      <label for={`add-${adapter}`}>
         Missing a {name} position? <span class="hint">Enter its ID; the kit checks it belongs to this wallet.</span>
       </label>
-      <div class="row" style="flex-wrap:nowrap">
+      <div class="inline">
         <input id={`add-${adapter}`} inputMode="numeric" placeholder="e.g. 41448" value={id} onInput={(e) => setId((e.target as HTMLInputElement).value)} />
         <button class="secondary" disabled={busy || working || !id.trim()} onClick={add}>
           {working ? 'Checking…' : 'Add'}
         </button>
       </div>
-      {err && <p class="warn" style="margin:8px 0 0" role="status">{err}</p>}
+      {err && <p class="warn small" role="status">{err}</p>}
     </div>
   );
 }
+
+const STATUS_ICON = { recovered: IconCheckCircle, 'not-recovered': IconStop, rejected: IconStop, unsimulated: IconAlert } as const;
 
 function PositionRow(props: {
   p: Position;
@@ -383,40 +559,43 @@ function PositionRow(props: {
   const { p, result, meta } = props;
   const fmt = (token: `0x${string}`, amount: bigint) =>
     `${formatAmount(amount, meta[token]?.decimals ?? 18)} ${meta[token]?.symbol ?? `${token.slice(0, 6)}…${token.slice(-4)}`}`;
-  const label = result
-    ? { recovered: <b class="ok">{COPY.recovered}</b>, 'not-recovered': <b class="bad">{COPY.notRecovered}</b>, rejected: <b class="bad">{COPY.blocked}</b>, unsimulated: <b class="warn">{COPY.unsimulated}</b> }[result.status]
-    : null;
+  const text = result ? { recovered: COPY.recovered, 'not-recovered': COPY.notRecovered, rejected: COPY.blocked, unsimulated: COPY.unsimulated }[result.status] : '';
+  const tone = result ? { recovered: 'ok', 'not-recovered': 'bad', rejected: 'bad', unsimulated: 'warn' }[result.status] : '';
+  const StatusIcon = result ? STATUS_ICON[result.status] : null;
   return (
-    <div style="border-top:1px solid var(--line);padding:12px 0" data-position={p.id}>
-      <div class="row">
-        <div>
-          <b>{p.label}</b>
+    <div class={`prow${result?.status === 'recovered' ? ' done' : ''}`} data-position={p.id}>
+      <div class="prow-main">
+        <span class="token-badge" aria-hidden="true">{ADAPTER_SHORT[p.adapter] ?? p.adapter.slice(0, 2).toUpperCase()}</span>
+        <div class="prow-text">
+          <div class="prow-title">{p.label}</div>
           {props.preview.length > 0 && !result && (
-            <div class="muted" style="font-size:14px">You would receive ≈ {props.preview.map((x) => fmt(x.token, x.amount)).join(' + ')}</div>
+            <div class="prow-preview">
+              <span class="muted">You would receive ≈</span> <span class="num">{props.preview.map((x) => fmt(x.token, x.amount)).join(' + ')}</span>
+            </div>
           )}
           {p.manual && (
-            <div class="warn" style="font-size:13px">
+            <div class="warn small">
               {COPY.manual}: {p.manual}
             </div>
           )}
         </div>
         {!p.manual && result?.status !== 'recovered' && (
-          <button disabled={!!props.busy} onClick={props.onExit}>
+          <button class="secondary exit-btn" disabled={!!props.busy} onClick={props.onExit}>
             {props.busy === p.id ? COPY.exiting : COPY.exit}
           </button>
         )}
       </div>
       {props.busy === p.id && <ExitStatusLine p={props.progress} chainId={props.chainId} />}
       {result && props.busy !== p.id && (
-        <div style="margin-top:6px" data-status={result.status} class={`result result-${result.status}`}>
-          {label}
+        <div data-status={result.status} class={`result result-${result.status}`}>
+          <span class={`chip ${tone}-chip`}>
+            {StatusIcon && <StatusIcon size={14} />} {text}
+          </span>
           {result.deltas.length > 0 && result.status === 'recovered' && (
-            <div class="ok" style="font-size:15px;margin-top:4px">
-              {result.deltas.map((d) => `+${fmt(d.token, d.after - d.before)}`).join('   ')} back in your wallet
-            </div>
+            <div class="ok delta num">{result.deltas.map((d) => `+${fmt(d.token, d.after - d.before)}`).join('   ')} back in your wallet</div>
           )}
           {result.txHashes.map((h) => (
-            <div class="mono">
+            <div class="mono txlink">
               <a href={`${EXPLORERS[props.chainId] ?? '#'}${h}`} target="_blank" rel="noreferrer noopener">
                 {h}
               </a>
@@ -430,7 +609,7 @@ function PositionRow(props: {
                   <li>
                     {h.text}
                     {h.fix === 'faucet' && (
-                      <div style="margin-top:6px">
+                      <div class="actions">
                         <FixHelp h={h} chainId={props.chainId} />
                       </div>
                     )}

@@ -3,9 +3,12 @@ import type { ExitProgress } from '@copeybara/exec';
 import { COPY, FAUCET_URL, WALLET_LINKS } from '../copy';
 import { CHAIN_NAMES, EXPLORERS } from '../config';
 import type { Humanized } from '../errors';
+import { IconExternal } from './Icons';
 
 const focus = (id: string) => {
   const el = document.getElementById(id) as HTMLInputElement | null;
+  el?.closest('details')?.setAttribute('open', ''); // the RPC box lives under "Advanced"
+
   el?.scrollIntoView({ block: 'center' });
   el?.focus();
 };
@@ -18,7 +21,7 @@ export function FixHelp({ h, chainId, onRetry }: { h: Humanized; chainId: number
     case 'faucet':
       return (
         <a class="btn" href={FAUCET_URL} target="_blank" rel="noreferrer noopener" data-fix="faucet">
-          {COPY.faucet}
+          {COPY.faucet} <IconExternal size={14} />
         </a>
       );
     case 'retry':
@@ -50,7 +53,7 @@ export function FixHelp({ h, chainId, onRetry }: { h: Humanized; chainId: number
         <span class="row" style="justify-content:flex-start" data-fix="install-wallet">
           {WALLET_LINKS.map((w) => (
             <a class="btn secondary" href={w.href} target="_blank" rel="noreferrer noopener">
-              Get {w.name}
+              Get {w.name} <IconExternal size={14} />
             </a>
           ))}
         </span>
@@ -83,9 +86,14 @@ export function ExitStatusLine({ p, chainId }: { p?: ExitProgress; chainId: numb
   return (
     <div class="live" role="status" aria-live="polite" data-stage={stage}>
       <span class="spinner" aria-hidden="true" />
-      <div>
+      <div class="live-body">
+        <div class="live-bar" aria-hidden="true">
+          {ORDER.map((_, i) => (
+            <span class={i < n - 1 ? 'seg done' : i === n - 1 ? 'seg now' : 'seg'} />
+          ))}
+        </div>
         <div>
-          <span class="muted">
+          <span class="muted num">
             {n}/{ORDER.length}
           </span>{' '}
           {COPY.progress[stage]}

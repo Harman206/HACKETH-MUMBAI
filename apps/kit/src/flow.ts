@@ -11,7 +11,7 @@ import { tokenMeta, type TokenMeta } from './tokens';
 
 export type FlowState =
   | { step: 'setup' }
-  | { step: 'loading'; what: string; stage: 1 | 2 | 3 }
+  | { step: 'loading'; what: string; stage: 1 | 2 | 3; /** The wallet already had a connect request open: the kit is waiting for the user to approve it there. */ pending?: boolean }
   | {
       step: 'positions';
       records: CopeybaraRecords;
@@ -63,7 +63,7 @@ export interface FlowDeps {
   ens: { chainId: number; universalResolver: Address };
   adapters: ExitAdapter[];
   wallet: {
-    connect(): Promise<{ account: Address; chainId: number }>;
+    connect(opts?: { onPending(): void; signal: AbortSignal }): Promise<{ account: Address; chainId: number }>;
     ensureChain(chainId: number): Promise<void>;
     sender(account: Address): Sender;
   };
@@ -79,6 +79,8 @@ export interface FlowDeps {
 export interface Flow {
   state: Store<FlowState>;
   start(s: Settings): Promise<void>;
+  /** Stop waiting for the wallet (while connecting) and go back to the form. */
+  cancel(): void;
   exit(id: string): Promise<void>;
   exitAll(): Promise<void>;
   /** Add a position the scan could not find. Resolves to null on success, or a plain error message. */
@@ -99,7 +101,15 @@ export function createFlow(deps: FlowDeps): Flow {
   let failures: { kind: string; at: number }[] = [];
 
   let stage: 1 | 2 | 3 = 1;
+  let connecting: AbortController | null = null;
   const fail = (m: string) => state.set({ step: 'error', message: m, stage });
+
+  function cancel() {
+    if (!connecting) return;
+    connecting.abort();
+    connecting = null;
+    state.set({ step: 'setup' });
+  }
 
   async function start(s: Settings) {
     startedAt = deps.now();
@@ -128,12 +138,23 @@ export function createFlow(deps: FlowDeps): Flow {
     stage = 2;
     state.set({ step: 'loading', what: COPY.connecting, stage });
     let account: Address;
+    const ac = new AbortController();
+    connecting = ac;
     try {
-      const w = await deps.wallet.connect();
+      const w = await deps.wallet.connect({
+        signal: ac.signal,
+        onPending: () => {
+          if (!ac.signal.aborted) state.set({ step: 'loading', what: COPY.connectPending, stage, pending: true });
+        },
+      });
+      if (ac.signal.aborted) return;
       account = w.account;
       if (w.chainId !== s.targetChainId) await deps.wallet.ensureChain(s.targetChainId);
     } catch (e) {
+      if (ac.signal.aborted) return; // cancelled: the form is already back
       return fail(message(e));
+    } finally {
+      if (connecting === ac) connecting = null;
     }
 
     stage = 3;
@@ -271,5 +292,5 @@ export function createFlow(deps: FlowDeps): Flow {
     });
   }
 
-  return { state, start, exit, exitAll, addById, report };
+  return { state, start, cancel, exit, exitAll, addById, report };
 }
