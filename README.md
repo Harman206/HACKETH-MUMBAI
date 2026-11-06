@@ -39,7 +39,7 @@ The **Check a transaction** tab runs the same Exit Guard on anything a live site
 |---|---|---|
 | A real withdrawal from the saved kit, with the website and primary RPC switched off | Drill e2e: site down + RPC down + DNS hijack, then 3 Uniswap v3 exits recovered, time-to-exit < 60 s | `cd apps/kit && pnpm exec playwright test e2e/drill.spec.ts` |
 | A tampered kit is rejected by an independent fingerprint check against ENSv2 | `verify-kit.sh` → `MISMATCH` on the hijack's one-byte-tampered kit | drill report `tamperedKitDetected: true` |
-| A stolen website key cannot change the release record or swap the resolver | 9 must-revert fork tests + live Sepolia reverted txs | `cd contracts && forge test --match-contract PermissionsForkTest`; [live hashes](#deployed-addresses-and-transactions) |
+| A stolen website key cannot change the release record or swap the resolver | 9 must-revert fork tests; on-chain reverted txs from the website key (live Sepolia hashes below once the live run is done) | `cd contracts && forge test --match-contract PermissionsForkTest`; [live hashes](#deployed-addresses-and-transactions) |
 | The Exit Guard rejects real attacker calldata (Curve 2022) | Victim's real `approve` calldata → rejected (BANNED + TARGET) | `pnpm vitest run packages/guard/test/fixtures.test.ts` |
 | Without BLACKOUT the Curve 2022 victim loses 400,227.23 USDC; with it, 0 | Foundry `vm.transact` replay on a mainnet fork | `cd replay && forge test` · report: [docs/replay/R1.md](docs/replay/R1.md) |
 | The kit loads zero third-party code | Playwright network log: 0 third-party origins (DemoSwap: 4) | `pnpm exec playwright test e2e/no-trackers.spec.ts e2e/scan.spec.ts` |
@@ -115,9 +115,9 @@ Proven by a 26-case banned corpus (including the Curve 2022 victim's real callda
 | | How BLACKOUT meets it |
 |---|---|
 | **C**ensorship resistance (lead) | The exit needs no BLACKOUT server and no protocol server. The judge kills the website, the primary RPC and DNS live, and the exit still lands. Broadcast goes through the wallet's own RPC, which is a disclosed trusted dependency. |
-| **O**pen source | MIT. Builds from this repo. The kit build is reproducible: CI-style check builds twice and compares sha256 (`apps/kit/scripts/check-repro.mjs`). |
+| **O**pen source | MIT. Builds from this repo. Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
 | **P**rivacy | No server and no analytics. The kit contacts only the RPC endpoints you configure plus the bundled public ones (Playwright-verified: 0 third-party requests). RPC providers see reads for your address. Anon-RPC: see [docs/crops.md](docs/crops.md). |
-| **S**ecurity | Keys stay in the wallet. The kit only ever calls `eth_estimateGas` and `eth_sendTransaction`, and never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. |
+| **S**ecurity | Keys stay in the wallet. The only transaction methods the kit calls are `eth_estimateGas` and `eth_sendTransaction` (plus `eth_requestAccounts`, `eth_chainId` and `wallet_switchEthereumChain` to connect), and it never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. In this testnet demo all three Safe owner keys were generated on one machine; a real protocol must use independent signers. |
 
 More detail: [docs/crops.md](docs/crops.md).
 
@@ -159,11 +159,11 @@ Wallets: the e2e uses an injected EIP-6963 test wallet. Manual checks with MetaM
 ## Honest limits
 
 - Does not stop smart-contract exploits (the replay control C1 shows this).
-- Still trusted: the user's wallet and its broadcast RPC, Ethereum itself, ENS, the release Safe's signers, and `sha256sum`.
+- Still trusted: the user's wallet and its broadcast RPC, Ethereum itself, ENS, the release Safe's signers, and `sha256sum`. In this testnet demo the Safe's three owner keys sit on one machine (`contracts/.env`), so the 2-of-3 property is demonstrated, not independent.
 - The MVP covers Uniswap v3 NFTs held directly, Aave v3 supply-only, and Curve 3pool LP. It does not cover Uniswap v4, vaults or staked positions. Aave positions with debt are flagged "manual", because repaying needs an approval.
 - The user must save or fetch the kit, and must know the ENS name from a source other than the kit.
 - ENSv2 resolver roles are per resolver, not per name. We deploy one resolver per protocol name, so the web key's `url` grant covers exactly that one name.
-- The kit warns when it sees a lower release version than one seen before in this browser. On-chain monotonicity is not enforced, but a rollback needs the release Safe anyway.
+- The kit warns when it sees a lower release version than one seen before in this browser. On-chain monotonicity is not enforced. Serving an older record needs either the release Safe or a majority of the kit's RPC paths lying together (a single path reporting an old block is ignored: heads more than 16 blocks from the median are dropped).
 - Replays are labelled **mainnet fork**, **impersonated account** and **counterfactual**. None is a live mainnet rescue.
 
 ## License and disclosures
