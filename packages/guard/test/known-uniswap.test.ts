@@ -9,7 +9,7 @@ import { encodeFunctionData, parseAbi, toHex, type Hex } from 'viem';
 import { KNOWN_CONTRACTS, SIGS, type Address, type KnownTable } from '@copeybara/core';
 import { classifyRequest, type ClassifyCtx } from '../src/classify';
 import { ATTACKER, USER, approveData } from './helpers';
-import { AAVE_POOL, MANIFEST } from './manifest-fixture';
+import { AAVE_POOL, CURVE_POOL, MANIFEST } from './manifest-fixture';
 
 const PERMIT2: Address = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 const UR: Record<number, Address> = { 1: '0x66a9893cc07d91d95644aedd05d03f95e1dba8af', 11155111: '0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b' };
@@ -155,6 +155,10 @@ describe('ClassifyCtx.known', () => {
     expect(classifyRequest(send(USDC, approveData(PERMIT2)), { ...bare(1), known: empty }).verdict).toBe('dangerous');
   });
   test('a followed contract that is not in the table keeps the old answer (standing permission → risky)', () => {
-    expect(classifyRequest(send(USDC, approveData(AAVE_POOL)), followed(1)).verdict).toBe('risky');
+    expect(classifyRequest(send(USDC, approveData(CURVE_POOL)), followed(1)).verdict).toBe('risky');
+  });
+  test('a followed contract that is also in the table (Aave v3 Pool) → known, named by the table', () => {
+    const r = classifyRequest(send(USDC, approveData(AAVE_POOL)), followed(1));
+    expect(r).toMatchObject({ verdict: 'known', protocol: 'Aave' });
   });
 });

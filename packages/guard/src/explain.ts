@@ -14,6 +14,10 @@ export function explain(r: GuardResult): string[] {
           break;
         }
         const name = x.detail.replace(/ is never part of an exit$/, '');
+        if (/upgrade|Ownership|setOwner|\(Safe\)/.test(name)) {
+          out.push(`This would hand control of a contract or a Safe to ${short(x.subject)} (${name}). Exits never do that.`);
+          break;
+        }
         out.push(
           /approve|permit|setApprovalForAll|increaseAllowance/i.test(name)
             ? `This asks you to approve (${name}) ${short(x.subject)} to spend your tokens. Exits never need approvals.`

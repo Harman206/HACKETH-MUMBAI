@@ -27,6 +27,26 @@ export const SIGS = {
     'permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)',
     'permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)',
     'permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)',
+    // Control of a contract or a Safe (B1 gap: proxy-upgrade / owner phishing). Never part of an exit.
+    'upgradeTo(address)',
+    'upgradeToAndCall(address,bytes)',
+    'transferOwnership(address)',
+    'acceptOwnership()',
+    'setOwner(address)',
+    'addOwnerWithThreshold(address,uint256)',
+    'swapOwner(address,address,address)',
+    'removeOwner(address,address,uint256)',
+    'changeThreshold(uint256)',
+    'enableModule(address)',
+    'setGuard(address)',
+    'setFallbackHandler(address)',
+    'execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)',
+    'multiSend(bytes)',
+    // Batch transfers (B1 gap: NFT bulk-transfer phish) and Permit2 lockdown (a revocation).
+    'bulkTransfer(((uint8,address,uint256,uint256)[],address,bool)[],bytes32)',
+    'safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)',
+    'safeTransferFrom(address,address,uint256,uint256,bytes)',
+    'lockdown((address,address)[])',
   ],
 } as const;
 
@@ -57,6 +77,24 @@ export const SEL = {
   permit2WitnessTransferFrom: sel(
     'permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)',
   ),
+  upgradeTo: sel('upgradeTo(address)'),
+  upgradeToAndCall: sel('upgradeToAndCall(address,bytes)'),
+  transferOwnership: sel('transferOwnership(address)'),
+  acceptOwnership: sel('acceptOwnership()'),
+  setOwner: sel('setOwner(address)'),
+  safeAddOwner: sel('addOwnerWithThreshold(address,uint256)'),
+  safeSwapOwner: sel('swapOwner(address,address,address)'),
+  safeRemoveOwner: sel('removeOwner(address,address,uint256)'),
+  safeChangeThreshold: sel('changeThreshold(uint256)'),
+  safeEnableModule: sel('enableModule(address)'),
+  safeSetGuard: sel('setGuard(address)'),
+  safeSetFallbackHandler: sel('setFallbackHandler(address)'),
+  safeExecTransaction: sel('execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)'),
+  safeMultiSend: sel('multiSend(bytes)'),
+  bulkTransfer: sel('bulkTransfer(((uint8,address,uint256,uint256)[],address,bool)[],bytes32)'),
+  safeBatchTransferFrom1155: sel('safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)'),
+  safeTransferFrom1155: sel('safeTransferFrom(address,address,uint256,uint256,bytes)'),
+  permit2Lockdown: sel('lockdown((address,address)[])'),
 } as const satisfies Record<string, Hex>;
 
 export const BANNED_SELECTORS: ReadonlySet<Hex> = new Set(SIGS.banned.map(sel));

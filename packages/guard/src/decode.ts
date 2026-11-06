@@ -13,7 +13,22 @@ export interface Decoded {
   counterparty?: Address;
   /** Set on a step that is never part of an exit (e.g. a Uniswap v4 SETTLE action); the plain reason. */
   forbidden?: string;
+  // ---- Below: read only by the request classifier, for its verdict and wording. The Guard rejects every one of these calls.
+  /** Token amount of this call's own arguments (approve, increaseAllowance, transfer, permit, Permit2 approve). */
+  amount?: bigint;
+  /** setApprovalForAll / DAI permit flag (false = a revocation). */
+  approved?: boolean;
+  /** Every receiver (batch transfers) or spender (Permit2 lockdown), when there can be more than one. */
+  counterparties?: Address[];
+  /** The call changes who controls a contract, a Safe or the account. `counterparty` is who gets control. */
+  control?: ControlKind;
+  /** Safe changeThreshold / removeOwner: the new threshold. */
+  threshold?: bigint;
+  /** The nested calls are a batch (multicall, Safe MultiSend), not a single wrapped call (Safe execTransaction). */
+  batch?: boolean;
 }
+
+export type ControlKind = 'implementation' | 'owner' | 'acceptOwner' | 'safeOwner' | 'safeRemoveOwner' | 'threshold' | 'module' | 'guard' | 'fallbackHandler' | 'delegatecall';
 
 export class DecodeError extends Error {
   override name = 'DecodeError';
@@ -21,24 +36,89 @@ export class DecodeError extends Error {
 
 const MAX_MULTICALL_DEPTH = 2;
 
-/** Banned selectors → [human name, ABI fragment, index of counterparty arg or -1]. */
-const BANNED: Record<Hex, [string, string, number]> = {
-  [SEL.approve]: ['approve', 'function approve(address,uint256)', 0],
-  [SEL.increaseAllowance]: ['increaseAllowance', 'function increaseAllowance(address,uint256)', 0],
-  [SEL.permit2612]: ['permit', 'function permit(address,address,uint256,uint256,uint8,bytes32,bytes32)', 1],
-  [SEL.permitDai]: ['permit (DAI)', 'function permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)', 1],
+type Extra = (args: readonly any[]) => Partial<Decoded>;
+const big = (v: unknown): bigint | undefined => (typeof v === 'bigint' ? v : typeof v === 'number' ? BigInt(v) : undefined);
+const addr = (v: unknown): Address => getAddress(v as Address);
+const ctl = (control: ControlKind, i: number): Extra => (a) => ({ control, counterparty: addr(a[i]) });
+
+/** Banned selectors → [human name, ABI fragment, index of counterparty arg or -1, extra fields for the classifier]. */
+const BANNED: Record<Hex, [string, string, number, Extra?]> = {
+  [SEL.approve]: ['approve', 'function approve(address,uint256)', 0, (a) => ({ amount: big(a[1]) })],
+  [SEL.increaseAllowance]: ['increaseAllowance', 'function increaseAllowance(address,uint256)', 0, (a) => ({ amount: big(a[1]) })],
+  [SEL.permit2612]: ['permit', 'function permit(address,address,uint256,uint256,uint8,bytes32,bytes32)', 1, (a) => ({ amount: big(a[2]) })],
+  [SEL.permitDai]: ['permit (DAI)', 'function permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)', 1, (a) => ({ approved: a[4] === true })],
   [SEL.permit721]: ['permit (NFT)', 'function permit(address,uint256,uint256,uint8,bytes32,bytes32)', 0],
-  [SEL.setApprovalForAll]: ['setApprovalForAll', 'function setApprovalForAll(address,bool)', 0],
-  [SEL.transfer]: ['transfer', 'function transfer(address,uint256)', 0],
-  [SEL.transferFrom]: ['transferFrom', 'function transferFrom(address,address,uint256)', 1],
+  [SEL.setApprovalForAll]: ['setApprovalForAll', 'function setApprovalForAll(address,bool)', 0, (a) => ({ approved: a[1] === true })],
+  [SEL.transfer]: ['transfer', 'function transfer(address,uint256)', 0, (a) => ({ amount: big(a[1]) })],
+  [SEL.transferFrom]: ['transferFrom', 'function transferFrom(address,address,uint256)', 1, (a) => ({ amount: big(a[2]) })],
   [SEL.safeTransferFrom]: ['safeTransferFrom', 'function safeTransferFrom(address,address,uint256)', 1],
   [SEL.safeTransferFromData]: ['safeTransferFrom', 'function safeTransferFrom(address,address,uint256,bytes)', 1],
-  [SEL.permit2Approve]: ['Permit2 approve', 'function approve(address,address,uint160,uint48)', 1],
+  [SEL.permit2Approve]: ['Permit2 approve', 'function approve(address,address,uint160,uint48)', 1, (a) => ({ amount: big(a[2]) })],
   [SEL.permit2PermitSingle]: ['Permit2 permit', `function ${SIGS.banned[11]}`, -1],
   [SEL.permit2PermitBatch]: ['Permit2 permit', `function ${SIGS.banned[12]}`, -1],
   [SEL.permit2TransferFrom]: ['Permit2 permitTransferFrom', `function ${SIGS.banned[13]}`, -1],
   [SEL.permit2WitnessTransferFrom]: ['Permit2 permitWitnessTransferFrom', `function ${SIGS.banned[14]}`, -1],
+  // Who controls a contract or a Safe.
+  [SEL.upgradeTo]: ['upgradeTo', 'function upgradeTo(address)', -1, ctl('implementation', 0)],
+  [SEL.upgradeToAndCall]: ['upgradeToAndCall', 'function upgradeToAndCall(address,bytes)', -1, ctl('implementation', 0)],
+  [SEL.transferOwnership]: ['transferOwnership', 'function transferOwnership(address)', -1, ctl('owner', 0)],
+  [SEL.setOwner]: ['setOwner', 'function setOwner(address)', -1, ctl('owner', 0)],
+  [SEL.acceptOwnership]: ['acceptOwnership', 'function acceptOwnership()', -1, () => ({ control: 'acceptOwner' })],
+  [SEL.safeAddOwner]: ['addOwnerWithThreshold (Safe)', 'function addOwnerWithThreshold(address,uint256)', -1, (a) => ({ control: 'safeOwner', counterparty: addr(a[0]), threshold: big(a[1]) })],
+  [SEL.safeSwapOwner]: ['swapOwner (Safe)', 'function swapOwner(address,address,address)', -1, ctl('safeOwner', 2)],
+  [SEL.safeRemoveOwner]: ['removeOwner (Safe)', 'function removeOwner(address,address,uint256)', -1, (a) => ({ control: 'safeRemoveOwner', counterparty: addr(a[1]), threshold: big(a[2]) })],
+  [SEL.safeChangeThreshold]: ['changeThreshold (Safe)', 'function changeThreshold(uint256)', -1, (a) => ({ control: 'threshold', threshold: big(a[0]) })],
+  [SEL.safeEnableModule]: ['enableModule (Safe)', 'function enableModule(address)', -1, ctl('module', 0)],
+  [SEL.safeSetGuard]: ['setGuard (Safe)', 'function setGuard(address)', -1, ctl('guard', 0)],
+  [SEL.safeSetFallbackHandler]: ['setFallbackHandler (Safe)', 'function setFallbackHandler(address)', -1, ctl('fallbackHandler', 0)],
+  // Batch transfers and Permit2 lockdown.
+  [SEL.bulkTransfer]: ['bulkTransfer', 'function bulkTransfer(((uint8,address,uint256,uint256)[],address,bool)[],bytes32)', -1, (a) => {
+    const groups = a[0] as readonly (readonly [readonly unknown[], Address, boolean])[];
+    const counterparties = groups.map((g) => addr(g[1]));
+    return { counterparties, counterparty: counterparties[0], amount: BigInt(groups.reduce((n, g) => n + g[0].length, 0)) };
+  }],
+  [SEL.safeBatchTransferFrom1155]: ['safeBatchTransferFrom', 'function safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)', 1],
+  [SEL.safeTransferFrom1155]: ['safeTransferFrom (ERC-1155)', 'function safeTransferFrom(address,address,uint256,uint256,bytes)', 1],
+  [SEL.permit2Lockdown]: ['Permit2 lockdown', 'function lockdown((address,address)[])', -1, (a) => {
+    const counterparties = (a[0] as readonly (readonly [Address, Address])[]).map((p) => addr(p[1]));
+    return { counterparties, counterparty: counterparties[0], amount: 0n };
+  }],
 };
+
+/** Safe containers (banned too): decoded only so the classifier can look at the calls inside. */
+const MAX_CONTAINER_DEPTH = 4;
+const execAbi = parseAbi(['function execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)']);
+const multiSendAbi = parseAbi(['function multiSend(bytes)']);
+
+/** One call a Safe makes (operation 1 = delegatecall: the target's code runs as the Safe). Undecodable inner data is skipped. */
+function safeCall(to: Address, data: Hex, operation: number, depth: number): Decoded[] {
+  const out: Decoded[] = [];
+  if (operation === 1) out.push({ selector: SEL.safeExecTransaction, name: 'delegatecall (Safe)', recipients: [], paysCaller: false, nested: [], control: 'delegatecall', counterparty: getAddress(to) });
+  if (depth < MAX_CONTAINER_DEPTH && data.length >= 10) {
+    try {
+      out.push(decodeCall(data, depth + 1));
+    } catch {
+      /* an ordinary call the classifier cannot read */
+    }
+  }
+  return out;
+}
+
+/** MultiSend packs (uint8 operation, address to, uint256 value, uint256 length, bytes data) back to back. */
+function multiSendCalls(packed: Hex, depth: number): Decoded[] {
+  const h = packed.slice(2);
+  const out: Decoded[] = [];
+  let i = 0;
+  while (i + 170 <= h.length) {
+    const op = parseInt(h.slice(i, i + 2), 16);
+    const to = `0x${h.slice(i + 2, i + 42)}` as Address;
+    const len = Number(BigInt(`0x${h.slice(i + 106, i + 170)}`));
+    if (!Number.isSafeInteger(len) || i + 170 + len * 2 > h.length) break;
+    out.push(...safeCall(to, `0x${h.slice(i + 170, i + 170 + len * 2)}` as Hex, op, depth));
+    i += 170 + len * 2;
+  }
+  return out;
+}
 
 function decodeWith(abi: Abi, data: Hex): { functionName: string; args: readonly unknown[] } {
   try {
@@ -146,7 +226,7 @@ export function decodeCall(data: Hex, depth = 0): Decoded {
       if (depth >= MAX_MULTICALL_DEPTH) throw new DecodeError('multicall nested too deeply');
       const { args } = decodeWith(npmAbi, data);
       const inner = args[0] as readonly Hex[];
-      return { ...base, name: 'multicall', nested: inner.map((d) => decodeCall(d, depth + 1)) };
+      return { ...base, name: 'multicall', batch: true, nested: inner.map((d) => decodeCall(d, depth + 1)) };
     }
     case SEL.decreaseLiquidity:
       decodeWith(npmAbi, data);
@@ -167,28 +247,41 @@ export function decodeCall(data: Hex, depth = 0): Decoded {
       return decodeV4(data, selector);
   }
 
+  if (selector === SEL.safeExecTransaction || selector === SEL.safeMultiSend) {
+    // Banned like every other non-exit; the calls inside are decoded for the classifier only.
+    const name = selector === SEL.safeExecTransaction ? 'execTransaction (Safe)' : 'multiSend (Safe)';
+    try {
+      if (selector === SEL.safeExecTransaction) {
+        const { args } = decodeWith(execAbi, data);
+        return { ...base, name, nested: safeCall(args[0] as Address, args[2] as Hex, Number(args[3]), depth) };
+      }
+      const { args } = decodeWith(multiSendAbi, data);
+      return { ...base, name, batch: true, nested: depth < MAX_CONTAINER_DEPTH ? multiSendCalls(args[0] as Hex, depth + 1) : [] };
+    } catch {
+      return { ...base, name };
+    }
+  }
+
   const banned = BANNED[selector];
   if (banned) {
-    const [name, fragment, idx] = banned;
+    const [name, fragment, idx, extra] = banned;
     let counterparty: Address | undefined;
-    if (idx >= 0) {
-      try {
-        const { args } = decodeWith(parseAbi([fragment]), data);
-        counterparty = getAddress(args[idx] as Address);
-      } catch {
-        /* name alone is enough to reject */
+    let more: Partial<Decoded> = {};
+    try {
+      const { args } = decodeWith(parseAbi([fragment]), data);
+      if (idx >= 0) counterparty = getAddress(args[idx] as Address);
+      else if (selector === SEL.permit2PermitSingle || selector === SEL.permit2PermitBatch) {
+        // permit(owner, (details, spender, sigDeadline), signature): the spender sits inside the struct.
+        const s = args[1] as readonly unknown[];
+        counterparty = getAddress(s[1] as Address);
+        const details = (selector === SEL.permit2PermitSingle ? [s[0]] : s[0]) as readonly (readonly unknown[])[];
+        more.amount = details.reduce<bigint>((m, d) => (big(d[1])! > m ? big(d[1])! : m), 0n);
       }
-    } else if (selector === SEL.permit2PermitSingle || selector === SEL.permit2PermitBatch) {
-      // permit(owner, (details, spender, sigDeadline), signature): the spender sits inside the struct.
-      try {
-        const { args } = decodeWith(parseAbi([fragment]), data);
-        const s = args[1] as { spender?: Address } | readonly unknown[];
-        counterparty = getAddress((Array.isArray(s) ? s[1] : (s as { spender?: Address }).spender) as Address);
-      } catch {
-        /* name alone is enough to reject */
-      }
+      if (extra) more = { ...more, ...extra(args) };
+    } catch {
+      /* name alone is enough to reject */
     }
-    return { ...base, name, counterparty };
+    return { ...base, name, counterparty, ...more };
   }
 
   throw new DecodeError(`unknown selector ${selector}`);
