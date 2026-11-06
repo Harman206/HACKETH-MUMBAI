@@ -114,4 +114,29 @@ describe('quorum', () => {
     const v = await q.read({ address: TO, abi: [{ type: 'function', name: 'x', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] }] as const, functionName: 'x' }, 100n);
     expect(v).toBe(42n);
   });
+
+  test('review I2: one path reporting an ancient block is dropped from the pin (no rollback to old state)', async () => {
+    const f = await three([{ block: 1000 }, { block: 1001 }, { block: 1 }]);
+    const q = createQuorum({ urls: f.map((x) => x.url), ...fast });
+    expect(await q.pinBlock()).toBe(1000n);
+  });
+
+  test('review I2: when no two paths are within the lag bound → refuse', async () => {
+    const f = await three([{ block: 1000 }, { block: 500 }, { block: 1 }]);
+    const q = createQuorum({ urls: f.map((x) => x.url), ...fast });
+    await expect(q.pinBlock()).rejects.toMatchObject({ kind: 'DISAGREE' });
+  });
+
+  test('expected chain ID: all agree on the wrong chain → CHAIN_MISMATCH', async () => {
+    const f = await three([{ chainId: 1 }, { chainId: 1 }, { chainId: 1 }]);
+    const q = createQuorum({ urls: f.map((x) => x.url), expectedChainId: 11155111, ...fast });
+    await expect(q.pinBlock()).rejects.toMatchObject({ kind: 'CHAIN_MISMATCH' });
+  });
+
+  test('receipt: a path lying about blockNumber → DISAGREE', async () => {
+    const r = { status: '0x1', blockNumber: '0x65', blockHash: '0xaa', gasUsed: '0x5208', transactionHash: '0xbb' };
+    const f = await three([{ receipt: r }, { receipt: { ...r, blockNumber: '0x10' } }, { receipt: r }]);
+    const q = createQuorum({ urls: f.map((x) => x.url), ...fast });
+    await expect(q.getReceipt('0xbb')).rejects.toMatchObject({ kind: 'DISAGREE' });
+  });
 });

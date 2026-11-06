@@ -16,6 +16,10 @@ export interface QuorumOpts {
   retries?: number;
   /** A path marked down is skipped for this long before it is tried again. */
   cooldownMs?: number;
+  /** Paths whose head is more than this many blocks from the median head are ignored when pinning. */
+  maxLagBlocks?: number;
+  /** When set, the agreed chain ID must equal this, or every read fails with CHAIN_MISMATCH. */
+  expectedChainId?: number;
   fetchFn?: typeof fetch;
 }
 
@@ -68,6 +72,7 @@ export function createQuorum(opts: QuorumOpts): Quorum {
   const timeoutMs = opts.timeoutMs ?? 4000;
   const retries = opts.retries ?? 2;
   const cooldownMs = opts.cooldownMs ?? 30_000;
+  const maxLag = BigInt(opts.maxLagBlocks ?? 16);
   const fetchFn = opts.fetchFn ?? fetch;
   const paths = opts.urls.map((url) => ({ url, up: true, lastError: undefined as string | undefined, downUntil: 0 }));
   let chainChecked: Promise<number> | null = null;
@@ -148,6 +153,9 @@ export function createQuorum(opts: QuorumOpts): Quorum {
       if (ids.some((x) => x !== ids[0]) || Number.isNaN(ids[0])) {
         throw new QuorumError('CHAIN_MISMATCH', `RPC paths report different chains (${[...new Set(ids)].join(', ')}).`);
       }
+      if (opts.expectedChainId !== undefined && ids[0] !== opts.expectedChainId) {
+        throw new QuorumError('CHAIN_MISMATCH', `The RPC endpoints are on chain ${ids[0]}, not chain ${opts.expectedChainId}.`);
+      }
       return ids[0]!;
     })().catch((e) => {
       chainChecked = null;
@@ -166,7 +174,15 @@ export function createQuorum(opts: QuorumOpts): Quorum {
       const answers = await gather('eth_blockNumber', []);
       const heights = answers.map((a) => (a.ok ? BigInt(a.value as string) : null)).filter((x): x is bigint => x !== null);
       if (heights.length < minAnswers) throw new QuorumError('TOO_FEW', 'Not enough paths reported a block number.');
-      return heights.reduce((a, b) => (b < a ? b : a));
+      // A single path must not be able to pick an old block (stale state = rolled-back records, stale prices).
+      // Keep heads within maxLag of the (lower) median head, then pin the lowest of those.
+      const sorted = [...heights].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+      const median = sorted[Math.floor((sorted.length - 1) / 2)]!;
+      const near = sorted.filter((h) => (h > median ? h - median : median - h) <= maxLag);
+      if (near.length < minAnswers) {
+        throw new QuorumError('DISAGREE', `RPC paths are too far apart in block height (${sorted.join(', ')}); refusing to pick one.`);
+      }
+      return near[0]!;
     },
 
     async call(req, block) {
@@ -193,7 +209,7 @@ export function createQuorum(opts: QuorumOpts): Quorum {
       type Raw = { status: string; blockNumber: string; blockHash: Hex; gasUsed: string; transactionHash: Hex };
       const seen = answers.filter((a): a is { ok: true; value: Raw } => a.ok && a.value !== null);
       if (seen.length === 0) return null;
-      const k = (r: Raw) => `${r.status}|${r.blockHash}`;
+      const k = (r: Raw) => `${r.status}|${r.blockHash}|${r.blockNumber}|${r.gasUsed}`;
       if (!seen.every((a) => k(a.value) === k(seen[0]!.value))) {
         throw new QuorumError('DISAGREE', 'RPC paths disagree on the transaction receipt.');
       }

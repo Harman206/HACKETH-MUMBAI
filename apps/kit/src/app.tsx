@@ -38,7 +38,7 @@ export function App() {
       quorumFor: (chainId) => {
         const urls = rpcUrlsFor(loadSettings(), chainId, DEFAULT_RPCS);
         const key = `${chainId}|${urls.join(',')}`;
-        if (!cache.has(key)) cache.set(key, createQuorum({ urls }));
+        if (!cache.has(key)) cache.set(key, createQuorum({ urls, expectedChainId: chainId }));
         return cache.get(key)!;
       },
       ens: ENS_CONFIG,
@@ -88,9 +88,9 @@ export function App() {
         <button aria-pressed={tab === 'release'} onClick={() => setTab('release')}>Release &amp; exits</button>
       </nav>
       {tab === 'release' ? (
-        <ReleaseScreen settings={settings} update={update} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS) })} />
+        <ReleaseScreen settings={settings} update={update} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS), expectedChainId: id })} />
       ) : tab === 'check' ? (
-        <CheckScreen settings={settings} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS) })} />
+        <CheckScreen settings={settings} quorumFor={(id) => createQuorum({ urls: rpcUrlsFor(settings, id, DEFAULT_RPCS), expectedChainId: id })} />
       ) : (
         <ExitTab state={state} settings={settings} update={update} flow={flow} />
       )}
