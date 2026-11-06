@@ -134,5 +134,9 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
   if (missing.length) {
     return { ...res, status: 'not-recovered', reasons: missing.map((t) => `no balance increase for ${t}`) };
   }
+  const short = res.deltas.filter((d) => d.after - d.before < d.min);
+  if (short.length) {
+    return { ...res, status: 'not-recovered', reasons: short.map((d) => `received less than the minimum for ${d.token} (${d.after - d.before} < ${d.min})`) };
+  }
   return { ...res, status: 'recovered' };
 }

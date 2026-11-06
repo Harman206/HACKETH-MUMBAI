@@ -213,3 +213,14 @@ describe('report', () => {
     expect(j.results[0].gasUsed).toBe('3');
   });
 });
+
+describe('A2: received amounts must meet the plan minimum', () => {
+  test('delta > 0 but below min → not-recovered with a plain reason', async () => {
+    const { sender, ctx } = stub({ balances: { before: { [T0]: 10n, [T1]: 5n }, after: { [T0]: 11n, [T1]: 9n } } });
+    const p = plan();
+    p.expected[0]!.min = 5n;
+    const r = await runExit(p, sender, ctx);
+    expect(r.status).toBe('not-recovered');
+    expect(r.reasons.join(' ')).toMatch(new RegExp(`received less than the minimum for ${T0}`));
+  });
+});
