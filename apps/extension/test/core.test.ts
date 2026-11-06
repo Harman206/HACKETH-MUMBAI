@@ -286,7 +286,7 @@ describe('setup & kit', () => {
   test('Exit safely opens the kit only when its bytes match the release', async () => {
     const { core, calls, page } = await setup();
     expect(await core.handleMessage({ t: 'openKit', name: NAME }, page)).toEqual({ ok: true });
-    expect(calls.tabsCreate[0]).toBe(`https://kit.example/copeybara-kit.html#name=${NAME}`);
+    expect(calls.tabsCreate[0]).toBe(`https://kit.example/copeybara-kit.html?ens=${NAME}`);
     records.release = { sha256: 'ee'.repeat(32), version: 6 };
     now += FRESH;
     const r = (await core.handleMessage({ t: 'openKit', name: NAME }, page)) as { ok: boolean; error: string };

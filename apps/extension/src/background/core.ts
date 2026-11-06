@@ -346,7 +346,9 @@ export function createCore(deps: CoreDeps) {
     if (got !== rel.sha256) {
       return { ok: false, error: `The kit at ${settings.kitUrl} does not match ${name}'s release v${rel.version} (sha256 ${got.slice(0, 12)}… ≠ ${rel.sha256.slice(0, 12)}…). Not opening it.` };
     }
-    await chrome.tabs.create({ url: `${settings.kitUrl}#name=${encodeURIComponent(name)}` });
+    const u = new URL(settings.kitUrl);
+    u.searchParams.set('ens', name);
+    await chrome.tabs.create({ url: u.href });
     return { ok: true };
   }
 

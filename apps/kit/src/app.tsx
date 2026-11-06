@@ -32,6 +32,43 @@ function useFlowState(flow: ReturnType<typeof createFlow>): FlowState {
   return s;
 }
 
+const copeybaraConnect = typeof location !== 'undefined' && /(^|[#&])connect=copeybara(&|$)/.test(location.hash.slice(1));
+
+/**
+ * Opened by the Copeybara extension's setup (#connect=copeybara): connect a wallet here, where wallets work, and hand
+ * the address (only the address) to the extension. The extension asks the user to confirm it before using it.
+ */
+function CopeybaraHandoff() {
+  const [sent, setSent] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const go = async () => {
+    setErr(null);
+    try {
+      const ws = await discoverWallets();
+      if (!ws[0]) throw new Error('No browser wallet found. Install MetaMask or Rabby, then reload this page.');
+      const { account } = await connect(ws[0].provider);
+      window.postMessage({ tag: 'copeybara:kit-address', address: account }, location.origin === 'null' ? '*' : location.origin);
+      setSent(account);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  };
+  return (
+    <div class="card" data-copeybara-handoff>
+      <h2>Connect your wallet to Copeybara</h2>
+      {sent ? (
+        <p>Sent <span class="mono">{sent}</span> to the Copeybara extension. Go back to its setup tab and confirm it.</p>
+      ) : (
+        <>
+          <p class="muted">Copeybara only receives your address, to find your positions. It never signs.</p>
+          <button onClick={go}>Use this wallet in Copeybara</button>
+        </>
+      )}
+      {err && <p class="bad">{err}</p>}
+    </div>
+  );
+}
+
 export function App() {
   const [boot] = useState(() => mergeUrlSettings(loadSettings(), typeof location !== 'undefined' ? settingsFromUrl(location.href) : {}));
   const [settings, setSettings] = useState<Settings>(() => {
@@ -98,6 +135,7 @@ export function App() {
           The protocol name <b>{ensFromLink}</b> was filled in from the link you opened. Before you continue, confirm it matches the name in the protocol’s official docs. Links can be faked.
         </div>
       )}
+      {copeybaraConnect && <CopeybaraHandoff />}
       <nav aria-label="Mode">
         <button aria-pressed={tab === 'exit'} onClick={() => setTab('exit')}>Exit my positions</button>
         <button aria-pressed={tab === 'check'} onClick={() => setTab('check')}>Check a transaction</button>
