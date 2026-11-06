@@ -6,37 +6,41 @@ import { KitSnippet } from './KitSnippet';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
 
+/** Wraps the first `word` in `text` in a <mark> (the lime highlighter stroke). */
+function highlight(text: string, word: string) {
+  const i = text.indexOf(word);
+  if (i < 0) return text;
+  return <>{text.slice(0, i)}<mark>{word}</mark>{text.slice(i + word.length)}</>;
+}
+
 export function Hero({ live }: { live: string | null }) {
   return (
     <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-glow" aria-hidden="true"><i /><i /><i /></div>
       <div class="wrap hero-layout">
         <div class="hero-copy">
-          <p class="hero-pill" data-reveal><i aria-hidden="true" />{live ?? HERO.note}</p>
-          <h1 id="hero-title" data-reveal style="--d:1">{HERO.title}</h1>
+          <p class="hero-pill" data-reveal><i class="status-dot" aria-hidden="true" />{live ?? HERO.note}</p>
+          <h1 id="hero-title" data-reveal style="--d:1">{highlight(HERO.title, 'exit')}</h1>
           <p class="hero-summary" data-reveal style="--d:2">{HERO.sub}</p>
           <div class="cta" data-reveal style="--d:3">
             <a class="btn" href="#download">Get the exit kit <span aria-hidden="true">↓</span></a>
-            <a class="btn ghost on-dark" href="#demo">See the live demo</a>
+            <a class="btn ghost" href="#demo">See the live demo</a>
           </div>
         </div>
         <div class="hero-visual" data-reveal style="--d:2">
           <KitSnippet />
+          <img class="hero-copey" src="copey/protected.webp" width="418" height="490" alt="" />
         </div>
       </div>
     </section>
   );
 }
 
-const ScenarioIcon = ({ n }: { n: number }) => (
-  <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true" class="scn-icon">
-    <rect x="4" y="8" width="40" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="2" />
-    <path d="M4 15h40" stroke="currentColor" stroke-width="2" />
-    {n === 0 && <path class="c" d="M18 23l12 10m0-10L18 33" />}
-    {n === 1 && <path class="c" d="M24 21v7m0 4.5v.5" />}
-    {n === 2 && <path class="c" d="M16 27c4-6 12-6 16 0m-8 4v.5" />}
-  </svg>
-);
+/** Copey's pose for each scenario, and whether the tag reads as trouble or as handled. */
+const SCENARIO_ART = [
+  { copey: 'worried', tone: 'is-bad' },
+  { copey: 'checking', tone: 'is-bad' },
+  { copey: 'protected', tone: 'is-ok' },
+] as const;
 
 export function Scenarios() {
   return (
@@ -49,10 +53,14 @@ export function Scenarios() {
         <div class="scn-grid">
           {SCENARIOS.map((s, i) => (
             <article key={s.kicker} class="scn" data-reveal style={`--d:${i}`}>
-              <ScenarioIcon n={i} />
-              <p class="kicker">{s.kicker}</p>
-              <h3>{s.title}</h3>
-              <p>{s.body}</p>
+              <div class={`scn-art ${SCENARIO_ART[i]!.tone}`}>
+                <span class="scn-tag">{s.kicker}</span>
+                <img src={`copey/${SCENARIO_ART[i]!.copey}.webp`} alt="" loading="lazy" />
+              </div>
+              <div class="scn-body">
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+              </div>
             </article>
           ))}
         </div>
@@ -112,8 +120,9 @@ export function ExtensionBand() {
     <section id="extension" class="section dark-band">
       <div class="wrap ext-band">
         <div data-reveal>
+          <img class="ext-copey" src="copey/verified.webp" width="430" height="439" alt="" loading="lazy" />
           <p class="kicker">The browser extension</p>
-          <h2>Stops the drainer before your wallet sees it.</h2>
+          <h2>Stops the drainer <mark>before</mark> your wallet sees it.</h2>
           <ul class="tick-list">{EXT_PITCH.map((p) => <li key={p}>{p}</li>)}</ul>
           <div class="cta">
             <a class="btn" href="#/extension">Get the extension <span aria-hidden="true">→</span></a>

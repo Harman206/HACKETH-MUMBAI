@@ -26,7 +26,7 @@ export function App() {
   return (
     <>
       <a class="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById('main')?.focus(); }}>Skip to content</a>
-      <header class={`top${route.page === 'home' ? ' on-hero' : ''}`}>
+      <header class="top">
         <nav class="wrap nav-layout" aria-label="Main">
           <a class="brand" href="#top"><BrandMark />Copeybara</a>
           <ul>
