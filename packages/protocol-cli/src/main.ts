@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { parseArgs } from 'node:util';
-import { createPublicClient, getAddress, http, type Hex } from 'viem';
+import { createPublicClient, getAddress, http, parseAbi, type Hex } from 'viem';
 import { COPEYBARA_KEYS, parseSiteRecord, type Address, type StatusState } from '@copeybara/core';
 import { readCopeybaraRecords, readRawTexts } from '@copeybara/ens';
 import { buildIncident } from './incident';
@@ -18,7 +18,7 @@ import { buildManifest } from './manifest';
 import { buildProposal, grantId } from './propose';
 import { extensionRelease, kitRelease } from './release';
 import { WATCHER_KEYS, WEBSITE_KEYS, type SafeKey } from './resolver';
-import { safeApiProposal, safeTxHash } from './safe';
+import { multiSend, safeApiProposal, safeTxHash } from './safe';
 import { compare, failed, formatChecks, type Check } from './verify';
 import { INIT_TEMPLATE } from './init';
 
@@ -35,8 +35,9 @@ const HELP = `copeybara <command> [--config copeybara.config.ts]
   certify                  verify + the Copeybara certified checks; writes certification.json
   roles-check [--live]     prove the website and watcher keys cannot write anything else (fork by default)
   drill [--sample]         fork the chain, switch off the site + primary RPC, exit a seeded position headlessly
-  incident --state s        ONE Safe batch setting org.copeybara.status (ok | degraded | compromised)
+  incident --state s       ONE Safe batch setting org.copeybara.status (ok | degraded | compromised)
           [--note "…"] [--block host]… [--unblock host]…   and the look-alike blocklist; never touches exits
+          [--nonce n] [--api --sender 0x… --signature 0x…]
   watcher [--up]           docker compose for the watcher (status + blocklist key only), with a healthcheck
   adapter new <name>       scaffold a code adapter with fork tests, Guard corpus cases and property tests
 
@@ -130,19 +131,23 @@ async function proposeCmd(l: LoadedConfig, o: Record<string, string | string[] |
   p.calls.forEach((c, i) => say(`  ${i + 1}. ${c.label}`));
   say(`\nTransaction Builder file → ${await writeOut(l, 'safe-batch.json', JSON.stringify(p.batch, null, 2))}`);
   say('  Safe{Wallet} → Apps → Transaction Builder → drag the file in → Create batch → owners sign on their own devices.');
-  if (nonce !== undefined) {
-    const tx = { ...p.multiSend, nonce };
-    const hash = safeTxHash(cfg.safe, ensChainId(cfg), tx);
-    await writeOut(l, 'safe-tx.json', JSON.stringify({ safe: cfg.safe, chainId: ensChainId(cfg), ...tx, value: '0', nonce: nonce.toString(), safeTxHash: hash }, null, 2));
-    say(`\nAs one MultiSendCallOnly transaction (nonce ${nonce}): safeTxHash ${hash}`);
-    if (o.api) {
-      const service = cfg.safeTxService ?? die('propose --api needs safeTxService in the config');
-      if (!o.sender || !o.signature) die(`propose --api needs --sender <owner> and --signature <owner's signature of ${hash}>, made on the owner's own device.`);
-      const body = safeApiProposal(cfg.safe, ensChainId(cfg), tx, getAddress(o.sender as string), o.signature as Hex);
-      const res = await fetch(`${service.replace(/\/$/, '')}/api/v1/safes/${cfg.safe}/multisig-transactions/`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (!res.ok) die(`Safe Transaction Service refused the proposal: ${res.status} ${await res.text()}`);
-      say(`Proposed to ${service}: the other owners will see it in their Safe queue.`);
-    }
+  if (nonce !== undefined) await safeTxOut(l, 'safe-tx.json', p.multiSend, nonce, o);
+}
+
+/** The batch as ONE MultiSendCallOnly Safe transaction: what each owner signs (safeTxHash), and `--api` to queue it. */
+async function safeTxOut(l: LoadedConfig, file: string, multi: ReturnType<typeof multiSend>, nonce: bigint, o: Record<string, string | string[] | boolean | undefined>) {
+  const { cfg } = l;
+  const tx = { ...multi, nonce };
+  const hash = safeTxHash(cfg.safe, ensChainId(cfg), tx);
+  const out = await writeOut(l, file, JSON.stringify({ safe: cfg.safe, chainId: ensChainId(cfg), ...tx, value: '0', nonce: nonce.toString(), safeTxHash: hash }, null, 2));
+  say(`\nAs one MultiSendCallOnly transaction (nonce ${nonce}): safeTxHash ${hash} → ${out}`);
+  if (o.api) {
+    const service = cfg.safeTxService ?? die('--api needs safeTxService in the config');
+    if (!o.sender || !o.signature) die(`--api needs --sender <owner> and --signature <owner's signature of ${hash}>, made on the owner's own device.`);
+    const body = safeApiProposal(cfg.safe, ensChainId(cfg), tx, getAddress(o.sender as string), o.signature as Hex);
+    const res = await fetch(`${service.replace(/\/$/, '')}/api/v1/safes/${cfg.safe}/multisig-transactions/`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) die(`Safe Transaction Service refused the proposal: ${res.status} ${await res.text()}`);
+    say(`Proposed to ${service}: the other owners will see it in their Safe queue.`);
   }
 }
 
@@ -185,7 +190,7 @@ async function verifyCmd(l: LoadedConfig) {
   say('\nverify: OK');
 }
 
-async function incidentCmd(l: LoadedConfig, o: { state?: string; note?: string; block?: string[]; unblock?: string[] }) {
+async function incidentCmd(l: LoadedConfig, o: Record<string, string | string[] | boolean | undefined> & { state?: string; note?: string; block?: string[]; unblock?: string[] }) {
   const { cfg } = l;
   const state = o.state as StatusState | undefined;
   if (!state || !['ok', 'degraded', 'compromised'].includes(state)) die('incident: --state ok | degraded | compromised');
@@ -195,6 +200,17 @@ async function incidentCmd(l: LoadedConfig, o: { state?: string; note?: string; 
   for (const c of r.calls) say(`  ${c.label}`);
   say(`Safe batch → ${await writeOut(l, 'incident-batch.json', JSON.stringify(r.batch, null, 2))}`);
   say('Safe{Wallet} → Transaction Builder → drag in the file. Extensions following the name act on the next read; the exit kit ignores status.');
+  const nonce = o.nonce !== undefined ? BigInt(o.nonce as string) : await safeNonce(l, q);
+  if (nonce !== undefined) await safeTxOut(l, 'incident-tx.json', r.multiSend, nonce, o);
+}
+
+const safeNonceAbi = parseAbi(['function nonce() view returns (uint256)']);
+async function safeNonce(l: LoadedConfig, q: Quorum): Promise<bigint | undefined> {
+  try {
+    return (await q.read({ address: l.cfg.safe, abi: safeNonceAbi, functionName: 'nonce' }, await q.pinBlock())) as bigint;
+  } catch {
+    return undefined;
+  }
 }
 
 async function certifyCmd(l: LoadedConfig) {

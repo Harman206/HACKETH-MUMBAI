@@ -88,19 +88,23 @@ export interface DrillInput {
   kitSha256: string | null;
   user?: Address;
   log?: (s: string) => void;
+  /** What to fork, per chain (default: the public FORK_RPCS). A protocol's config `rpcs` go here. */
+  forkUrls?: Partial<Record<ForkChain, string>>;
 }
 
 export async function runDrill(i: DrillInput): Promise<DrillReport> {
   const log = i.log ?? (() => {});
   const user = i.user ?? ANVIL_ACCOUNTS[1]!;
-  const ensFork = await startFork({ chainId: i.ensChainId });
-  const exitFork = i.exitChainId === i.ensChainId ? ensFork : await startFork({ chainId: i.exitChainId });
+  const ensFork = await startFork({ chainId: i.ensChainId, forkUrl: i.forkUrls?.[i.ensChainId] });
+  const exitFork = i.exitChainId === i.ensChainId ? ensFork : await startFork({ chainId: i.exitChainId, forkUrl: i.forkUrls?.[i.exitChainId] });
   const closers: (() => Promise<void>)[] = [];
   try {
     log(`forks up: ENS chain ${i.ensChainId}${exitFork !== ensFork ? `, exits chain ${i.exitChainId}` : ''}`);
     const after = await i.seed(exitFork, user);
     log(`seeded positions for ${user}`);
 
+    const code = await ensFork.publicClient.getCode({ address: i.resolver });
+    if (!code || code === '0x') throw new Error(`the resolver ${i.resolver} has no code on the forked chain: set rpcs["${i.ensChainId}"] in the config to a node that has ${i.name}.`);
     const site = await listen(createServer((_, res) => res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>protocol site</title>')));
     closers.push(site.close);
     for (const [key, value] of Object.entries({ ...i.records, url: site.url })) {
@@ -297,6 +301,7 @@ async function configDrill(l: LoadedConfig, log: (s: string) => void): Promise<D
       await d.seed!({ fork: f, user });
     },
     user: d.user,
+    forkUrls: Object.fromEntries([ens, exitChainId].flatMap((c) => (cfg.rpcs?.[String(c)]?.[0] ? [[c, cfg.rpcs[String(c)]![0]]] : []))),
   });
 }
 
