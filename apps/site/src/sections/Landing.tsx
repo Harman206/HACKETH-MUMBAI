@@ -2,7 +2,7 @@ import { EXT_PITCH, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, REPLAY_R1, SCENAR
 import { useCountUp, useInView } from '../motion';
 import { CertifiedTick } from '../pages/Certified';
 import { ExtensionPreview } from './ExtensionPreview';
-import { KitSnippet } from './KitSnippet';
+import { HeroSim } from './ProductSim';
 import { Paths } from './Sections';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
@@ -28,8 +28,7 @@ export function Hero({ live }: { live: string | null }) {
           </div>
         </div>
         <div class="hero-visual" data-reveal style="--d:2">
-          <KitSnippet />
-          <img class="hero-copey" src="copey/protected.webp" width="418" height="490" alt="" />
+          <HeroSim />
         </div>
       </div>
       <div class="wrap" data-reveal style="--d:3">

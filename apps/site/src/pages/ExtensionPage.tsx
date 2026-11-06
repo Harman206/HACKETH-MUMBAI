@@ -1,6 +1,6 @@
 import { BLOCKS, EXT_HERO, EXT_LIMITS, LAYERS, VERDICTS, VERIFY_INSTALL } from '../extension';
 import { Extension } from '../sections/Sections';
-import { ExtensionPreview } from '../sections/ExtensionPreview';
+import { PanelSim } from '../sections/ProductSim';
 import { Lnk } from '../sections/Ui';
 
 export function ExtensionPage() {
@@ -18,7 +18,7 @@ export function ExtensionPage() {
               <a class="text-link" href="#/developers/onboarding">For protocol teams <span aria-hidden="true">→</span></a>
             </div>
           </div>
-          <ExtensionPreview />
+          <PanelSim />
         </div>
       </section>
 
