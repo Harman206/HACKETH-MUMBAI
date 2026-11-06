@@ -10,6 +10,7 @@ interface IEnhancedAccessControl {
     error EACCannotRevokeRoles(uint256 resource, uint256 roleBitmap, address account);
 
     function grantRootRoles(uint256 roleBitmap, address account) external returns (bool);
+    function revokeRootRoles(uint256 roleBitmap, address account) external returns (bool);
     function roles(uint256 resource, address account) external view returns (uint256);
     function hasRootRoles(uint256 roleBitmap, address account) external view returns (bool);
     function hasRoles(uint256 resource, uint256 roleBitmap, address account) external view returns (bool);
@@ -26,6 +27,8 @@ interface IPermissionedResolver is IEnhancedAccessControl {
     function initialize(Grant[] calldata grants, bytes[] calldata calls) external;
     function setText(bytes calldata name, string calldata key, string calldata value) external;
     function setContenthash(bytes calldata name, bytes calldata hash) external;
+    /// coinType 60 = ETH; `addressBytes` = abi.encodePacked(address)
+    function setAddress(bytes calldata name, uint256 coinType, bytes calldata addressBytes) external;
     function grantSetterRoles(bytes calldata setter, address account) external returns (bool);
     function revokeRoles(uint256 resource, uint256 roleBitmap, address account) external returns (bool);
     function resolve(bytes calldata name, bytes calldata data) external view returns (bytes memory);
@@ -69,9 +72,23 @@ interface IETHRegistrar {
 
 interface IPermissionedRegistry is IEnhancedAccessControl {
     function setResolver(uint256 anyId, address resolver) external;
+    function setSubregistry(uint256 anyId, address registry) external;
+    function setParent(address parent, string calldata label) external;
+    function register(string calldata label, address owner, address registry, address resolver, uint256 roleBitmap, uint64 expiry)
+        external
+        returns (uint256 tokenId);
     function getResolver(string calldata label) external view returns (address);
+    function getSubregistry(string calldata label) external view returns (address);
+    function getParent() external view returns (address parent, string memory label);
     function getOwner(uint256 anyId) external view returns (address);
+    function getExpiry(uint256 anyId) external view returns (uint64);
+    function getTokenId(uint256 anyId) external view returns (uint256);
     function getResource(uint256 anyId) external view returns (uint256);
+}
+
+/// contracts-v2 UserRegistry: a PermissionedRegistry proxy (via VerifiableFactory) serving the subnames of one name.
+interface IUserRegistry is IPermissionedRegistry {
+    function initialize(address rootAccount, uint256 roleBitmap) external;
 }
 
 interface IUniversalResolverV2 {
@@ -90,8 +107,12 @@ library ENSv2Roles {
     uint256 internal constant ROLE_SET_TEXT_ADMIN = ROLE_SET_TEXT << 128;
     uint256 internal constant ROLE_UPGRADE = 1 << 124;
     // RegistryRolesLib
+    uint256 internal constant ROLE_REGISTRAR = 1 << 0;
+    uint256 internal constant ROLE_SET_PARENT = 1 << 8;
+    uint256 internal constant ROLE_RENEW = 1 << 16;
     uint256 internal constant ROLE_SET_RESOLVER = 1 << 24;
     uint256 internal constant ROLE_SET_SUBREGISTRY = 1 << 20;
+    uint256 internal constant ROLE_CAN_TRANSFER_ADMIN = (1 << 28) << 128;
     // EACBaseRolesLib
     uint256 internal constant ALL_ROLES = 0x1111111111111111111111111111111111111111111111111111111111111111;
 }
@@ -102,6 +123,17 @@ library ENSName {
         bytes memory l = bytes(label);
         require(l.length > 0 && l.length < 64, "label length");
         return abi.encodePacked(uint8(l.length), l, uint8(3), "eth", uint8(0));
+    }
+
+    /// DNS-encode "sub.label.eth".
+    function dnsEncodeSub(string memory sub, string memory label) internal pure returns (bytes memory) {
+        bytes memory s = bytes(sub);
+        require(s.length > 0 && s.length < 64, "sub length");
+        return abi.encodePacked(uint8(s.length), s, dnsEncodeEth(label));
+    }
+
+    function namehashSub(string memory sub, string memory label) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(namehashEth(label), keccak256(bytes(sub))));
     }
 
     function namehashEth(string memory label) internal pure returns (bytes32) {
