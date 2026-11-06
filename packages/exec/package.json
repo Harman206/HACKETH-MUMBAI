@@ -5,12 +5,17 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "@blackout/adapters": "workspace:*",
     "@blackout/core": "workspace:*",
     "@blackout/guard": "workspace:*",
     "@blackout/quorum": "workspace:*",
     "viem": "2.21.55"
+  },
+  "devDependencies": {
+    "@blackout/testkit": "workspace:*"
   }
 }

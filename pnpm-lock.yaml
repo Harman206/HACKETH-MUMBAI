@@ -175,6 +175,10 @@ importers:
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
+    devDependencies:
+      '@blackout/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/guard:
     dependencies:

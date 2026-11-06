@@ -28,7 +28,8 @@ export const ANVIL_ACCOUNTS: Address[] = [
 /** Fork sources, tried in order (env first). Public endpoints flake; anvil only needs one. */
 export const FORK_RPCS: Record<1 | 11155111, string[]> = {
   1: [process.env.MAINNET_RPC, 'https://ethereum-rpc.publicnode.com', 'https://eth.drpc.org', 'https://gateway.tenderly.co/public/mainnet'].filter(Boolean) as string[],
-  11155111: [process.env.SEPOLIA_RPC, 'https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://rpc.sepolia.ethpandaops.io'].filter(Boolean) as string[],
+  // Tenderly first: an anvil fork backed by publicnode returned wrong state (balanceOf 0 for fresh v4 mints) in testing.
+  11155111: [process.env.SEPOLIA_RPC, 'https://sepolia.gateway.tenderly.co', 'https://ethereum-sepolia-rpc.publicnode.com', 'https://rpc.sepolia.ethpandaops.io'].filter(Boolean) as string[],
 };
 
 function anvilBin(): string {
