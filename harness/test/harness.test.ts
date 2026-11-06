@@ -94,12 +94,18 @@ describe('fire drill harness', () => {
     for (const s of ['site-down', 'rpc-down', 'hijack-on']) expect(html).toContain(`data-switch="${s}"`);
   });
 
-  test('Demo Portal: GET / is the portal with the 5 scenarios; config links point at this harness', async () => {
+  test('Demo Portal: GET / is the portal with the 7 scenarios; config links point at this harness', async () => {
     const html = await (await fetch(`http://127.0.0.1:${ports.control}/`)).text();
     expect(html).toContain('Copeybara Demo Portal');
     for (const s of ['verified', 'hijack', 'lookalike', 'approve', 'permit', 'nft', 'down']) expect(html).toContain(`id: '${s}'`);
     expect(html).toContain('data-guide'); // presenter mode
-    expect(html).not.toMatch(/<(?:script|link|img)[^>]+(?:src|href)="https?:/); // no external assets
+    // no external scripts or images; stylesheets only from Google Fonts (brand fonts)
+    expect(html).not.toMatch(/<(?:script|img)[^>]+src="https?:/);
+    for (const m of html.matchAll(/<link[^>]+href="(https?:[^"]+)"/g)) expect(m[1]!.startsWith('https://fonts.googleapis.com')).toBe(true);
+    for (const mood of ['verified', 'worried', 'protected']) expect(html).toContain(`mood: '${mood}'`);
+    const img = await fetch(`http://127.0.0.1:${ports.control}/brand/copey-worried.png`);
+    expect([img.status, img.headers.get('content-type')]).toEqual([200, 'image/png']);
+    expect((await fetch(`http://127.0.0.1:${ports.control}/brand/..%2Fpackage.json`)).status).toBe(404);
     const cfg = await (await fetch(`http://127.0.0.1:${ports.control}/portal/config`)).json();
     expect(cfg).toMatchObject({
       ensName: 'x.eth',

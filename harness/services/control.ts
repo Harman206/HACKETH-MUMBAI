@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import type { Server } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -139,6 +139,14 @@ export async function startHarness(o: HarnessOpts) {
     if (req.method === 'GET' && (path === '/drainer' || path === '/permit' || path === '/nft')) {
       const kind = path === '/drainer' ? 'approve' : (path.slice(1) as 'permit' | 'nft');
       return html(res, attackPage(kind, attacks[kind], o.chainId));
+    }
+    // brand assets (lime mark, Copey the mascot, hero image) from assets/brand
+    const brand = /^\/brand\/([a-z0-9-]+\.(png|jpg|svg))$/.exec(path);
+    if (req.method === 'GET' && brand) {
+      const f = join(ROOT, '..', 'assets', 'brand', brand[1]!);
+      if (!existsSync(f)) return void res.writeHead(404).end();
+      const type = { png: 'image/png', jpg: 'image/jpeg', svg: 'image/svg+xml' }[brand[2] as 'png' | 'jpg' | 'svg'];
+      return void res.writeHead(200, { 'content-type': type, 'cache-control': 'max-age=3600' }).end(readFileSync(f));
     }
     if (path === '/portal/config') return json(res, { ensName: o.ensName, chainId: o.chainId, links, theater: !!theater });
     if (path === '/portal/ens') return json(res, await readEns());
