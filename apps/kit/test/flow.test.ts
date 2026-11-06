@@ -90,7 +90,7 @@ describe('exit flow', () => {
     });
     const f = createFlow(d);
     await f.start(settings);
-    expect(f.state.get()).toMatchObject({ step: 'error', message: expect.stringMatching(/Switch your wallet to chain 11155111/) });
+    expect(f.state.get()).toMatchObject({ step: 'error', message: expect.stringMatching(/Switch your wallet to Sepolia \(it is on Ethereum mainnet\)/) });
     expect(adapter.discover).not.toHaveBeenCalled();
   });
 
@@ -155,5 +155,92 @@ describe('exit flow', () => {
     if (s.step !== 'positions') return;
     expect(s.positions).toEqual([pos]);
     expect(s.discoveryErrors).toEqual([expect.stringMatching(/aave-v3.*Only 1 of 3/)]);
+  });
+});
+
+describe('exit flow: live status (usability)', () => {
+  test('exit streams runExit progress into state, then clears it when the result lands', async () => {
+    const seen: string[] = [];
+    let f!: ReturnType<typeof createFlow>;
+    const { d } = deps({
+      runExit: vi.fn(async (_plan, _sender, ctx) => {
+        ctx.onProgress?.({ stage: 'wallet', at: 1, call: 1, calls: 1 });
+        const s = f.state.get();
+        if (s.step === 'positions') seen.push(s.progress['7']?.stage ?? 'none');
+        ctx.onProgress?.({ stage: 'confirming', at: 2, call: 1, calls: 1, txHash: '0xaa' });
+        const t = f.state.get();
+        if (t.step === 'positions') seen.push(`${t.progress['7']?.stage}:${t.progress['7']?.txHash}`);
+        return { positionId: '7', status: 'recovered', reasons: [], txHashes: ['0xaa'], before: {}, after: {}, gasUsed: 1n, deltas: [] } as ExitResult;
+      }),
+    });
+    f = createFlow(d);
+    await f.start(settings);
+    await f.exit('7');
+    expect(seen).toEqual(['wallet', 'confirming:0xaa']);
+    const s = f.state.get();
+    expect(s.step === 'positions' && s.progress['7']).toBeUndefined();
+  });
+
+  test('exitAll exposes "n of total" while it runs and clears it after', async () => {
+    const two: Position = { ...pos, id: '9', label: 'Uniswap v3 #9' };
+    const batches: string[] = [];
+    let f!: ReturnType<typeof createFlow>;
+    const { d, adapter } = deps({
+      runExit: vi.fn(async (plan) => {
+        const s = f.state.get();
+        if (s.step === 'positions') batches.push(`${s.batch?.done}/${s.batch?.total}`);
+        return { positionId: plan.position.id, status: 'recovered', reasons: [], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] } as ExitResult;
+      }),
+    });
+    (adapter.discover as ReturnType<typeof vi.fn>).mockResolvedValue([pos, two]);
+    f = createFlow(d);
+    await f.start(settings);
+    await f.exitAll();
+    expect(batches).toEqual(['0/2', '1/2']);
+    const s = f.state.get();
+    expect(s.step === 'positions' && s.batch).toBeNull();
+  });
+
+  test('exit asks the wallet to switch back to the position\'s network first', async () => {
+    const { d } = deps();
+    const f = createFlow(d);
+    await f.start(settings);
+    (d.wallet.ensureChain as ReturnType<typeof vi.fn>).mockClear();
+    await f.exit('7');
+    expect(d.wallet.ensureChain).toHaveBeenCalledWith(11155111);
+  });
+
+  test('a refused network switch at exit time → a plain result, nothing run', async () => {
+    const { d } = deps();
+    const f = createFlow(d);
+    await f.start(settings);
+    (d.wallet.ensureChain as ReturnType<typeof vi.fn>).mockRejectedValue(new WrongChainError(11155111, 1));
+    await f.exit('7');
+    const s = f.state.get();
+    expect(d.runExit).not.toHaveBeenCalled();
+    expect(s.step === 'positions' && s.results['7']).toMatchObject({ status: 'unsimulated', reasons: [expect.stringMatching(/Switch your wallet to Sepolia/)] });
+  });
+
+  test('fee check: an empty wallet is flagged; a funded one is not', async () => {
+    const q = (bal: bigint) => () => ({ pinBlock: async () => 10n, status: () => [], getBalance: async () => bal }) as unknown as Quorum;
+    for (const [bal, low] of [[0n, true], [10n ** 18n, false]] as const) {
+      const { d } = deps({ quorumFor: q(bal) });
+      const f = createFlow(d);
+      await f.start(settings);
+      expect(f.state.get()).toMatchObject({ step: 'positions', fees: { balance: bal, low } });
+    }
+  });
+
+  test('wallet errors that are plain objects keep their message', async () => {
+    const { d } = deps({
+      wallet: {
+        connect: async () => { throw { code: 4001, message: 'User rejected the request.' }; },
+        ensureChain: async () => {},
+        sender: () => ({ sendTransaction: async () => '0xaa' }),
+      },
+    });
+    const f = createFlow(d);
+    await f.start(settings);
+    expect(f.state.get()).toMatchObject({ step: 'error', message: 'User rejected the request.', stage: 2 });
   });
 });

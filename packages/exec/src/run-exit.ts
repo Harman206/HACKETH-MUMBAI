@@ -32,7 +32,21 @@ export interface ExitResult {
   confirmedAt?: number;
 }
 
-export type RunCtx = Ctx & { pollMs?: number; timeoutMs?: number; now?: () => number; balanceRetries?: number };
+/** Live stages of one exit, for the UI. The final outcome is the ExitResult, not a stage. */
+export type ExitStage = 'checking' | 'simulating' | 'wallet' | 'confirming' | 'balances';
+
+export interface ExitProgress {
+  stage: ExitStage;
+  /** ms timestamp the stage began. */
+  at: number;
+  /** 1-based index of the call being sent, and how many calls the plan has. */
+  call: number;
+  calls: number;
+  /** Set once the wallet returned a hash (stage 'confirming'). */
+  txHash?: Hex;
+}
+
+export type RunCtx = Ctx & { pollMs?: number; timeoutMs?: number; now?: () => number; balanceRetries?: number; onProgress?: (p: ExitProgress) => void };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -73,7 +87,17 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
   if (plan.calls.length === 0) return { ...res, reasons: [plan.position.manual ?? 'Nothing to send for this position.'] };
   if (tokens.length === 0) return { ...res, reasons: ['The simulation shows nothing to recover from this position.'] };
 
+  const calls = plan.calls.length;
+  const progress = (stage: ExitStage, call = 1, txHash?: Hex) => {
+    try {
+      ctx.onProgress?.({ stage, at: now(), call, calls, ...(txHash ? { txHash } : {}) });
+    } catch {
+      // a UI listener must never change the outcome of an exit
+    }
+  };
+
   // 1. Guard every call
+  progress('checking');
   for (const c of plan.calls) {
     const g = guard(c, { account: ctx.account, chainId: ctx.chainId, manifest: ctx.manifest });
     if (!g.ok) return { ...res, reasons: explain(g) };
@@ -81,6 +105,7 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
 
   // 2. Simulate through the quorum at a freshly pinned block
   let block: bigint;
+  progress('simulating');
   try {
     block = await ctx.q.pinBlock();
     for (const c of plan.calls) await ctx.q.call({ to: c.to, data: c.data, from: c.from }, block);
@@ -95,14 +120,16 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
 
   // 4–5. Send each call, wait for a quorum-confirmed receipt. From here on, a sent tx is never reported as "blocked".
   let last: Receipt | null = null;
-  for (const c of plan.calls) {
+  for (const [i, c] of plan.calls.entries()) {
     let hash: Hex;
+    progress('wallet', i + 1);
     try {
       hash = await sender.sendTransaction(c);
     } catch (e) {
       return { ...res, status: 'not-recovered', reasons: [walletMessage(e)] };
     }
     res.txHashes.push(hash);
+    progress('confirming', i + 1, hash);
     let r: Receipt | null;
     try {
       r = await waitReceipt(ctx.q, hash, ctx.pollMs ?? 2000, ctx.timeoutMs ?? 120_000, now);
@@ -115,6 +142,7 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
     last = r;
   }
   res.confirmedAt = now();
+  progress('balances', calls);
 
   // 6–7. Balances after, at the receipt block. Lagging paths may not have that block yet: retry a few times.
   const attempts = ctx.balanceRetries ?? 5;

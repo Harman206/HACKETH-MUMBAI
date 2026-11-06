@@ -1,6 +1,9 @@
 import { toHex } from 'viem';
 import type { Address, Hex, TxRequest } from '@blackout/core';
 import type { Sender } from '@blackout/exec';
+import { CHAIN_NAMES } from './config';
+
+const chainName = (id: number) => CHAIN_NAMES[id] ?? `chain ${id}`;
 
 export interface Eip1193 {
   request(args: { method: string; params?: unknown }): Promise<unknown>;
@@ -16,7 +19,7 @@ export class WrongChainError extends Error {
   readonly want: number;
   readonly have: number | null;
   constructor(want: number, have: number | null) {
-    super(`Switch your wallet to chain ${want}${have ? ` (it is on ${have})` : ''}.`);
+    super(`Switch your wallet to ${chainName(want)}${have ? ` (it is on ${chainName(have)})` : ''}.`);
     this.want = want;
     this.have = have;
   }

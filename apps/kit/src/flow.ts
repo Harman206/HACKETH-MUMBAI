@@ -1,7 +1,7 @@
 import type { Address, Position } from '@blackout/core';
 import type { Ctx, ExitAdapter } from '@blackout/adapters';
 import { normaliseName, readBlackoutRecords, type BlackoutRecords } from '@blackout/ens';
-import { buildReport, tallyVerdicts, runExit as defaultRunExit, type ExitReport, type ExitResult, type Sender } from '@blackout/exec';
+import { buildReport, tallyVerdicts, runExit as defaultRunExit, type ExitProgress, type ExitReport, type ExitResult, type Sender } from '@blackout/exec';
 import type { Quorum } from '@blackout/quorum';
 import type { Settings } from './settings';
 import { maxSeenVersion, recordSeenVersion } from './storage';
@@ -28,8 +28,17 @@ export type FlowState =
       /** Simulated payout per position id (display), and token symbols/decimals. */
       previews: Record<string, { token: Address; amount: bigint }[]>;
       meta: TokenMeta;
+      /** Live stage of the exit in flight, by position id. Cleared when its result lands. */
+      progress: Record<string, ExitProgress>;
+      /** "Exit all" counter while it runs. */
+      batch: { done: number; total: number } | null;
+      /** The wallet's native balance for network fees, when the RPCs could read it. */
+      fees: { balance: bigint; low: boolean } | null;
     }
   | { step: 'error'; message: string; stage?: 1 | 2 | 3 };
+
+/** Below this (0.001 ETH) an exit may not be able to pay its network fee. */
+export const LOW_FEE_BALANCE = 10n ** 15n;
 
 /** Stepper position: 1 Verify, 2 Connect, 3 Positions, 4 Exit. */
 export function stepOf(s: FlowState): 1 | 2 | 3 | 4 {
@@ -71,7 +80,9 @@ export interface Flow {
   report(): ExitReport;
 }
 
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** Wallets often throw plain objects ({ code, message }), not Errors. */
+const message = (e: unknown) =>
+  e instanceof Error ? e.message : typeof (e as { message?: unknown })?.message === 'string' ? (e as { message: string }).message : String(e);
 
 export function createFlow(deps: FlowDeps): Flow {
   const state = store<FlowState>({ step: 'setup' });
@@ -154,7 +165,9 @@ export function createFlow(deps: FlowDeps): Flow {
           }),
       );
       const meta = typeof q.read === 'function' ? await tokenMeta(q, positions.flatMap((p) => p.tokens), ctx.block).catch(() => ({})) : {};
-      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors, facts, previews, meta });
+      const balance = typeof q.getBalance === 'function' ? await q.getBalance(account, ctx.block).catch(() => null) : null;
+      const fees = balance === null ? null : { balance, low: balance < LOW_FEE_BALANCE };
+      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors, facts, previews, meta, progress: {}, batch: null, fees });
     } catch (e) {
       return fail(message(e));
     }
@@ -167,24 +180,42 @@ export function createFlow(deps: FlowDeps): Flow {
     if (!pos || pos.manual) return;
     const adapter = deps.adapters.find((a) => a.id === pos.adapter)!;
     state.set({ ...s, busy: id });
+    const onProgress = (p: ExitProgress) => {
+      const cur = state.get();
+      if (cur.step === 'positions') state.set({ ...cur, progress: { ...cur.progress, [id]: p } });
+    };
     let result: ExitResult;
     try {
+      // The user may have switched networks in the wallet since connecting.
+      await deps.wallet.ensureChain(s.chainId);
       const fresh = { ...ctx, block: await ctx.q.pinBlock() };
       const plan = await adapter.buildExit(pos, fresh);
-      result = await run(plan, deps.wallet.sender(s.account), fresh);
+      result = await run(plan, deps.wallet.sender(s.account), { ...fresh, onProgress });
     } catch (e) {
       result = { positionId: id, status: 'unsimulated', reasons: [message(e)], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] };
     }
     if (deps.drillFailures) failures = await deps.drillFailures().catch(() => failures);
     const cur = state.get();
-    if (cur.step === 'positions') state.set({ ...cur, busy: null, results: { ...cur.results, [id]: result } });
+    if (cur.step === 'positions') {
+      const { [id]: _done, ...progress } = cur.progress;
+      state.set({ ...cur, busy: null, progress, results: { ...cur.results, [id]: result } });
+    }
     if (deps.onReport) deps.onReport(report());
   }
 
   async function exitAll() {
     const s = state.get();
-    if (s.step !== 'positions') return;
-    for (const p of s.positions) if (!p.manual) await exit(p.id);
+    if (s.step !== 'positions' || s.busy) return;
+    const todo = s.positions.filter((p) => !p.manual && s.results[p.id]?.status !== 'recovered');
+    const setBatch = (batch: { done: number; total: number } | null) => {
+      const cur = state.get();
+      if (cur.step === 'positions') state.set({ ...cur, batch });
+    };
+    for (const [i, p] of todo.entries()) {
+      setBatch({ done: i, total: todo.length });
+      await exit(p.id);
+    }
+    setBatch(null);
   }
 
   function report(): ExitReport {

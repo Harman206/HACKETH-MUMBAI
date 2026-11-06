@@ -3,7 +3,7 @@ import { decodeFunctionData, encodeFunctionData, encodeFunctionResult, maxUint12
 import { erc20Abi, EXIT_SELECTORS, npmAbi, type Address, type ExitPlan, type Manifest, type TxRequest } from '@blackout/core';
 import { CallRevertedError, QuorumError, type Quorum, type Receipt } from '@blackout/quorum';
 import type { Ctx } from '@blackout/adapters';
-import { buildReport, reportToHtml, reportToJson, runExit, tallyVerdicts, type Sender } from '../src';
+import { buildReport, reportToHtml, reportToJson, runExit, tallyVerdicts, type ExitProgress, type Sender } from '../src';
 
 const USER: Address = '0x1111111111111111111111111111111111111111';
 const NPM: Address = '0x1238536071E1c677A632429e3655c799b22cDA52';
@@ -81,6 +81,34 @@ describe('runExit', () => {
       { token: T0, before: 10n, after: 20n, min: 1n },
       { token: T1, before: 5n, after: 9n, min: 1n },
     ]);
+  });
+
+  test('reports progress in order: checking → simulating → wallet → confirming (with hash) → balances', async () => {
+    const { sender, ctx } = stub();
+    const seen: ExitProgress[] = [];
+    const r = await runExit(plan(), sender, { ...ctx, onProgress: (p) => seen.push(p), now: () => 42 });
+    expect(r.status).toBe('recovered');
+    expect(seen.map((p) => p.stage)).toEqual(['checking', 'simulating', 'wallet', 'confirming', 'balances']);
+    expect(seen.find((p) => p.stage === 'confirming')).toMatchObject({ txHash: '0xaa', call: 1, calls: 1, at: 42 });
+    expect(seen.find((p) => p.stage === 'wallet')?.txHash).toBeUndefined();
+  });
+
+  test('progress stops at the stage that failed (Guard block → only checking; wallet rejection → up to wallet)', async () => {
+    const blocked: string[] = [];
+    const a = stub();
+    await runExit(plan({ recipient: ATTACKER }), a.sender, { ...a.ctx, onProgress: (p) => blocked.push(p.stage) });
+    expect(blocked).toEqual(['checking']);
+    const declined: string[] = [];
+    const b = stub();
+    const no: Sender = { sendTransaction: async () => { throw Object.assign(new Error('User rejected'), { code: 4001 }); } };
+    await runExit(plan(), no, { ...b.ctx, onProgress: (p) => declined.push(p.stage) });
+    expect(declined).toEqual(['checking', 'simulating', 'wallet']);
+  });
+
+  test('a throwing progress listener never breaks the exit', async () => {
+    const { sender, ctx } = stub();
+    const r = await runExit(plan(), sender, { ...ctx, onProgress: () => { throw new Error('ui bug'); } });
+    expect(r.status).toBe('recovered');
   });
 
   test('guard rejection never reaches the wallet', async () => {
