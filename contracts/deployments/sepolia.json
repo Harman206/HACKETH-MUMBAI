@@ -7,8 +7,8 @@
   "secret": "0x03ffdfecc47583fc739c9ec5e4370bf1357dd3e3ebdf9d7b4148322c116b6973",
   "webKey": "0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182",
   "tokenId": 69744561349315654606744923969529915681143012943538267628858506939205983141888,
-  "kitRelease": "5485e76be539ca554d1798f47a3bf50ef2c18d8657a206a271ccdb502a53c561",
-  "kitReleaseVersion": 4,
+  "kitRelease": "30e5b586c733325aaba3b59c240d9e37b5c35fb27fd766fa71fb922ed4029a8a",
+  "kitReleaseVersion": 5,
   "manifest2Sha": "304508a1ef337f70309c312532861f3bbde66040aad3309d50b93e6ca28e9b3c",
   "copeybara": {
     "migrationTxs": [
@@ -22,6 +22,12 @@
     "urlTx": "0xf21794dd7b39ae5418e79b96889995e2bfc2cee7813fc4bcb3a7ade7c1b0dd1b",
     "site": "v=2;sha256=056153931800b9f227b3e824c767c48261c47f5d0096b195acca8a022b8c0838,f43f86068fa8f2da9d2f5f5b07eee3c5b4bc3f20821932b346ccde76157a89f2,fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a",
     "manifestSha": "304508a1ef337f70309c312532861f3bbde66040aad3309d50b93e6ca28e9b3c",
-    "url": "http://demoswap.localhost:8080"
+    "url": "http://demoswap.localhost:8080",
+    "releaseTxs": [
+      "0xd0f3285443b6a9af6039e24c96c33ffc89f3cab3062d095e10b46c724b94422d",
+      "0x1d87605fb4022bb1e958d39f4cc805894edc1282b3a8ddb27d0e0af630cba5ed"
+    ],
+    "extensionRelease": "2ba251b1d600b5aa2b2098c7e60dbd9b12dbfc86c3caee2b544b90a648a2343d",
+    "extensionReleaseVersion": 1
   }
 }
