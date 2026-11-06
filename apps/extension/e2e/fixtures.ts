@@ -76,6 +76,8 @@ export function installTestWallet(ctx: BrowserContext, w: World) {
       };
       const calls: string[] = [];
       (window as any).__walletCalls = calls;
+      // init scripts normally run before any page script; on a page Playwright attached to late they run after it
+      (window as any).__testWalletLate = document.readyState !== 'loading';
       const provider = {
         request: async ({ method, params }: { method: string; params?: unknown[] }) => {
           if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [account];
@@ -89,13 +91,37 @@ export function installTestWallet(ctx: BrowserContext, w: World) {
       window.addEventListener('eip6963:requestProvider', () =>
         window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: { info: { name: 'Test Wallet', rdns: 'test.wallet', uuid: 't', icon: 'data:,' }, provider } })),
       );
-      // the kit reads its RPCs from localStorage: point it at the fork
-      if (location.port === kitPort && !localStorage.getItem('copeybara.settings.v1')) {
-        localStorage.setItem('copeybara.settings.v1', JSON.stringify({ targetChainId: 11155111, userRpcs: { '11155111': rpcs }, slippageBps: 50, useDefaultRpcs: false, drillUrl: '' }));
+      // the kit reads its RPCs from localStorage: point it at the fork (always: an earlier load of the kit without
+      // this script, see ensureTestWallet, has already saved the public defaults there)
+      if (location.port === kitPort) {
+        let saved: Record<string, unknown> = {};
+        try {
+          saved = JSON.parse(localStorage.getItem('copeybara.settings.v1') ?? '{}') ?? {};
+        } catch {
+          /* replaced below */
+        }
+        localStorage.setItem('copeybara.settings.v1', JSON.stringify({ slippageBps: 50, drillUrl: '', ...saved, targetChainId: 11155111, userRpcs: { '11155111': rpcs }, useDefaultRpcs: false }));
       }
     },
     { rpc: w.rpcs[0]!, account: w.wallet, kitPort: new URL(w.kitUrl).port, rpcs: w.rpcs },
   );
+}
+
+/**
+ * Pages the extension opens itself (chrome.tabs.create: the kit from setup and from the dashboard) can load their
+ * first document before Playwright has attached to the new tab. The context init script (test wallet + the kit's fork
+ * RPCs) then either never runs there, or runs only after the kit has started (and saved its public-RPC defaults):
+ * no wallet when the button is clicked, or a kit reading real Sepolia, where the e2e name does not exist.
+ * Reload such a page once; the reload runs with the init script first. The caller asserts the opened URL before this.
+ */
+export async function ensureTestWallet(page: Page) {
+  await page.waitForLoadState('domcontentloaded');
+  const state = () => page.evaluate(() => (!Array.isArray((window as any).__walletCalls) ? 'missing' : (window as any).__testWalletLate ? 'late' : 'ok'));
+  const s = await state();
+  if (s === 'ok') return;
+  console.log(`[e2e] init script ${s} on ${page.url()} (opened by the extension before Playwright attached): reloading`);
+  await page.reload();
+  expect(await state()).toBe('ok');
 }
 
 export const test = base.extend<{ w: World; ctx: BrowserContext; ext: Ext }>({

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { control, expect, test } from './fixtures';
+import { control, ensureTestWallet, expect, test } from './fixtures';
 
 /**
  * The whole product, as a beginner meets it:
@@ -18,9 +18,11 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   // wallet via the kit (wallets work there): the kit hands over only the address; the user confirms it here
   const [kit] = await Promise.all([ctx.waitForEvent('page'), setup.getByRole('button', { name: 'Open the kit to connect' }).click()]);
   await expect(kit).toHaveURL(/#connect=copeybara$/);
+  await ensureTestWallet(kit);
   await kit.getByRole('button', { name: 'Use this wallet in Copeybara' }).click();
   await expect(kit.getByText(/Sent .* to the Copeybara extension/)).toBeVisible({ timeout: 20_000 }).catch(async (e) => {
     console.log('[handoff text]', (await kit.locator('[data-copeybara-handoff]').innerText()).slice(0, 800));
+    console.log('[handoff env]', await kit.evaluate(() => JSON.stringify({ eth: typeof (window as any).ethereum, calls: (window as any).__walletCalls, shim: (window as any).__copeybaraShim, ls: localStorage.getItem('copeybara.settings.v1'), href: location.href })));
     throw e;
   });
   await kit.close();
@@ -108,6 +110,7 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   await dash.reload();
   const [kit2] = await Promise.all([ctx.waitForEvent('page'), dash.locator(`[data-protocol="${w.ensName}"]`).locator('xpath=..').getByRole('button', { name: 'Exit safely' }).click()]);
   await expect(kit2).toHaveURL(`${w.kitUrl}?ens=${w.ensName}`);
+  await ensureTestWallet(kit2);
   await exitAll(kit2, w.positions);
 });
 
