@@ -139,4 +139,44 @@ describe('quorum', () => {
     const q = createQuorum({ urls: f.map((x) => x.url), ...fast });
     await expect(q.getReceipt('0xbb')).rejects.toMatchObject({ kind: 'DISAGREE' });
   });
+
+  test('A4: agreed reverts compare equal regardless of provider data formatting', async () => {
+    const f = await three([
+      { callError: { code: 3, message: 'execution reverted', data: '0x08c379a0' } },
+      { callError: { code: -32000, message: 'execution reverted' } },
+      { callError: { code: 3, message: 'execution reverted: Not approved', data: '0x' } },
+    ]);
+    const q = createQuorum({ urls: f.map((x) => x.url), ...fast });
+    await expect(q.call({ to: TO, data: '0x' }, 100n)).rejects.toBeInstanceOf(CallRevertedError);
+  });
+
+  test('A4: HTTP 429 is retried with backoff and the later answer counts', async () => {
+    const f = await three();
+    let n = 0;
+    const realFetch = fetch;
+    const fetchFn: typeof fetch = async (u, init) => {
+      if (String(u) === f[2]!.url && n++ < 2) return new Response('slow down', { status: 429 });
+      return realFetch(u, init);
+    };
+    const q = createQuorum({ urls: f.map((x) => x.url), timeoutMs: 300, retries: 3, fetchFn });
+    const t0 = Date.now();
+    expect(await q.call({ to: TO, data: '0x' }, 100n)).toBe('0x01');
+    expect(q.status()[2]!.up).toBe(true);
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(250 + 500 - 50);
+  });
+
+  test('A4: once 2 paths agree, a slow third path does not delay the answer', async () => {
+    const f = await three([{}, {}, { delayMs: 3000 }]);
+    const q = createQuorum({ urls: f.map((x) => x.url), timeoutMs: 4000, retries: 0 });
+    await q.chainId().catch(() => {});
+    const t0 = Date.now();
+    expect(await q.call({ to: TO, data: '0x' }, 100n)).toBe('0x01');
+    expect(Date.now() - t0).toBeLessThan(1500);
+  });
+
+  test('A4: a third path that answers differently within the grace window → DISAGREE', async () => {
+    const f = await three([{}, {}, { delayMs: 200, callResult: '0x02' }]);
+    const q = createQuorum({ urls: f.map((x) => x.url), timeoutMs: 4000, retries: 0 });
+    await expect(q.call({ to: TO, data: '0x' }, 100n)).rejects.toMatchObject({ kind: 'DISAGREE' });
+  });
 });

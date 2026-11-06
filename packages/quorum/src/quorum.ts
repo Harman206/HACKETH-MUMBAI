@@ -63,6 +63,10 @@ export interface Quorum {
 type Answer = { ok: true; value: unknown } | { ok: false; revert: string; data?: string };
 
 class PathFailure extends Error {}
+class RateLimited extends PathFailure {}
+
+/** After enough paths answered, wait this long for the rest, then decide without them. */
+const GRACE_MS = 1000;
 
 const toHex = (n: bigint) => `0x${n.toString(16)}` as Hex;
 const isRevert = (e: { code?: number; message?: string }) => e.code === 3 || /revert/i.test(e.message ?? '');
@@ -88,6 +92,7 @@ export function createQuorum(opts: QuorumOpts): Quorum {
         body: JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params }),
         signal: ac.signal,
       });
+      if (res.status === 429) throw new RateLimited('HTTP 429 (rate limited)');
       if (!res.ok) throw new PathFailure(`HTTP ${res.status}`);
       const body = (await res.json()) as { result?: unknown; error?: { code?: number; message?: string; data?: unknown } };
       if (body.error) {
@@ -117,6 +122,7 @@ export function createQuorum(opts: QuorumOpts): Quorum {
         return a;
       } catch (e) {
         p.lastError = (e as Error).message;
+        if (e instanceof RateLimited && attempt < retries) await new Promise((r) => setTimeout(r, 250 * 2 ** attempt));
       }
     }
     p.up = false;
@@ -124,16 +130,39 @@ export function createQuorum(opts: QuorumOpts): Quorum {
     return null;
   }
 
-  /** Ask every path; require ≥minAnswers answers. Returns the answers (with their path index). */
+  /**
+   * Ask every path; require ≥minAnswers answers. Once minAnswers have answered, the remaining paths get
+   * GRACE_MS more: a slow path does not delay the result, but any path that does answer is counted.
+   */
   async function gather(method: string, params: unknown[]): Promise<Answer[]> {
-    const answers = (await Promise.all(paths.map((_, i) => ask(i, method, params)))).filter((a): a is Answer => a !== null);
+    const answers = await new Promise<Answer[]>((resolve) => {
+      const got: Answer[] = [];
+      let settled = 0;
+      let grace: ReturnType<typeof setTimeout> | null = null;
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (grace) clearTimeout(grace);
+        resolve([...got]);
+      };
+      paths.forEach((_, i) => {
+        void ask(i, method, params).then((a) => {
+          settled++;
+          if (a && !done) got.push(a);
+          if (settled === paths.length) finish();
+          else if (got.length >= minAnswers && !grace && !done) grace = setTimeout(finish, GRACE_MS);
+        });
+      });
+    });
     if (answers.length < minAnswers) {
       throw new QuorumError('TOO_FEW', `Only ${answers.length} of ${paths.length} RPC paths answered ${method}; need ${minAnswers}.`);
     }
     return answers;
   }
 
-  const key = (a: Answer) => (a.ok ? `r:${JSON.stringify(a.value)}` : `e:${a.data ?? 'revert'}`);
+  // Providers format revert data differently; an agreed revert is "reverted" regardless of payload.
+  const key = (a: Answer) => (a.ok ? `r:${JSON.stringify(a.value)}` : 'e:revert');
 
   /** Every answer must be identical. */
   async function agreed(method: string, params: unknown[]): Promise<unknown> {
