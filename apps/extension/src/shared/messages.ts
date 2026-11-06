@@ -29,7 +29,8 @@ export type PageMsg =
   | { t: 'rejectAddress' }
   | { t: 'openKit'; name: string }
   | { t: 'testRpc'; url: string }
-  | { t: 'resetStats' };
+  | { t: 'resetStats' }
+  | { t: 'getTab'; tabId: number };
 
 const obj = (m: unknown): m is Record<string, unknown> => typeof m === 'object' && m !== null && !Array.isArray(m);
 const str = (v: unknown, max = 200): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -127,6 +128,8 @@ export function parsePageMsg(m: unknown): PageMsg | null {
       return str(m.id, 64) ? { t: 'getConfirm', id: m.id } : null;
     case 'confirmDecision':
       return str(m.id, 64) && typeof m.allow === 'boolean' ? { t: 'confirmDecision', id: m.id, allow: m.allow } : null;
+    case 'getTab':
+      return typeof m.tabId === 'number' && Number.isSafeInteger(m.tabId) ? { t: 'getTab', tabId: m.tabId } : null;
     case 'testRpc':
       return typeof m.url === 'string' && isHttpUrl(m.url) ? { t: 'testRpc', url: m.url } : null;
     default:

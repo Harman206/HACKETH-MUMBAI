@@ -27,3 +27,4 @@ contracts/deployments/*.site-published
 apps/site/dist/
 contracts/.rehearsal-victim.key
 deploy/
+apps/extension/dist/

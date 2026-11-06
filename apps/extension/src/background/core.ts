@@ -414,6 +414,8 @@ export function createCore(deps: CoreDeps) {
             return { ok: false, error: (e as Error).message };
           }
         }
+        case 'getTab':
+          return tabs.get(m.tabId)?.site ?? { kind: 'none' };
         case 'resetStats':
           stats = emptyStats();
           await save(['stats']);
