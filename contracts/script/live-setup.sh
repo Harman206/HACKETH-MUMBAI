@@ -47,8 +47,12 @@ fi
 ../scripts/verify-kit.sh ../apps/kit/dist/blackout-kit.html "$(jq -r .name "$DF")" "$SEPOLIA_RPC"
 
 # Seed three Uniswap v3 test positions into DEMO_WALLET (your MetaMask address), once.
-POS=${POSITIONS_FILE:-deployments/sepolia-positions.json}
+POS=${POSITIONS_FILE:-${DF%.json}-positions.json}
 if [ ! -f "$POS" ]; then
   TEST_WALLET_KEY=$DEPLOYER_KEY POSITIONS_FILE=$POS forge script script/SeedPositions.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
 fi
 jq . "$POS"
+
+# Fill the README's live-deployment section (real deployment only; rehearsals never touch the README).
+if [ "$DF" = "deployments/sepolia.json" ]; then ( cd .. && node scripts/readme-live.mjs contracts/deployments/sepolia.json README.md ); fi
+echo "Live setup complete. Next: open the kit on http://localhost, connect MetaMask as $(jq -r .wallet "$POS"), exit the three positions."

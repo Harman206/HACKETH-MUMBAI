@@ -4,6 +4,7 @@
 # Env: SEPOLIA_RPC, WEB_KEY (private key). Reads deployments/sepolia.json, writes deployments/sepolia-permissions.json.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+export PATH=$HOME/.foundry/bin:$PATH
 D=${DEPLOYMENTS_FILE:-deployments/sepolia.json}; OUT=${PERMISSIONS_FILE:-deployments/sepolia-permissions.json}
 LABEL=$(jq -r .label $D); RESOLVER=$(jq -r .resolver $D); TOKEN=$(jq -r .tokenId $D)
 REGISTRY=$(jq -r .ens.ethRegistry ../config/networks.json); IMPL=$(jq -r .ens.permissionedResolverImpl ../config/networks.json)
