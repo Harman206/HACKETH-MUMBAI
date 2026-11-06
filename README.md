@@ -46,6 +46,7 @@ The **Check a transaction** tab runs the same Exit Guard on anything a live site
 | A stolen website key cannot change the release record or swap the resolver | 9 must-revert fork tests; on-chain reverted txs from the website key (live Sepolia hashes below once the live run is done) | `cd contracts && forge test --match-contract PermissionsForkTest`; [live hashes](#deployed-addresses-and-transactions) |
 | The Exit Guard rejects real attacker calldata (Curve 2022) | Victim's real `approve` calldata → rejected (BANNED + TARGET) | `pnpm vitest run packages/guard/test/fixtures.test.ts` |
 | Without BLACKOUT the Curve 2022 victim loses 400,227.23 USDC; with it, 0 | Foundry `vm.transact` replay on a mainnet fork | `cd replay && forge test` · report: [docs/replay/R1.md](docs/replay/R1.md) |
+| A Uniswap v4 exit (not enumerable, action-list calldata) works against the real v4 contracts | Sepolia fork: mint via Permit2 → log-scan discovery → Guard → quorum simulation → send → "Recovered", preview = received to the wei | `pnpm vitest run -c vitest.fork.config.ts packages/exec/test/uniswap-v4.fork.test.ts` |
 | The kit loads zero third-party code | Playwright network log: 0 third-party origins (DemoSwap: 4) | `pnpm exec playwright test e2e/no-trackers.spec.ts e2e/scan.spec.ts` |
 
 ## Live demo: the Attack Theater
@@ -85,7 +86,7 @@ flowchart TB
   end
   subgraph Kit["Exit kit (one HTML file on http://localhost)"]
     Q["Read quorum: 3 RPC paths, pinned block, agree or stop"]
-    A["Adapters: Uniswap v3 · Aave v3 · Curve 3pool"]
+    A["Adapters: Uniswap v3 · Uniswap v4 · Aave v3 · Curve 3pool"]
     G["Exit Guard: allowlist, recipient pinned, no approvals, no ETH"]
     X["runExit: simulate → send → receipt + balance check"]
   end
@@ -110,7 +111,7 @@ Trust boundaries:
 | [`packages/guard`](packages/guard/src/guard.ts) | the Exit Guard (pure TS) and its plain-language `explain()` |
 | [`packages/quorum`](packages/quorum/src/quorum.ts) | 3-path read quorum: 4 s timeout, 2 retries, ≥2 must answer, all must agree, pinned block |
 | [`packages/ens`](packages/ens/src/records.ts) | reads `url`, `org.blackout.release`, `org.blackout.manifest`, `org.blackout.site` via UniversalResolverV2 |
-| [`packages/adapters`](packages/adapters/src) | Uniswap v3, Aave v3 (supply-only), Curve 3pool |
+| [`packages/adapters`](packages/adapters/src) | Uniswap v3, Uniswap v4 (ERC-20 pairs), Aave v3 (supply-only), Curve 3pool |
 | [`packages/exec`](packages/exec/src/run-exit.ts) | Guard → simulate → send → receipt → balance check; exit report |
 | [`apps/kit`](apps/kit) | the single-file kit (Vite + Preact + viem, hashed CSP, reproducible build) |
 | [`contracts`](contracts) | Foundry: ENSv2 setup via Safe, record writer, must-revert tests, Sepolia seed |
@@ -118,7 +119,15 @@ Trust boundaries:
 | [`replay`](replay) | Incident Replay Lab: fixtures, Foundry `vm.transact` replays, kit exits at incident blocks |
 | [`scripts/verify-kit.sh`](scripts/verify-kit.sh) | independent verifier (cast + sha256sum) |
 
-### Uniswap v3 integration (for the Uniswap Foundation track)
+### Uniswap v3 and v4 integration (for the Uniswap Foundation track)
+
+**Uniswap v4** ([`packages/adapters/src/uniswap-v4.ts`](packages/adapters/src/uniswap-v4.ts)):
+- Discovery ([`#L78-L101`](packages/adapters/src/uniswap-v4.ts#L78-L101)): v4 position NFTs are not enumerable, so the kit reads `balanceOf` for the true count, scans recent `Transfer(→ user)` logs in 10k-block chunks through the RPC quorum ([`#L30`](packages/adapters/src/uniswap-v4.ts#L30)), and confirms each id with `ownerOf`. If it finds fewer than the wallet owns, it says how many are missing, and the user adds them by ID ([`byId`, `#L103-L114`](packages/adapters/src/uniswap-v4.ts#L103-L114)); the kit checks ownership first.
+- Exit ([`#L121-L159`](packages/adapters/src/uniswap-v4.ts#L121-L159)): one `modifyLiquidities` call with `[DECREASE_LIQUIDITY(all liquidity, mins), TAKE_PAIR(currency0, currency1, user)]`. Minimums are the principal from v4 math at the pinned block minus slippage ([`v4-math.ts`](packages/adapters/src/v4-math.ts): `TickMath` / `SqrtPriceMath` ported to bigint; all 21 constants diffed against the Uniswap source). The preview adds fees owed from `StateView` fee growth.
+- Exit Guard ([`decodeV4`](packages/guard/src/decode.ts#L76-L111)): decodes the action list. Only `DECREASE_LIQUIDITY`, `BURN_POSITION` and `TAKE_PAIR` to the user are allowed. `SETTLE*` / `CLOSE_CURRENCY` / `MINT` / `INCREASE` (they can pull tokens through an existing Permit2 allowance), `SWEEP`, `TAKE*` and swaps are banned with a plain reason; unknown action codes fail closed.
+- Proven on a Sepolia fork against the real PoolManager, PositionManager and StateView ([`packages/exec/test/uniswap-v4.fork.test.ts`](packages/exec/test/uniswap-v4.fork.test.ts)): mint through Permit2, discover by log scan, exit through the kit's own `runExit`. "Recovered", and the previewed amounts equal what arrived, to the wei. Live on Sepolia: positions #41448 and #41449 in the demo wallet.
+
+**Uniswap v3:**
 
 - Discovery: [`packages/adapters/src/uniswap-v3.ts#L34-L59`](packages/adapters/src/uniswap-v3.ts#L34-L59) calls `balanceOf`, then `tokenOfOwnerByIndex`, then `positions(id)`.
 - Exit: [`#L62-L102`](packages/adapters/src/uniswap-v3.ts#L62-L102) builds `multicall[decreaseLiquidity(min from simulation), collect(to user)]` in one transaction.
@@ -133,12 +142,12 @@ Trust boundaries:
 3. Every selector, including those nested in a multicall, must be allowlisted for that target.
 4. Every decoded recipient must be the connected account.
 5. Pay-the-caller pools require `from` = the account.
-6. Always banned: `approve`, `increaseAllowance`, EIP-2612 / DAI / ERC-721 permits, `setApprovalForAll`, `transfer(From)`, `safeTransferFrom`, Permit2.
+6. Always banned: `approve`, `increaseAllowance`, EIP-2612 / DAI / ERC-721 permits, `setApprovalForAll`, `transfer(From)`, `safeTransferFrom`, Permit2. Inside a Uniswap v4 `modifyLiquidities`, every action except `DECREASE_LIQUIDITY`, `BURN_POSITION` and `TAKE_PAIR` is banned.
 7. `value` must be 0.
 
 Any decode failure, unknown selector or quorum disagreement means reject, and the UI has no override.
 
-Proven by a 26-case banned corpus (including the Curve 2022 victim's real calldata) and 10,000-run property tests.
+Proven by a 39-case banned corpus (including the Curve 2022 victim's real calldata and 13 Uniswap v4 action-list attacks), 10,000-run property tests, and a 2,000-run v4 property test (accepted exactly when every action is an exit action and every payout goes to the user).
 
 ## CROPS
 
@@ -171,7 +180,7 @@ Our deployment (`demoswap-blackout.eth`: Safe, resolver, must-revert transaction
 | Release Safe (2-of-3, name owner) | [`0x3ae03951044Ced07F7fa12072CfE7F95827A057F`](https://sepolia.etherscan.io/address/0x3ae03951044Ced07F7fa12072CfE7F95827A057F) |
 | PermissionedResolver (per app) | [`0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82`](https://sepolia.etherscan.io/address/0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82) |
 | Website key (url only) | [`0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182`](https://sepolia.etherscan.io/address/0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182) |
-| Published kit sha256 (`org.blackout.release` v2) | `e466b44cce87059035de8860a0e82ee20193db2f9634957ed57d1811581d4e60` |
+| Published kit sha256 (`org.blackout.release` v3) | `e466b44cce87059035de8860a0e82ee20193db2f9634957ed57d1811581d4e60` |
 
 Must-revert checks, sent on chain from the website key:
 
@@ -185,13 +194,15 @@ Must-revert checks, sent on chain from the website key:
 | web key writes url (must succeed) | succeeded ✓ | [`0xe36172b9…`](https://sepolia.etherscan.io/tx/0xe36172b98a22910e241c11119a940e813c9f436c5dee03a99fb7fa6e9db0ecec) |
 
 Seeded Uniswap v3 positions (owner [`0xa9e11dfe4115c9193057533A0DAf56A59d1A7CF4`](https://sepolia.etherscan.io/address/0xa9e11dfe4115c9193057533A0DAf56A59d1A7CF4)): #234133 in range, #234134 out of range, #234135 owed only.
+
+Seeded Uniswap v4 positions (owner [`0xa9e11dfe4115c9193057533A0DAf56A59d1A7CF4`](https://sepolia.etherscan.io/address/0xa9e11dfe4115c9193057533A0DAf56A59d1A7CF4), DETH/DUSD 0.3% pool `0x50e3c5a1…`): #41448 in range, #41449 out of range.
 <!-- LIVE-DEPLOYMENT:END -->
 
 ## Running everything
 
 ```bash
 pnpm test                    # unit: core, guard (+10k property runs), quorum, ens, exec, kit, harness, replay schema
-pnpm test:fork               # anvil mainnet forks: Uniswap v3 / Aave v3 / Curve exits, R1 kit exits at block 15309928
+pnpm test:fork               # anvil forks: Uniswap v3 / Aave v3 / Curve exits (mainnet), Uniswap v4 exits (Sepolia), R1 kit exits at block 15309928
 cd contracts && SEPOLIA_RPC=… forge test     # ENSv2 setup + must-revert on a Sepolia fork
 cd replay && forge test      # R1 as it happened vs counterfactual (archive RPC: ARCHIVE_RPC, default Tenderly public)
 cd apps/kit && pnpm exec playwright test     # e2e: full exit, check-a-transaction, no trackers, fire drill, scan
@@ -209,7 +220,7 @@ Wallets: the e2e uses an injected EIP-6963 test wallet. Manual checks with MetaM
 
 - Does not stop smart-contract exploits (the replay control C1 shows this).
 - Still trusted: the user's wallet and its broadcast RPC, Ethereum itself, ENS, the release Safe's signers, and `sha256sum`. In this testnet demo the Safe's three owner keys sit on one machine (`contracts/.env`), so the 2-of-3 property is demonstrated, not independent.
-- The MVP covers Uniswap v3 NFTs held directly, Aave v3 supply-only, and Curve 3pool LP. It does not cover Uniswap v4, vaults or staked positions. Aave positions with debt are flagged "manual", because repaying needs an approval.
+- Covered: Uniswap v3 and v4 NFTs held directly, Aave v3 supply-only, and Curve 3pool LP. Not covered: vaults, staked positions, and Uniswap v4 pools that pay native ETH (listed as "manual"; the balance check would have to net out gas). Uniswap v4 discovery searches the last ~50k blocks; older positions are added by ID. A v4 hook that takes a cut on withdrawal can push the payout under the minimum: the simulation then fails and nothing is sent. Aave positions with debt are flagged "manual", because repaying needs an approval.
 - The user must save or fetch the kit, and must know the ENS name from a source other than the kit.
 - The website's offline copy (service worker) covers the website going **down**, not being **hijacked**: a hijacked host can replace it. Check the kit's sha256 against ENS (`scripts/verify-kit.sh`) or keep your own downloaded copy.
 - ENSv2 resolver roles are per resolver, not per name. We deploy one resolver per protocol name, so the web key's `url` grant covers exactly that one name.

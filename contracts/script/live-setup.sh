@@ -44,7 +44,7 @@ else
   ./script/permission-checks.sh
 fi
 
-# Publish the real kit fingerprint as release v2 (v1 was a placeholder), once per kit build.
+# Publish the kit fingerprint as the next release version, once per kit build.
 ( cd .. && SOURCE_DATE_EPOCH=0 pnpm --filter @blackout/kit build >/dev/null )
 KIT_SHA=$(cut -d' ' -f1 ../apps/kit/dist/blackout-kit.html.sha256)
 if [ "$(jq -r '.kitRelease // empty' "$DF")" != "$KIT_SHA" ]; then
@@ -54,7 +54,14 @@ if [ "$(jq -r '.kitRelease // empty' "$DF")" != "$KIT_SHA" ]; then
   KIT_VERSION=${KIT_VERSION:-$(( ${CUR:-1} + 1 ))}
   echo "publishing release v=$KIT_VERSION (was v=${CUR:-none})"
   env -u MANIFEST_FILE RELEASE="sha256:$KIT_SHA;v=$KIT_VERSION" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
-  jq --arg s "$KIT_SHA" '.kitRelease=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
+  jq --arg s "$KIT_SHA" --argjson v "$KIT_VERSION" '.kitRelease=$s | .kitReleaseVersion=$v' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
+fi
+# Publish the exit manifest whenever config/manifest.json changed since the last publish (same Safe 2-of-3 path).
+MF_SHA=$(shasum -a 256 "$MANIFEST_FILE" | cut -d' ' -f1)
+if [ "$(jq -r '.manifestSha // empty' "$DF")" != "$MF_SHA" ]; then
+  echo "publishing exit manifest (sha256 $MF_SHA)"
+  env -u RELEASE -u SITE_HASH forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  jq --arg s "$MF_SHA" '.manifestSha=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
 fi
 # Independent check through 3 public RPCs (a local fork rehearsal can only use the fork itself).
 case "$SEPOLIA_RPC" in
