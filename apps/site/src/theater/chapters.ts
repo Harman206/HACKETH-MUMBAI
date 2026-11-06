@@ -12,6 +12,8 @@ export interface TState {
   chapter: 1 | 2 | 3 | 4;
   prepareTxs: string[];
   failures: { kind: string; at: number }[];
+  /** The ENS name this booth is running (kit links must use it, not a hard-coded one). */
+  ensName?: string;
   tokens: Record<string, string>;
   links: { demoswap: string; kit: string; control: string };
 }

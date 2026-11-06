@@ -144,6 +144,7 @@ export async function startHarness(o: HarnessOpts) {
         return json(res, {
           ...(await theater.state()),
           failures,
+          ensName: o.ensName,
           tokens: o.theater?.tokens ?? {},
           links: { demoswap: `http://demoswap.localhost:${p.router}`, kit: o.kitUrl ?? 'http://localhost:8000', control: `http://localhost:${p.control}` },
         });

@@ -114,7 +114,7 @@ describe('fire drill harness', () => {
 
   test('B4: theater endpoints — state, prepare (400 on bad victim), verify, hijack request', async () => {
     const st = await (await fetch(`http://127.0.0.1:${ports.control}/theater/state`)).json();
-    expect(st).toMatchObject({ network: 'sepolia', chapter: 1, victim: null, links: { kit: 'http://localhost:8000', control: `http://localhost:${ports.control}` } });
+    expect(st).toMatchObject({ network: 'sepolia', chapter: 1, victim: null, ensName: 'x.eth', links: { kit: 'http://localhost:8000', control: `http://localhost:${ports.control}` } });
     expect((await fetch(`http://127.0.0.1:${ports.control}/theater/prepare`, { method: 'POST', body: '{"victim":"nope"}' })).status).toBe(400);
     const ok = await (await fetch(`http://127.0.0.1:${ports.control}/theater/prepare`, { method: 'POST', body: JSON.stringify({ victim: '0x1111111111111111111111111111111111111111' }) })).json();
     expect(ok).toEqual({ txs: ['0x01'] });

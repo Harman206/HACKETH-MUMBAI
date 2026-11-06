@@ -54,7 +54,7 @@ export function Theater({ base }: { base: string }) {
   if (!s) return <div class="card">Connecting to the booth harness at {base}…{err && <p class="bad">{err}</p>}</div>;
   const fork = s.network === 'local-fork';
   const board = scoreboard(s);
-  const links = hijack ? kitLinks(s, ENS_NAME, hijack) : null;
+  const links = hijack ? kitLinks(s, s.ensName ?? ENS_NAME, hijack) : null;
   const Btn = (p: { n: 1 | 2 | 3 | 4; id: string; label: string; onClick(): void; primary?: boolean }) => {
     const g = gate(p.n, s);
     return (
