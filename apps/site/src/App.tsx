@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
-import { Download, Footer, Hero, How, Problem, Protocols, Trust } from './sections/Sections';
+import { Download, Footer, Hero, How, Problem, Protocols, Roadmap, Trust } from './sections/Sections';
+import { BrandMark } from './sections/Icons';
 import { LiveDemo } from './sections/LiveDemo';
 
 export function App() {
@@ -14,26 +15,27 @@ export function App() {
   }, []);
   return (
     <>
-      <nav class="top" aria-label="Main">
-        <div class="wrap">
-          <a class="brand" href="#top">Copeybara</a>
+      <a class="skip-link" href="#main">Skip to content</a>
+      <header class="top">
+        <nav class="wrap nav-layout" aria-label="Main">
+          <a class="brand" href="#top"><BrandMark />Copeybara</a>
           <ul>
-            <li><a href="#problem">The problem</a></li>
             <li><a href="#how">How it works</a></li>
             <li><a href="#demo">Live demo</a></li>
             <li><a href="#protocols">For protocols</a></li>
-            <li><a href="#download">Download</a></li>
           </ul>
-        </div>
-      </nav>
-      <main>
+          <a class="nav-action" href="#download">Get the kit <span aria-hidden="true">↓</span></a>
+        </nav>
+      </header>
+      <main id="main" tabIndex={-1}>
         <Hero live={live} />
-        <Problem />
         <How />
+        <Problem />
         <LiveDemo onLive={setLive} />
         <Trust />
         <Download sha={sha} offline={offline} />
         <Protocols />
+        <Roadmap />
       </main>
       <Footer />
     </>

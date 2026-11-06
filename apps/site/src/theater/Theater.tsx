@@ -67,7 +67,7 @@ export function Theater({ base }: { base: string }) {
   const next = nextStep(s);
   const why = (n: 1 | 2 | 3 | 4) => {
     const g = gate(n, s);
-    return g.ok ? null : <p class="muted" style="font-size:14px;margin-top:8px">🔒 {g.why}</p>;
+    return g.ok ? null : <p class="muted" style="font-size:14px;margin-top:8px">{g.why}</p>;
   };
 
   return (
