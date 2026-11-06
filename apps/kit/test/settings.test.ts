@@ -72,3 +72,25 @@ describe('settings from the URL (Attack Theater links)', () => {
     expect(settingsFromUrl('http://localhost:8000/')).toEqual({});
   });
 });
+
+describe('review #2: a protocol name from a link is never silent and never persisted', () => {
+  test('URL ens differing from the saved one → used for this session, flagged, saved name untouched', async () => {
+    const { mergeUrlSettings } = await import('../src/settings');
+    const saved = { ...DEFAULT_SETTINGS, ensName: 'real-protocol.eth' };
+    const r = mergeUrlSettings(saved, { ensName: 'evil.eth' });
+    expect(r.settings.ensName).toBe('evil.eth');
+    expect(r.ensFromLink).toBe('evil.eth');
+    expect(r.persist.ensName).toBe('real-protocol.eth');
+  });
+  test('URL ens equal to the saved one → no flag', async () => {
+    const { mergeUrlSettings } = await import('../src/settings');
+    const r = mergeUrlSettings({ ...DEFAULT_SETTINGS, ensName: 'a.eth' }, { ensName: 'a.eth' });
+    expect(r.ensFromLink).toBeNull();
+  });
+  test('drill URL (localhost only) is applied without a flag', async () => {
+    const { mergeUrlSettings } = await import('../src/settings');
+    const r = mergeUrlSettings(DEFAULT_SETTINGS, { drillUrl: 'http://localhost:8090' });
+    expect(r.settings.drillUrl).toBe('http://localhost:8090');
+    expect(r.ensFromLink).toBeNull();
+  });
+});

@@ -65,3 +65,14 @@ export function settingsFromUrl(href: string): Partial<Settings> {
   }
   return out;
 }
+
+/**
+ * Apply link-provided settings for this session only. A protocol name from a link is flagged (the UI asks the user
+ * to confirm it against the official docs) and never overwrites the saved name.
+ */
+export function mergeUrlSettings(saved: Settings, fromUrl: Partial<Settings>): { settings: Settings; persist: Settings; ensFromLink: string | null } {
+  const settings = { ...saved, ...fromUrl };
+  const ensFromLink = fromUrl.ensName && fromUrl.ensName !== saved.ensName ? fromUrl.ensName : null;
+  const persist = { ...saved, ...(fromUrl.drillUrl !== undefined ? { drillUrl: fromUrl.drillUrl } : {}) };
+  return { settings, persist, ensFromLink };
+}

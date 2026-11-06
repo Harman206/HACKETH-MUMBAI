@@ -5,7 +5,7 @@ import { reportToHtml, reportToJson, type ExitResult } from '@blackout/exec';
 import type { Position } from '@blackout/core';
 import { createFlow, stepOf, type FlowState } from './flow';
 import { Stepper } from './screens/Stepper';
-import { loadSettings, rpcUrlsFor, saveSettings, settingsFromUrl, type Settings } from './settings';
+import { loadSettings, mergeUrlSettings, rpcUrlsFor, saveSettings, settingsFromUrl, type Settings } from './settings';
 import { connect, discoverWallets, ensureChain, senderFrom, type Eip1193 } from './wallet';
 import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
 import { COPY } from './copy';
@@ -30,11 +30,12 @@ function useFlowState(flow: ReturnType<typeof createFlow>): FlowState {
 }
 
 export function App() {
+  const [boot] = useState(() => mergeUrlSettings(loadSettings(), typeof location !== 'undefined' ? settingsFromUrl(location.href) : {}));
   const [settings, setSettings] = useState<Settings>(() => {
-    const s = { ...loadSettings(), ...(typeof location !== 'undefined' ? settingsFromUrl(location.href) : {}) };
-    saveSettings(s);
-    return s;
+    saveSettings(boot.persist); // never persist a protocol name that came from a link
+    return boot.settings;
   });
+  const [ensFromLink, setEnsFromLink] = useState<string | null>(boot.ensFromLink);
   const [tab, setTab] = useState<'exit' | 'check' | 'release'>(() => (typeof location !== 'undefined' && new URL(location.href).searchParams.has('check') ? 'check' : 'exit'));
   const [provider, setProvider] = useState<Eip1193 | null>(null);
 
@@ -79,6 +80,7 @@ export function App() {
   const state = useFlowState(flow);
 
   const update = (patch: Partial<Settings>) => {
+    if (patch.ensName !== undefined) setEnsFromLink(null); // the user typed it themselves
     const next = { ...settings, ...patch };
     setSettings(next);
     saveSettings(next);
@@ -88,6 +90,11 @@ export function App() {
     <main>
       <h1>{COPY.title}</h1>
       <p class="muted">{COPY.tagline}</p>
+      {ensFromLink && settings.ensName === ensFromLink && (
+        <div class="card banner warn" role="alert" data-ens-from-link>
+          The protocol name <b>{ensFromLink}</b> was filled in from the link you opened. Before you continue, confirm it matches the name in the protocol’s official docs. Links can be faked.
+        </div>
+      )}
       <nav aria-label="Mode">
         <button aria-pressed={tab === 'exit'} onClick={() => setTab('exit')}>Exit my positions</button>
         <button aria-pressed={tab === 'check'} onClick={() => setTab('check')}>Check a transaction</button>
