@@ -151,7 +151,7 @@ pre { background: var(--paper); border-radius: 6px; padding: .8rem 1rem; overflo
 .protocol-steps h3 { margin-bottom: .25rem; }
 .protocol-steps li::marker { color: var(--ok); font-weight: 700; }
 #protocols { border-top: 1px solid var(--line); }
-.roadmap-link { margin-top: 1rem; font-weight: 700; }
+.watcher-note { margin-top: .75rem; }
 
 footer { padding: 2rem 0; background: var(--paper); color: var(--muted); }
 .foot { display: flex; gap: 1.5rem 3rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }

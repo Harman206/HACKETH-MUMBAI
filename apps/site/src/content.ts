@@ -15,16 +15,16 @@ export const RESOLVER = (deployment as { resolver: string }).resolver;
 
 export const HERO = {
   title: 'An exit of your own.',
-  sub: 'Save the Copeybara exit kit to withdraw from supported DeFi positions if the protocol’s website goes down or gets hijacked.',
+  sub: 'Save the Copeybara exit kit to withdraw from supported DeFi positions if the protocol’s website goes down or gets hijacked. Currently a Sepolia testnet demo.',
 };
 
 export const EXTENSION = {
   title: 'Get the Copeybara extension',
   lede: 'The kit gets you out after something goes wrong. The extension watches while you use DeFi, so you can see it go wrong before you sign.',
   bullets: [
-    { title: 'Checks the site you are on', body: 'Every protocol site you open is compared with the script fingerprints the protocol published on ENS. Code the protocol never published gets a warning.' },
-    { title: 'Stops drainer requests', body: 'Approvals, permits and blind signatures that would hand your tokens to an unknown address are stopped before your wallet shows them.' },
-    { title: 'One click to exit', body: 'When a site is down or hijacked, the extension opens the verified exit kit and you withdraw straight from the contracts.' },
+    { title: 'Checks the site you are on', body: 'It compares the scripts of every protocol site you open with the fingerprints the protocol published on ENS, warns about code the protocol never published, and blocks ENS-flagged and look-alike sites before they load.' },
+    { title: 'Stops drainer requests', body: 'It stops approval and permit requests to unknown addresses, and blind signatures, before your wallet shows them.' },
+    { title: 'One click to exit', body: 'When a site is down or hijacked, it opens the verified exit kit and you withdraw straight from the contracts.' },
   ],
   chromeZip: 'copeybara-extension-chrome.zip',
   firefoxZip: 'copeybara-extension-firefox.zip',
@@ -34,13 +34,14 @@ export const EXTENSION = {
     'Turn on Developer mode (top right).',
     'Click Load unpacked and choose the unzipped folder. The setup wizard opens by itself.',
   ],
-  note: 'Sepolia testnet preview, installed unpacked; it is not in any extension store. Checks inside a web page are best effort, because a hostile page can get around code running in it. The blocks you can rely on are the ones applied before a flagged site loads.',
+  watcher: 'Protocols can also run the Copeybara watcher. It fingerprints the official site, probes look-alike domains, and can write only two ENS records, status and blocklist, which warn about or block websites. Nothing it writes can block an exit.',
+  note: 'Sepolia testnet preview, installed unpacked from the zip; no store listing yet. Checks inside a web page are best effort, because a hostile page can get around code running in it. The blocks you can rely on are the ones applied before a flagged site loads.',
 } as const;
 
 export interface Incident { name: string; date: string; what: string; loss: string; source?: string; unverified?: boolean }
 export const INCIDENTS: Incident[] = [
-  { name: 'Curve Finance DNS hijack', date: '9 Aug 2022', what: 'A cloned site asked users to approve an unverified contract; USDC and DAI were drained.', loss: '~$612k, 7 users', source: 'CertiK incident write-up; replayed on chain below' },
-  { name: 'Balancer frontend hijack', date: '19–20 Sep 2023', what: 'Registrar social engineering; the fake site collected approvals for a drainer.', loss: '~$238k', source: 'Cointelegraph report' },
+  { name: 'Curve Finance DNS hijack', date: '9 Aug 2022', what: 'A cloned site asked users to approve an unverified contract; USDC and DAI were drained.', loss: 'hundreds of thousands of dollars (CertiK)', source: 'CertiK incident write-up; replayed on chain below' },
+  { name: 'Balancer frontend hijack', date: '19–20 Sep 2023', what: 'Registrar social engineering; the fake site collected approvals for a drainer.', loss: 'hundreds of thousands of dollars (Cointelegraph)', source: 'Cointelegraph report' },
   { name: 'Polymarket third-party script', date: '29 Oct 2026', what: 'A hijacked third-party script ran on the real site.', loss: '~$2.7M', unverified: true },
   { name: 'Name.com DNS hijack', date: '30–31 Oct 2026', what: '12–15 DeFi sites served drainers.', loss: 'not collected', unverified: true },
 ];
@@ -54,7 +55,7 @@ export const REPLAY_R1 = {
   approveTx: '0xec72bb412a3e56519af8cf96f7de56edb80de53c1d1b656d2e5d5d8ce2477f69',
   drainTx: '0x361bfdbd76290ead53b29a78c3e6f4633e6eb11459437f3c3955f59abfae1e6a',
   labels: ['mainnet fork', 'counterfactual'],
-  body: 'In a replay on a copy of Ethereum mainnet, the Exit Guard blocked the original approval. The same drain transaction then moved zero USDC.',
+  body: 'The Exit Guard rejects the victim’s real approval. In a mainnet-fork replay without that approval, the attacker’s same drain transaction moved zero USDC (counterfactual).',
 };
 
 export const HOW = [
@@ -64,7 +65,7 @@ export const HOW = [
   },
   {
     title: 'Verify the file before connecting',
-    body: 'Compare the file’s SHA-256 fingerprint with the release record on the protocol’s official ENS name. Publishing a release requires two of the three Safe signers.',
+    body: 'Compare the file’s SHA-256 fingerprint with the release record on the protocol’s official ENS name. Publishing a release requires two of the three Safe signers. In this demo all three Safe keys are held by one maintainer.',
   },
   {
     title: 'Review the withdrawal in your wallet',
@@ -90,11 +91,11 @@ export const LIMITS = [
   'The kit cannot prevent smart-contract exploits or recover funds after a wallet key is stolen.',
   'Withdrawals require contracts that are running and solvent.',
   'Keep a copy of the kit or use a mirror. Get the protocol’s ENS name independently before verifying.',
-  'Supported adapters cover Uniswap v3 and v4, Aave v3 supply positions, and Curve 3pool liquidity positions. Check the published manifest for chain and contract coverage.',
+  'Supported: Uniswap v3, Uniswap v4 (ERC-20 pairs; native-ETH pools are manual), Aave v3 supply-only, and Curve 3pool LP. This is a Sepolia testnet demo: on Sepolia the manifest lists Uniswap v3 and v4; the Aave and Curve exits are tested on mainnet forks.',
 ];
 
 export const PROTOCOL_STEPS = [
-  { title: 'Set up your ENS name', body: 'Put it under your 2-of-3 Safe and use a Permissioned Resolver.' },
+  { title: 'Set up your ENS name', body: 'Put it under your 2-of-3 Safe and use a Permissioned Resolver. In this demo all three Safe keys are held by one maintainer; a real protocol needs independent signers.' },
   { title: 'Publish the release and exit contracts', body: 'Set org.copeybara.release to the file fingerprint and version, and org.copeybara.manifest to the exit contract list. Leave the old org.blackout.* records in place for kits saved before the rename.' },
   { title: 'Scope the website key to the URL', body: 'Give the web team permission to update the url record. Keep release and resolver changes under the Safe.' },
 ];

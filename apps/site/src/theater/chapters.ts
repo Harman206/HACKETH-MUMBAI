@@ -23,7 +23,7 @@ export const CHAPTERS = [
   { n: 1, title: 'A normal day', sentence: 'Meet the victim: a normal DemoSwap user with 10,000 DUSD in their wallet and a liquidity position in the DETH/DUSD pool.' },
   { n: 2, title: 'The hijack', sentence: 'An attacker takes over DemoSwap’s domain. The fake site looks identical and asks for one “approval”. One click, and the attacker’s bot empties the wallet.' },
   { n: 3, title: 'The outage', sentence: 'Now the real website is gone and so is the protocol’s RPC server. Normally this is where users are stuck.' },
-  { n: 4, title: 'The rescue', sentence: 'The victim opens the Copeybara kit they saved earlier. It checks itself against ENS, refuses the attacker’s request, and withdraws the position straight from the contracts.' },
+  { n: 4, title: 'The rescue', sentence: 'The victim opens the Copeybara kit they saved earlier. Its fingerprint is checked against ENS from outside the kit, it refuses the attacker’s request, and it withdraws the position straight from the contracts.' },
 ] as const;
 
 export function gate(n: 1 | 2 | 3 | 4, s: TState): { ok: true } | { ok: false; why: string } {

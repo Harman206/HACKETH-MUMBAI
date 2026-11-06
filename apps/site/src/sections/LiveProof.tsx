@@ -39,7 +39,7 @@ export function LiveProof({ onLive }: { onLive(s: string): void }) {
             <p class="mono">{p.release.sha256}</p>
             <p style="margin-top:8px">Published exit contracts:</p>
             <ul>{p.exits.map((e) => <li>{e}</li>)}</ul>
-            <p class="muted" style="font-size:14px">Owned by the 2-of-3 <a href={addr(SAFE)}>release Safe</a> via its <a href={addr(RESOLVER)}>Permissioned Resolver</a>.</p>
+            <p class="muted" style="font-size:14px">Owned by the 2-of-3 <a href={addr(SAFE)}>release Safe</a> via its <a href={addr(RESOLVER)}>Permissioned Resolver</a>. In this demo all three Safe keys are held by one maintainer.</p>
           </>
         )}
       </article>

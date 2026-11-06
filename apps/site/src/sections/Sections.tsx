@@ -73,7 +73,7 @@ export function Extension() {
           <h3>Install in four steps</h3>
           <ol class="protocol-steps install-steps">{EXTENSION.steps.map((s) => <li key={s}><p>{s}</p></li>)}</ol>
           <p>{EXTENSION.note}</p>
-          <p class="roadmap-link"><a href="https://github.com/Harman206/HACKETH-MUMBAI/blob/4940792/docs/superpowers/specs/2026-11-06-copeybara-extension-design.md">Read the extension and watcher design</a></p>
+          <p class="watcher-note">{EXTENSION.watcher}</p>
         </div>
       </div>
     </section>
@@ -219,7 +219,7 @@ export function Footer() {
       <div class="wrap foot">
         <div>
           <a class="brand" href="#top"><BrandMark />Copeybara</a>
-          <p>Open source under the MIT license. Built at ETHGlobal.</p>
+          <p>MIT-licensed; source release coming soon. Built at ETHGlobal Mumbai.</p>
         </div>
         <QrCard />
       </div>
