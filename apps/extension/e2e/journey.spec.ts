@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { control, ensureTestWallet, expect, test } from './fixtures';
+import { control, ensureTestWallet, expect, shot, test } from './fixtures';
 
 /**
  * The whole product, as a beginner meets it:
@@ -12,6 +12,7 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   // ---------- 1. setup wizard ----------
   const setup = await ctx.newPage();
   await setup.goto(ext.url('setup.html'));
+  await shot(setup, 'setup-welcome');
   await setup.getByRole('button', { name: 'Start' }).click();
   await expect(setup.locator('[data-step="Wallet"]')).toBeVisible();
 
@@ -27,6 +28,7 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   });
   await kit.close();
   await expect(setup.locator(`[data-pending="${w.wallet}"]`)).toBeVisible({ timeout: 10_000 });
+  await shot(setup, 'setup-wallet');
   await setup.getByRole('button', { name: 'Yes, use it' }).click();
   await expect(setup.locator(`[data-account="${w.wallet}"]`)).toBeVisible();
   await setup.getByRole('button', { name: 'Next' }).click();
@@ -39,15 +41,19 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   await expect(card).toContainText('3 scripts');
   await expect(card).toContainText('uniswap-v3 · positionManager');
   await expect(card).toContainText('All clear');
+  await shot(setup, 'setup-protocols');
   await setup.getByRole('button', { name: 'Next' }).click();
   await expect(setup.locator('[data-step="Connections"]')).toBeVisible();
   await setup.getByRole('button', { name: 'Test' }).first().click();
   await expect(setup.locator(`[data-rpc-test="${w.rpcs[0]}"]`)).toContainText('✓ Sepolia');
+  await shot(setup, 'setup-connections');
   await setup.getByRole('button', { name: 'Next' }).click();
+  await shot(setup, 'setup-done');
   const [dash] = await Promise.all([ctx.waitForEvent('page'), setup.locator('#finish').click()]);
 
   // ---------- 2. dashboard: positions found straight from the contracts, with amounts ----------
   await expect(dash.locator('[data-position]')).toHaveCount(3, { timeout: 90_000 });
+  await shot(dash, 'dashboard');
   for (const id of w.positions) await expect(dash.locator(`[data-position="${id}"]`)).toContainText(/\d/);
   expect((await ext.state()).settings.setupDone).toBe(true);
 
@@ -67,6 +73,7 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   await expect(hijacked.locator('[data-unknown]')).toContainText('/inject.js');
   await expect(hijacked.locator('[data-unknown]')).toContainText('inline script');
   await expect(hijacked.getByRole('button', { name: /continue/i })).toHaveCount(0);
+  await shot(hijacked, 'warning-mismatch');
 
   // ---------- 5. the watcher sees it too and raises the alarm on ENS (its key can write status + blocklist only) ----------
   await control(w, '/watcher/tick'); // 1st mismatch (and the look-alike goes on the blocklist)
@@ -82,6 +89,7 @@ test('beginner journey: set up, verify, survive a DNS hijack, exit', async ({ ct
   await blocked.goto(w.siteUrl).catch(() => {});
   await blocked.waitForURL(/warning\.html\?reason=compromised/, { timeout: 15_000 });
   await expect(blocked.getByText(/never published/)).toBeVisible();
+  await shot(blocked, 'warning-compromised');
 
   // and the look-alike domain
   const fake = await ctx.newPage();
