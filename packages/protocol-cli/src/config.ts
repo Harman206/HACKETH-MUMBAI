@@ -73,7 +73,7 @@ export async function loadConfig(file = 'copeybara.config.ts'): Promise<LoadedCo
   const path = resolve(file);
   let raw: unknown;
   try {
-    raw = path.endsWith('.json') ? JSON.parse(await readFile(path, 'utf8')) : ((await import(pathToFileURL(path).href)) as { default: unknown }).default;
+    raw = path.endsWith('.json') ? JSON.parse(await readFile(path, 'utf8')) : ((await import(`${pathToFileURL(path).href}?copeybara-config`)) as { default: unknown }).default;
   } catch (e) {
     throw new ConfigError(`Could not load ${file}: ${(e as Error).message}`);
   }
