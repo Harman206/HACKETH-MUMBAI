@@ -36,6 +36,12 @@
     },
     {
       "path": "apps/watcher"
+    },
+    {
+      "path": "packages/fingerprint"
+    },
+    {
+      "path": "packages/protocol-cli"
     }
   ]
 }

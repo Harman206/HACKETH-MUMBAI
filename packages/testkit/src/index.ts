@@ -79,7 +79,7 @@ async function startForkFrom(chainId: 1 | 11155111, forkUrl: string, blockNumber
   proc.stderr?.on('data', (d) => (stderr += d));
   const url = `http://127.0.0.1:${port}`;
   const chain = { ...(opts.chainId === 1 ? mainnet : sepolia), rpcUrls: { default: { http: [url] } } } as Chain;
-  const publicClient = createPublicClient({ chain, transport: http(url) });
+  const publicClient = createPublicClient({ chain, transport: http(url, { timeout: 120_000 }) });
   for (let i = 0; ; i++) {
     try {
       await publicClient.getChainId();
@@ -93,8 +93,8 @@ async function startForkFrom(chainId: 1 | 11155111, forkUrl: string, blockNumber
     url,
     chain,
     publicClient,
-    testClient: createTestClient({ chain, mode: 'anvil', transport: http(url) }),
-    wallet: (account) => createWalletClient({ chain, account, transport: http(url) }),
+    testClient: createTestClient({ chain, mode: 'anvil', transport: http(url, { timeout: 120_000 }) }),
+    wallet: (account) => createWalletClient({ chain, account, transport: http(url, { timeout: 120_000 }) }),
     stop: async () => {
       proc.kill('SIGTERM');
       await new Promise((r) => proc.once('exit', r));

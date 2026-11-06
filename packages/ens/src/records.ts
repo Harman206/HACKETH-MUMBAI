@@ -97,6 +97,22 @@ async function readText(name: string, key: EnsKey, q: Quorum, ur: Address, block
 }
 
 /**
+ * Raw text values for `keys` at one pinned block, unparsed (empty string when unset). For tools that compare exact
+ * bytes (the protocol CLI's propose / verify); the kit uses readCopeybaraRecords.
+ */
+export async function readRawTexts(
+  rawName: string,
+  keys: readonly string[],
+  q: Quorum,
+  cfg: { universalResolver: Address },
+): Promise<{ texts: Record<string, string>; block: bigint; resolver: Address }> {
+  const name = normaliseName(rawName);
+  const block = await q.pinBlock();
+  const got = await Promise.all(keys.map((k) => readText(name, k as EnsKey, q, cfg.universalResolver, block)));
+  return { texts: Object.fromEntries(keys.map((k, i) => [k, got[i]!.text])), block, resolver: got[0]!.resolver };
+}
+
+/**
  * Read every Copeybara record for `name` through the quorum, all at one pinned block.
  * The name must come from the protocol's docs, never from the kit. release + manifest are required;
  * the optional records are reported in `problems` when malformed instead of stopping the read.
