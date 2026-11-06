@@ -23,6 +23,17 @@ describe('verify-kit.sh reads the release from 3 RPCs', () => {
     expect(r.status).toBe(3);
     expect(r.stdout).toMatch(/RPCS DISAGREE/);
   });
+  test('one RPC unreachable, two agree → MATCH (same rule as the kit quorum)', () => {
+    const r = run({ BLACKOUT_RELEASE_OVERRIDE_1: `sha256:${hex};v=3`, BLACKOUT_RELEASE_OVERRIDE_2: `sha256:${hex};v=3`, BLACKOUT_RELEASE_OVERRIDE_3: 'UNREACHABLE' });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/MATCH v=3/);
+    expect(r.stdout).toMatch(/2 of 3 RPCs answered/);
+  });
+  test('only one RPC answers → exit 3, too few', () => {
+    const r = run({ BLACKOUT_RELEASE_OVERRIDE_1: `sha256:${hex};v=3`, BLACKOUT_RELEASE_OVERRIDE_2: 'UNREACHABLE', BLACKOUT_RELEASE_OVERRIDE_3: 'UNREACHABLE' });
+    expect(r.status).toBe(3);
+    expect(r.stdout).toMatch(/TOO FEW RPCS/);
+  });
   test('DNS encoding: lowercases the name and counts label length in bytes', () => {
     const r = spawnSync('bash', [SCRIPT, '--dns-only', 'Ünï.ETH'], { encoding: 'utf8' });
     expect(r.stdout.trim()).toBe(`0x05${Buffer.from('ünï').toString('hex')}0365746800`);

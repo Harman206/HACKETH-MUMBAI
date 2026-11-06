@@ -46,19 +46,31 @@ read_release() { # $1 = rpc index (1-based)
   local rpc=${RPCS[$((i-1))]} dns inner out
   dns=$(dns_encode "$NAME_LC")
   inner=$("$CAST" calldata "text(bytes32,string)" "$("$CAST" namehash "$NAME_LC")" org.blackout.release)
-  out=$("$CAST" call "$UR" "resolve(bytes,bytes)(bytes,address)" "$dns" "$inner" --rpc-url "$rpc" 2>/dev/null | head -1) || { echo "UNREACHABLE"; return; }
-  "$CAST" abi-decode "text()(string)" "$out" | tr -d '"'
+  out=$(ETH_RPC_TIMEOUT=8 "$CAST" call "$UR" "resolve(bytes,bytes)(bytes,address)" "$dns" "$inner" --rpc-url "$rpc" 2>/dev/null | head -1) || { echo "UNREACHABLE"; return; }
+  [ -z "$out" ] && { echo "UNREACHABLE"; return; }
+  "$CAST" abi-decode "text()(string)" "$out" 2>/dev/null | tr -d '"' || echo "UNREACHABLE"
 }
 
-R1=$(read_release 1); R2=$(read_release 2); R3=$(read_release 3)
-if [ "$R1" != "$R2" ] || [ "$R2" != "$R3" ]; then
-  echo "RPCS DISAGREE on the release record of $NAME_LC:"; printf '  %s\n' "$R1" "$R2" "$R3"; exit 3
+# Same rule as the kit's quorum: at least 2 must answer, and every answer must agree (an unreachable RPC does not count).
+ANSWERS=()
+for i in 1 2 3; do
+  R=$(read_release "$i" || echo UNREACHABLE)
+  [ -n "$R" ] && [ "$R" != "UNREACHABLE" ] && ANSWERS+=("$R")
+done
+if [ ${#ANSWERS[@]} -lt 2 ]; then
+  echo "TOO FEW RPCS answered for $NAME_LC (${#ANSWERS[@]} of 3); cannot verify right now"; exit 3
 fi
-RELEASE=$R1
+for a in "${ANSWERS[@]}"; do
+  if [ "$a" != "${ANSWERS[0]}" ]; then
+    echo "RPCS DISAGREE on the release record of $NAME_LC:"; printf '  %s\n' "${ANSWERS[@]}"; exit 3
+  fi
+done
+RELEASE=${ANSWERS[0]}
+NOTE="(${#ANSWERS[@]} of 3 RPCs answered)"
 
 if [[ ! "$RELEASE" =~ ^sha256:([0-9a-f]{64})\;v=([1-9][0-9]*)$ ]]; then
   echo "BAD RELEASE RECORD on $NAME_LC: '$RELEASE'"; exit 2
 fi
 WANT=${BASH_REMATCH[1]}; VER=${BASH_REMATCH[2]}
-if [ "$GOT" = "$WANT" ]; then echo "MATCH v=$VER $GOT"; exit 0; fi
+if [ "$GOT" = "$WANT" ]; then echo "MATCH v=$VER $GOT $NOTE"; exit 0; fi
 echo "MISMATCH expected $WANT got $GOT"; exit 1
