@@ -60,11 +60,12 @@ const readOut = async (l: LoadedConfig, file: string) => (existsSync(join(outDir
 
 const ensQuorum = (l: LoadedConfig): Quorum => createQuorum({ urls: rpcsFor(l.cfg, ensChainId(l.cfg)), expectedChainId: ensChainId(l.cfg), timeoutMs: 10_000 });
 
+/** Deployed bytecode, so a function listed without an ABI file can be proven to exist (manifest --onchain). */
+const codeReader = (l: LoadedConfig) => async (chainId: number, address: Address) =>
+  createPublicClient({ transport: http(rpcsFor(l.cfg, chainId)[0]) }).getCode({ address }) as Promise<Hex | undefined>;
+
 async function manifestCmd(l: LoadedConfig, onchain: boolean) {
-  const code = onchain
-    ? async (chainId: number, address: Address) => createPublicClient({ transport: http(rpcsFor(l.cfg, chainId)[0]) }).getCode({ address }) as Promise<Hex | undefined>
-    : undefined;
-  const b = await buildManifest(l, { code });
+  const b = await buildManifest(l, { code: onchain ? codeReader(l) : undefined });
   for (const n of b.notes) say(`  note: ${n}`);
   if (b.problems.length) die(`manifest: ${b.problems.length} problem(s), nothing written:\n  ${b.problems.join('\n  ')}`);
   say(`org.copeybara.manifest → ${await writeOut(l, 'manifest.txt', b.text)}`);
@@ -91,9 +92,9 @@ async function releaseCmd(l: LoadedConfig) {
   return { kit: k, ext };
 }
 
-async function desired(l: LoadedConfig, siteFlag?: string): Promise<Partial<Record<SafeKey, string>>> {
+async function desired(l: LoadedConfig, siteFlag?: string, offline = false): Promise<Partial<Record<SafeKey, string>>> {
   const K = COPEYBARA_KEYS;
-  const m = await buildManifest(l);
+  const m = await buildManifest(l, { code: offline ? undefined : codeReader(l) });
   if (m.problems.length) die(`manifest: run copeybara manifest first:\n  ${m.problems.join('\n  ')}`);
   const r = await releaseCmd(l);
   const v: Partial<Record<SafeKey, string>> = { [K.release]: r.kit.record, [K.manifest]: m.text };
@@ -109,7 +110,7 @@ async function desired(l: LoadedConfig, siteFlag?: string): Promise<Partial<Reco
 
 async function proposeCmd(l: LoadedConfig, o: Record<string, string | string[] | boolean | undefined>) {
   const { cfg } = l;
-  const values = await desired(l, o.site as string | undefined);
+  const values = await desired(l, o.site as string | undefined, !!o.offline);
   let current: Record<string, string> | undefined;
   let granted: Set<string> | undefined;
   let nonce = o.nonce !== undefined ? BigInt(o.nonce as string) : undefined;
@@ -153,7 +154,7 @@ async function safeTxOut(l: LoadedConfig, file: string, multi: ReturnType<typeof
 
 async function verifyChecks(l: LoadedConfig): Promise<{ checks: Check[]; block: bigint }> {
   const { cfg } = l;
-  const m = await buildManifest(l);
+  const m = await buildManifest(l, { code: codeReader(l) });
   if (m.problems.length) die(`the config's manifest has problems:\n  ${m.problems.join('\n  ')}`);
   const k = await kitRelease(fromConfig(l, cfg.kit.file), cfg.kit.version);
   const ext = cfg.extension ? (await extensionRelease(fromConfig(l, cfg.extension.file), cfg.extension.version, cfg.extension.tree)).record : undefined;

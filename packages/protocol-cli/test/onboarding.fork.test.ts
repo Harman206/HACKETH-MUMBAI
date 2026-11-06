@@ -249,6 +249,12 @@ export default defineConfig({
   expect(r.out).toContain(`✓ release      MATCH v=1 ${kitSha}`);
   for (const line of ['✓ manifest     MATCH', '✓ exits        MATCH', '✓ site         MATCH', '✓ owner        the Safe owns', 'may write url only', 'may write status + blocklist only', '✓ safe         2 of 3 signers']) expect(r.out).toContain(line);
   expect(r.status).toBe(0);
+  // A team without an ABI file proves the exit function from the deployed bytecode: every command must accept that.
+  writeFileSync(join(dir, 'bytecode.config.ts'), readFileSync(join(dir, 'copeybara.config.ts'), 'utf8').replace(", abi: 'SampleVault.json'", ''));
+  r = await cli('verify', '--config', 'bytecode.config.ts');
+  expect(r.out).toContain('✓ manifest     MATCH');
+  expect(r.status).toBe(0);
+  expect((await cli('propose', '--config', 'bytecode.config.ts')).out).toContain('Nothing to propose');
   for (const mode of [['--live'], []]) {
     r = await cli('roles-check', ...mode);
     expect(r.out).toContain('roles-check: OK (35 calls)');

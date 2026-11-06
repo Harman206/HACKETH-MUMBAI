@@ -6,14 +6,14 @@
 import { createServer, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { encodeFunctionData, getAddress, parseAbi, parseEther, type Abi, type Hex } from 'viem';
+import { createPublicClient, encodeFunctionData, getAddress, http, parseAbi, parseEther, type Abi, type Hex } from 'viem';
 import { COPEYBARA_KEYS, erc4626Kind, type Address, type Position, type TxRequest } from '@copeybara/core';
 import { readCopeybaraRecords } from '@copeybara/ens';
 import { ADAPTERS, type Ctx } from '@copeybara/adapters';
 import { runExit, type ExitResult } from '@copeybara/exec';
 import { createQuorum } from '@copeybara/quorum';
 import { ANVIL_ACCOUNTS, startFork, type Fork } from '@copeybara/testkit';
-import { ensChainId, fromConfig, universalResolver, type CopeybaraConfig, type LoadedConfig } from './config';
+import { ensChainId, fromConfig, rpcsFor, universalResolver, type CopeybaraConfig, type LoadedConfig } from './config';
 import { buildManifest } from './manifest';
 import { kitRelease } from './release';
 import { resolverAbi, dnsName } from './resolver';
@@ -279,7 +279,9 @@ async function configDrill(l: LoadedConfig, log: (s: string) => void): Promise<D
   const exitChainId = (d.chainId ?? chainIds[0]) as ForkChain;
   const ens = ensChainId(cfg) as ForkChain;
   if (![1, 11155111].includes(exitChainId) || ![1, 11155111].includes(ens)) throw new Error('drill forks chain 1 or 11155111');
-  const b = await buildManifest(l);
+  const b = await buildManifest(l, {
+    code: async (chainId, address) => createPublicClient({ transport: http(rpcsFor(cfg, chainId)[0]) }).getCode({ address }) as Promise<Hex | undefined>,
+  });
   if (b.problems.length) throw new Error(`manifest: ${b.problems.join('; ')}`);
   let kitSha256: string | null = null;
   try {
