@@ -152,7 +152,7 @@ importers:
   apps/watcher:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: latest
+        specifier: 1.6.0
         version: 1.6.0
       '@copeybara/core':
         specifier: workspace:*
