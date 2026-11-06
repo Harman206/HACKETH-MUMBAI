@@ -8,6 +8,7 @@ if [[ "${1:-}" != "--offline" ]]; then
   $TSX bench/collect-benign.ts
   $TSX bench/collect-ptxphish.ts 120
   $TSX bench/bench-b2.ts
+  node ../../apps/extension/scripts/build.mjs >/dev/null   # B3 runs the built content script
   $TSX bench/bench-b3.ts
 fi
 $TSX bench/bench-b1.ts
