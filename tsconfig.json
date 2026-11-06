@@ -36,6 +36,24 @@
     },
     {
       "path": "apps/watcher"
+    },
+    {
+      "path": "packages/fingerprint"
+    },
+    {
+      "path": "packages/protocol-cli"
+    },
+    {
+      "path": "packages/vite-plugin"
+    },
+    {
+      "path": "packages/webpack-plugin"
+    },
+    {
+      "path": "packages/next-plugin"
+    },
+    {
+      "path": "packages/widget"
     }
   ]
 }

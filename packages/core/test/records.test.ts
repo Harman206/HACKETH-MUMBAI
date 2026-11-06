@@ -23,6 +23,7 @@ describe('record keys', () => {
       extension: 'org.copeybara.extension',
       status: 'org.copeybara.status',
       blocklist: 'org.copeybara.blocklist',
+      exits: 'org.copeybara.exits',
     });
   });
 });

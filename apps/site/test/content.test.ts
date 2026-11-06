@@ -11,7 +11,8 @@ const evidence = [
 
 describe('site content', () => {
   test('every incident has a source, or is explicitly tagged unverified', () => {
-    for (const i of INCIDENTS) expect(Boolean(i.source) || i.unverified === true, i.name).toBe(true);
+    for (const i of INCIDENTS) expect(Boolean(i.sources?.length) || i.unverified === true, i.name).toBe(true);
+    for (const s of INCIDENTS.flatMap((i) => i.sources ?? [])) expect(s.url, s.label).toMatch(/^https:\/\//);
   });
   test('every tx hash in the content is backed by deployments or replay fixtures', () => {
     const text = JSON.stringify({ INCIDENTS, HOW, REPLAY_R1 });

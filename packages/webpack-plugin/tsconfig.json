@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "../../node_modules/.tsbuild/webpack-plugin", "types": ["node"] },
+  "references": [{ "path": "../fingerprint" }],
+  "include": ["src", "test"]
+}

@@ -12,13 +12,15 @@
     "@copeybara/ens": "workspace:*",
     "@copeybara/quorum": "workspace:*",
     "preact": "10.25.4",
-    "viem": "2.21.55"
+    "viem": "2.21.55",
+    "@copeybara/protocol-cli": "workspace:*"
   },
   "devDependencies": {
     "@preact/preset-vite": "2.9.4",
     "@types/qrcode": "1.5.5",
     "jsdom": "25.0.1",
     "qrcode": "1.5.4",
-    "vite": "5.4.11"
+    "vite": "5.4.11",
+    "@copeybara/widget": "workspace:*"
   }
 }

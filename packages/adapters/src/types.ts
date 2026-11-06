@@ -1,4 +1,4 @@
-import type { Address, AdapterId, ExitPlan, Manifest, Position, TargetEntry } from '@copeybara/core';
+import type { Address, AdapterId, ExitPlan, ExitSpec, Manifest, Position, TargetEntry } from '@copeybara/core';
 import type { Quorum } from '@copeybara/quorum';
 
 /** Everything an adapter may use. Addresses come only from `manifest`; reads only through `q` at `block`. */
@@ -10,6 +10,8 @@ export interface Ctx {
   account: Address;
   slippageBps: number;
   nowSec: () => number;
+  /** org.copeybara.exits (checked against the manifest). Only the spec adapter and the Guard read it. */
+  exitSpec?: ExitSpec | null;
 }
 
 export interface ExitAdapter {

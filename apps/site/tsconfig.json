@@ -19,6 +19,9 @@
     },
     {
       "path": "../../packages/ens"
+    },
+    {
+      "path": "../../packages/protocol-cli"
     }
   ],
   "include": [

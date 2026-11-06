@@ -2,7 +2,9 @@ import { decodeAbiParameters, decodeFunctionResult, encodeFunctionData, namehash
 import { normalize, packetToBytes } from 'viem/ens';
 import {
   COPEYBARA_KEYS,
+  checkSpecAgainstManifest,
   parseBlocklist,
+  parseExitSpec,
   parseManifest,
   parseRelease,
   parseSiteRecord,
@@ -10,6 +12,7 @@ import {
   textResolverAbi,
   universalResolverAbi,
   type Address,
+  type ExitSpec,
   type Manifest,
   type ReleaseRecord,
   type StatusRecord,
@@ -26,6 +29,7 @@ export const ENS_KEYS = [
   COPEYBARA_KEYS.extension,
   COPEYBARA_KEYS.status,
   COPEYBARA_KEYS.blocklist,
+  COPEYBARA_KEYS.exits,
 ] as const;
 export type EnsKey = (typeof ENS_KEYS)[number];
 
@@ -46,6 +50,8 @@ export interface CopeybaraRecords {
   /** null only when the record is malformed (see problems); an empty record is { state: 'ok' } */
   status: StatusRecord | null;
   blocklist: string[];
+  /** declarative exits for the protocol's own contracts; null when absent, malformed or inconsistent with the manifest */
+  exitSpec?: ExitSpec | null;
   /** optional records that were present but unreadable: they never stop an exit, but callers must not show them as fine */
   problems: RecordProblem[];
   block: bigint;
@@ -91,6 +97,22 @@ async function readText(name: string, key: EnsKey, q: Quorum, ur: Address, block
 }
 
 /**
+ * Raw text values for `keys` at one pinned block, unparsed (empty string when unset). For tools that compare exact
+ * bytes (the protocol CLI's propose / verify); the kit uses readCopeybaraRecords.
+ */
+export async function readRawTexts(
+  rawName: string,
+  keys: readonly string[],
+  q: Quorum,
+  cfg: { universalResolver: Address },
+): Promise<{ texts: Record<string, string>; block: bigint; resolver: Address }> {
+  const name = normaliseName(rawName);
+  const block = await q.pinBlock();
+  const got = await Promise.all(keys.map((k) => readText(name, k as EnsKey, q, cfg.universalResolver, block)));
+  return { texts: Object.fromEntries(keys.map((k, i) => [k, got[i]!.text])), block, resolver: got[0]!.resolver };
+}
+
+/**
  * Read every Copeybara record for `name` through the quorum, all at one pinned block.
  * The name must come from the protocol's docs, never from the kit. release + manifest are required;
  * the optional records are reported in `problems` when malformed instead of stopping the read.
@@ -130,6 +152,12 @@ export async function readCopeybaraRecords(
       return fallback;
     }
   };
+  let exitSpec = optional<ExitSpec | null>(K.exits, parseExitSpec, null);
+  const mismatch = checkSpecAgainstManifest(exitSpec, manifest);
+  if (mismatch.length) {
+    problems.push({ key: K.exits, message: mismatch.join(' ') });
+    exitSpec = null;
+  }
   return {
     name,
     url: t.url || null,
@@ -139,6 +167,7 @@ export async function readCopeybaraRecords(
     extension: t[K.extension] ? optional<ReleaseRecord | null>(K.extension, parseRelease, null) : null,
     status: optional<StatusRecord | null>(K.status, parseStatus, null),
     blocklist: optional(K.blocklist, parseBlocklist, []),
+    exitSpec,
     problems,
     block,
     resolver: got[0]!.resolver,

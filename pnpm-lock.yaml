@@ -123,6 +123,9 @@ importers:
       '@copeybara/ens':
         specifier: workspace:*
         version: link:../../packages/ens
+      '@copeybara/protocol-cli':
+        specifier: workspace:*
+        version: link:../../packages/protocol-cli
       '@copeybara/quorum':
         specifier: workspace:*
         version: link:../../packages/quorum
@@ -133,6 +136,9 @@ importers:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
     devDependencies:
+      '@copeybara/widget':
+        specifier: workspace:*
+        version: link:../../packages/widget
       '@preact/preset-vite':
         specifier: 2.9.4
         version: 2.9.4(@babel/core@7.29.13)(preact@10.25.4)(vite@5.4.11(@types/node@22.10.2))
@@ -169,6 +175,12 @@ importers:
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
+
+  examples/demoswap:
+    devDependencies:
+      '@copeybara/protocol-cli':
+        specifier: workspace:*
+        version: link:../../packages/protocol-cli
 
   harness:
     dependencies:
@@ -247,6 +259,21 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
+  packages/fingerprint:
+    dependencies:
+      '@copeybara/core':
+        specifier: workspace:*
+        version: link:../core
+      '@copeybara/ens':
+        specifier: workspace:*
+        version: link:../ens
+      '@copeybara/quorum':
+        specifier: workspace:*
+        version: link:../quorum
+      '@copeybara/sitecheck':
+        specifier: workspace:*
+        version: link:../sitecheck
+
   packages/guard:
     dependencies:
       '@copeybara/core':
@@ -259,6 +286,51 @@ importers:
       fast-check:
         specifier: 3.23.2
         version: 3.23.2
+
+  packages/next-plugin:
+    dependencies:
+      '@copeybara/fingerprint':
+        specifier: workspace:*
+        version: link:../fingerprint
+      '@copeybara/webpack-plugin':
+        specifier: workspace:*
+        version: link:../webpack-plugin
+
+  packages/protocol-cli:
+    dependencies:
+      '@copeybara/adapters':
+        specifier: workspace:*
+        version: link:../adapters
+      '@copeybara/core':
+        specifier: workspace:*
+        version: link:../core
+      '@copeybara/ens':
+        specifier: workspace:*
+        version: link:../ens
+      '@copeybara/exec':
+        specifier: workspace:*
+        version: link:../exec
+      '@copeybara/fingerprint':
+        specifier: workspace:*
+        version: link:../fingerprint
+      '@copeybara/guard':
+        specifier: workspace:*
+        version: link:../guard
+      '@copeybara/quorum':
+        specifier: workspace:*
+        version: link:../quorum
+      '@copeybara/sitecheck':
+        specifier: workspace:*
+        version: link:../sitecheck
+      '@copeybara/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+      tsx:
+        specifier: 4.19.2
+        version: 4.19.2
+      viem:
+        specifier: 2.21.55
+        version: 2.21.55(typescript@5.6.3)
 
   packages/quorum:
     dependencies:
@@ -279,6 +351,34 @@ importers:
       viem:
         specifier: 2.21.55
         version: 2.21.55(typescript@5.6.3)
+
+  packages/vite-plugin:
+    dependencies:
+      '@copeybara/fingerprint':
+        specifier: workspace:*
+        version: link:../fingerprint
+    devDependencies:
+      '@copeybara/core':
+        specifier: workspace:*
+        version: link:../core
+      vite:
+        specifier: 5.4.11
+        version: 5.4.11(@types/node@22.10.2)
+
+  packages/webpack-plugin:
+    dependencies:
+      '@copeybara/fingerprint':
+        specifier: workspace:*
+        version: link:../fingerprint
+
+  packages/widget:
+    devDependencies:
+      '@copeybara/sitecheck':
+        specifier: workspace:*
+        version: link:../sitecheck
+      '@playwright/test':
+        specifier: 1.49.1
+        version: 1.49.1
 
   replay:
     dependencies:

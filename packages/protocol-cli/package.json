@@ -1,0 +1,32 @@
+{
+  "name": "@copeybara/protocol-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Publish and check a protocol's Copeybara records. Every record write is a Safe proposal; no keys are held.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./onchain": "./src/onchain.ts"
+  },
+  "bin": {
+    "copeybara": "bin/copeybara.mjs"
+  },
+  "scripts": {
+    "cli": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@copeybara/adapters": "workspace:*",
+    "@copeybara/core": "workspace:*",
+    "@copeybara/ens": "workspace:*",
+    "@copeybara/exec": "workspace:*",
+    "@copeybara/fingerprint": "workspace:*",
+    "@copeybara/guard": "workspace:*",
+    "@copeybara/quorum": "workspace:*",
+    "@copeybara/sitecheck": "workspace:*",
+    "@copeybara/testkit": "workspace:*",
+    "tsx": "4.19.2",
+    "viem": "2.21.55"
+  }
+}

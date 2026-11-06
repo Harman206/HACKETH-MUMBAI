@@ -1,0 +1,12 @@
+[
+  {
+    "protocol": "DemoSwap",
+    "name": "demoswap-blackout.eth",
+    "safe": "0x3ae03951044Ced07F7fa12072CfE7F95827A057F",
+    "resolver": "0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82",
+    "websiteKey": "0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182",
+    "watcher": "0xeBbcD4fC4265dbb7Fc7b2df00f1fD7B89FA1EfF8",
+    "since": "2026-11-07",
+    "note": "Sepolia testnet demo. All three Safe keys are held by one maintainer; a production protocol needs independent signers."
+  }
+]

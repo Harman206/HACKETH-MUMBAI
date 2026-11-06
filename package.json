@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "build": "pnpm -r build",
-    "test:fork": "vitest run -c vitest.fork.config.ts"
+    "test:fork": "vitest run -c vitest.fork.config.ts",
+    "copeybara": "node packages/protocol-cli/bin/copeybara.mjs"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

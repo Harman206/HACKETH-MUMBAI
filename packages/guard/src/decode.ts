@@ -1,5 +1,5 @@
-import { decodeAbiParameters, decodeFunctionData, getAddress, parseAbi, parseAbiParameters, type Abi } from 'viem';
-import { aavePoolAbi, curve3poolAbi, npmAbi, SEL, SIGS, V4_ACTIONS, v4PosmAbi, type Address, type Hex } from '@copeybara/core';
+import { decodeAbiParameters, decodeFunctionData, encodeFunctionData, getAddress, parseAbi, parseAbiParameters, type Abi } from 'viem';
+import { aavePoolAbi, curve3poolAbi, npmAbi, SEL, SIGS, specExitSelector, V4_ACTIONS, v4PosmAbi, type Address, type ExitKind, type Hex } from '@copeybara/core';
 
 export interface Decoded {
   selector: Hex;
@@ -111,6 +111,26 @@ function decodeV4(data: Hex, selector: Hex): Decoded {
     }
   });
   return { selector, name: 'modifyLiquidities (Uniswap v4)', recipients, paysCaller: false, nested };
+}
+
+/**
+ * Decode a call to a contract the manifest lists under `spec`, using only that kind's single exit function. The
+ * calldata must re-encode to exactly the same bytes (no trailing data, no non-canonical words). Recipients are the
+ * arguments the spec names in `recipient` and `self`; both must be the user. Banned selectors decode as banned (so
+ * the reason names them); every other selector fails closed.
+ */
+export function decodeSpecCall(data: Hex, kind: ExitKind): Decoded {
+  if (typeof data !== 'string' || !/^0x[0-9a-fA-F]*$/.test(data) || data.length < 10) throw new DecodeError('calldata is too short or not hex');
+  const selector = data.slice(0, 10).toLowerCase() as Hex;
+  if (BANNED[selector]) return decodeCall(data);
+  if (selector !== specExitSelector(kind)) throw new DecodeError(`${selector} is not the published exit ${kind.exit.fn} for ${kind.label}`);
+  const abi = parseAbi([`function ${kind.exit.fn}`] as string[]) as Abi;
+  const { functionName, args } = decodeWith(abi, data);
+  if (encodeFunctionData({ abi, functionName, args }).toLowerCase() !== data.toLowerCase()) {
+    throw new DecodeError(`calldata for ${kind.exit.fn} is not in canonical form`);
+  }
+  const recipients = [...kind.exit.recipient, ...kind.exit.self].map((i) => getAddress(args[i] as Address));
+  return { selector, name: `${functionName} (${kind.label})`, recipients, paysCaller: kind.exit.paysCaller, nested: [] };
 }
 
 /** Decode a call the kit (or a pasted request) wants to send. Throws DecodeError on anything unknown. */

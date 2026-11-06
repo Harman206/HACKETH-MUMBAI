@@ -1,5 +1,5 @@
 import type { CopeybaraRecords } from '@copeybara/ens';
-import { PERMISSIONS } from './content';
+import { PERMISSIONS, WATCHER_PERMISSIONS } from './content';
 
 export interface DemoRun {
   network: 'sepolia' | 'local-fork';
@@ -16,6 +16,7 @@ export interface LiveProof {
   block: string | null;
   exits: string[];
   permissions: typeof PERMISSIONS;
+  watcherPermissions: typeof WATCHER_PERMISSIONS;
   lastRun: DemoRun | null;
   error: string | null;
 }
@@ -30,8 +31,8 @@ export async function readLiveProof(deps: { readRecords: () => Promise<Copeybara
     const exits = Object.entries(r.manifest.chains)
       .sort(([a], [b]) => (a === '11155111' ? -1 : b === '11155111' ? 1 : 0))
       .flatMap(([cid, protos]) => Object.entries(protos).flatMap(([p, roles]) => Object.entries(roles ?? {}).filter(([, t]) => t.selectors.length > 0).map(([role]) => `${CHAIN[cid] ?? `chain ${cid}`}: ${p} ${role}`)));
-    return { release: { version: r.release.version, sha256: r.release.sha256 }, block: r.block.toString(), exits, permissions: PERMISSIONS, lastRun, error: null };
+    return { release: { version: r.release.version, sha256: r.release.sha256 }, block: r.block.toString(), exits, permissions: PERMISSIONS, watcherPermissions: WATCHER_PERMISSIONS, lastRun, error: null };
   } catch (e) {
-    return { release: null, block: null, exits: [], permissions: PERMISSIONS, lastRun, error: (e as Error).message };
+    return { release: null, block: null, exits: [], permissions: PERMISSIONS, watcherPermissions: WATCHER_PERMISSIONS, lastRun, error: (e as Error).message };
   }
 }

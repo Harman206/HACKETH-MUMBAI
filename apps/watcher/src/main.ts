@@ -4,10 +4,12 @@
  * Env:
  *   WATCHER_KEY        key holding ONLY the status + blocklist setter roles (contracts: grantWatcherRoles)
  *   WATCH_NAMES        comma-separated ENS names
+ *   WATCHER_ADDRESS    optional: refuse to start unless WATCHER_KEY is this address (set by `copeybara watcher`)
  *   CANDIDATES         look-alike URLs per name: "name=url,url;name2=url"
  *   RPCS               comma-separated Sepolia RPCs for reads (default: config/networks.json); WRITE_RPC for sends
  *   INTERVAL_MS        default 15000
- *   STATUS_PORT        if set, GET /status returns the watcher state as JSON (used by the theater)
+ *   STATUS_PORT        if set, GET /status returns the watcher state as JSON (used by the theater); GET /healthz is 200
+ *                      while checks complete, 503 after 4 missed intervals. STATUS_HOST defaults to 127.0.0.1
  *   ANTHROPIC_API_KEY  optional: Claude writes the plain-language incident note from structured facts
  *   AGENT_NAME         this watcher's ENS identity (default watcher.<first WATCH_NAMES>; contracts/script/RegisterAgent.s.sol)
  */
@@ -21,6 +23,7 @@ import { readCopeybaraRecords } from '@copeybara/ens';
 import { createQuorum } from '@copeybara/quorum';
 import networks from '../../../config/networks.json';
 import { ensReaders, identityLine, readAgentIdentity, type AgentIdentity } from './identity';
+import { health } from './health';
 import { claudeNote } from './note';
 import { createWatcher } from './watcher';
 
@@ -41,6 +44,9 @@ const candidates = Object.fromEntries(
 );
 
 const account = privateKeyToAccount(key);
+if (env.WATCHER_ADDRESS && env.WATCHER_ADDRESS.toLowerCase() !== account.address.toLowerCase()) {
+  throw new Error(`WATCHER_KEY is for ${account.address}, but the config names the watcher ${env.WATCHER_ADDRESS}. Refusing to start.`);
+}
 const chain = { ...sepolia, rpcUrls: { default: { http: [writeRpc] } } };
 const wallet = createWalletClient({ account, chain, transport: http(writeRpc) });
 const pub = createPublicClient({ chain, transport: http(writeRpc) });
@@ -91,17 +97,24 @@ void readAgentIdentity(agentName, ens.readText, ens.readAddr, account.address).t
 });
 
 console.log(`watcher ${account.address} watching ${names.join(', ')} every ${Number(env.INTERVAL_MS ?? 15000) / 1000} s${env.ANTHROPIC_API_KEY ? ' (Claude notes on)' : ''}`);
+const intervalMs = Number(env.INTERVAL_MS ?? 15000);
+let lastOkAt: number | null = null;
 if (env.STATUS_PORT) {
   createServer((req, res) => {
+    if (req.url === '/healthz') {
+      const h = health(lastOkAt, Date.now(), intervalMs);
+      return void res.writeHead(h.ok ? 200 : 503, { 'content-type': 'text/plain' }).end(h.detail);
+    }
     res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }).end(JSON.stringify({ watcher: account.address, identity, revoked: watcher.revoked(), names: watcher.state() }));
-  }).listen(Number(env.STATUS_PORT), '127.0.0.1');
+  }).listen(Number(env.STATUS_PORT), env.STATUS_HOST ?? '127.0.0.1');
 }
 const loop = async () => {
   try {
     await watcher.tick();
+    lastOkAt = Date.now();
   } catch (e) {
     console.error('tick failed', e);
   }
-  setTimeout(loop, Number(env.INTERVAL_MS ?? 15000));
+  setTimeout(loop, intervalMs);
 };
 void loop();

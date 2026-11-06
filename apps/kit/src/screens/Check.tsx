@@ -31,7 +31,7 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
     setResult(null);
     try {
       const rec = await readCopeybaraRecords(settings.ensName, props.quorumFor(ENS_CONFIG.chainId), ENS_CONFIG);
-      setResult(checkPastedText({ text: pasted, to, account, chainId: settings.targetChainId, manifest: rec.manifest }));
+      setResult(checkPastedText({ text: pasted, to, account, chainId: settings.targetChainId, manifest: rec.manifest, exitSpec: rec.exitSpec ?? null }));
     } catch (e) {
       setResult({ verdict: 'not-exit', sentences: [`Could not check: ${(e as Error).message}`] });
     } finally {

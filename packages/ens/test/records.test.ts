@@ -1,7 +1,17 @@
 import { describe, expect, test } from 'vitest';
 import { decodeFunctionData, encodeAbiParameters, encodeFunctionResult, namehash, toHex, type Hex } from 'viem';
 import { packetToBytes } from 'viem/ens';
-import { textResolverAbi, universalResolverAbi, ManifestError, type Address } from '@copeybara/core';
+import {
+  encodeExitSpec,
+  encodeManifest,
+  erc4626Kind,
+  specExitSelector,
+  textResolverAbi,
+  universalResolverAbi,
+  ManifestError,
+  type Address,
+  type ExitSpec,
+} from '@copeybara/core';
 import { CallRevertedError, type Quorum } from '@copeybara/quorum';
 import { readCopeybaraRecords, RecordsError, ENS_KEYS } from '../src';
 
@@ -127,5 +137,39 @@ describe('readCopeybaraRecords', () => {
     expect(r.blocklist).toEqual([]);
     expect(r.extension).toBeNull();
     expect(r.problems.map((p) => p.key).sort()).toEqual(['org.copeybara.blocklist', 'org.copeybara.extension', 'org.copeybara.site', 'org.copeybara.status']);
+  });
+
+  describe('org.copeybara.exits (declarative exit spec)', () => {
+    const VAULT = '0x2222222222222222222222222222222222222222';
+    const spec: ExitSpec = { v: 1, kinds: { vault: erc4626Kind('Demo vault') } };
+    const manifestWith = (sel: string) =>
+      encodeManifest({ v: 1, chains: { '11155111': { spec: { vault: { address: VAULT, selectors: [sel as `0x${string}`] } } } } });
+
+    test('absent → null, no problem', async () => {
+      const r = await readCopeybaraRecords(NAME, stubQuorum(GOOD).q, { universalResolver: UR });
+      expect(r.exitSpec).toBeNull();
+      expect(r.problems).toEqual([]);
+    });
+
+    test('present and consistent with the manifest → parsed', async () => {
+      const { q } = stubQuorum({ ...GOOD, 'org.copeybara.manifest': manifestWith(specExitSelector(spec.kinds.vault!)), 'org.copeybara.exits': encodeExitSpec(spec) });
+      const r = await readCopeybaraRecords(NAME, q, { universalResolver: UR });
+      expect(r.exitSpec).toEqual(spec);
+      expect(r.problems).toEqual([]);
+    });
+
+    test('malformed → null + problem (never a partial spec)', async () => {
+      const { q } = stubQuorum({ ...GOOD, 'org.copeybara.exits': '{"v":1,"kinds":{"vault":{"label":"x"}}}' });
+      const r = await readCopeybaraRecords(NAME, q, { universalResolver: UR });
+      expect(r.exitSpec).toBeNull();
+      expect(r.problems.map((p) => p.key)).toEqual(['org.copeybara.exits']);
+    });
+
+    test('manifest allows a selector the spec does not describe → spec dropped + problem', async () => {
+      const { q } = stubQuorum({ ...GOOD, 'org.copeybara.manifest': manifestWith('0x095ea7b3'), 'org.copeybara.exits': encodeExitSpec(spec) });
+      const r = await readCopeybaraRecords(NAME, q, { universalResolver: UR });
+      expect(r.exitSpec).toBeNull();
+      expect(r.problems[0]!.message).toMatch(/exactly/);
+    });
   });
 });

@@ -1,0 +1,13 @@
+{
+  "name": "@copeybara/example-demoswap",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify": "copeybara verify",
+    "certify": "copeybara certify"
+  },
+  "devDependencies": {
+    "@copeybara/protocol-cli": "workspace:*"
+  }
+}

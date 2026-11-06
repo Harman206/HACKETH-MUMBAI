@@ -40,6 +40,9 @@ pnpm workspace; internal packages are consumed as TS source (`main: src/index.ts
 - **`packages/ens`** — reads `url`, `org.blackout.release`, `org.blackout.manifest`, `org.blackout.site` via the ENSv2 UniversalResolver, through the quorum.
 - **`packages/adapters`** — per-protocol discovery + exit-tx builders (Uniswap v3, Aave v3 supply-only, Curve 3pool). Minimums come from `eth_call` simulation minus slippage.
 - **`packages/exec`** — `runExit`: Guard → simulate → send → receipt → per-token positive balance delta. "Recovered" requires both.
+- **`packages/protocol-cli`** — the `copeybara` CLI for protocol teams (manifest, release, fingerprint, propose, verify, certify, roles-check, drill, incident, watcher, adapter new). Never holds a key: every record write is a Safe Transaction Builder batch checked by `assertBatchScope`. `src/onchain.ts` is the browser-safe part the site uses for the certified check. Guide: `docs/protocol-integration.md`.
+- **`packages/fingerprint`** + **`vite-plugin` / `next-plugin` / `webpack-plugin`** — build-time site fingerprint (`.well-known/copeybara-site.json`, CI summary); fail on unpinned third-party scripts; never publish.
+- **`packages/widget`** — `<copeybara-exit>`, one hand-written dependency-free file; `pnpm --filter @copeybara/widget hash` after editing it (the site build checks the sidecar).
 - **`packages/testkit`** — test-only anvil fork/funding helpers; must never be imported by the kit.
 - **`apps/kit`** — Vite + Preact single-file build. `flow.ts` is the state machine (setup → loading → positions → exit); `check.ts` is the "Check a transaction" tab and site-bundle hash check. The only trust roots baked in are in `config/networks.json` (UniversalResolver address + default RPCs); protocol addresses come from the ENS manifest, never from kit code.
 - **`apps/site`** — the public website + "Attack Theater" (live Sepolia attack/rescue replication, driven by the harness via `?booth=`).

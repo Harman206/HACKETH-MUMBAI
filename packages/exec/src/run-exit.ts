@@ -99,7 +99,7 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
   // 1. Guard every call
   progress('checking');
   for (const c of plan.calls) {
-    const g = guard(c, { account: ctx.account, chainId: ctx.chainId, manifest: ctx.manifest });
+    const g = guard(c, { account: ctx.account, chainId: ctx.chainId, manifest: ctx.manifest, exitSpec: ctx.exitSpec });
     if (!g.ok) return { ...res, reasons: explain(g) };
   }
 
