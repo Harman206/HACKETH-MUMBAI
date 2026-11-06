@@ -3,7 +3,7 @@ import { decodeFunctionData, encodeFunctionData, encodeFunctionResult, maxUint12
 import { erc20Abi, EXIT_SELECTORS, npmAbi, type Address, type ExitPlan, type Manifest, type TxRequest } from '@blackout/core';
 import { CallRevertedError, QuorumError, type Quorum, type Receipt } from '@blackout/quorum';
 import type { Ctx } from '@blackout/adapters';
-import { buildReport, reportToHtml, reportToJson, runExit, type Sender } from '../src';
+import { buildReport, reportToHtml, reportToJson, runExit, tallyVerdicts, type Sender } from '../src';
 
 const USER: Address = '0x1111111111111111111111111111111111111111';
 const NPM: Address = '0x1238536071E1c677A632429e3655c799b22cDA52';
@@ -77,6 +77,10 @@ describe('runExit', () => {
     expect(r.before[T0]).toBe(10n);
     expect(r.after[T0]).toBe(20n);
     expect(r.gasUsed).toBe(90_000n);
+    expect(r.deltas).toEqual([
+      { token: T0, before: 10n, after: 20n, min: 1n },
+      { token: T1, before: 5n, after: 9n, min: 1n },
+    ]);
   });
 
   test('guard rejection never reaches the wallet', async () => {
@@ -87,18 +91,18 @@ describe('runExit', () => {
     expect(sender.sendTransaction).not.toHaveBeenCalled();
   });
 
-  test('simulation revert → rejected, nothing sent', async () => {
+  test('simulation revert → unsimulated (not a Guard block), nothing sent', async () => {
     const { sender, ctx } = stub({ simRevert: true });
     const r = await runExit(plan(), sender, ctx);
-    expect(r.status).toBe('rejected');
+    expect(r.status).toBe('unsimulated');
     expect(r.reasons[0]).toMatch(/Simulation failed/);
     expect(sender.sendTransaction).not.toHaveBeenCalled();
   });
 
-  test('quorum disagreement → rejected, nothing sent', async () => {
+  test('quorum disagreement before sending → unsimulated, nothing sent', async () => {
     const { sender, ctx } = stub({ disagree: true });
     const r = await runExit(plan(), sender, ctx);
-    expect(r.status).toBe('rejected');
+    expect(r.status).toBe('unsimulated');
     expect(r.reasons[0]).toMatch(/disagree/);
     expect(sender.sendTransaction).not.toHaveBeenCalled();
   });
@@ -167,12 +171,28 @@ describe('report', () => {
     startedAt: 1_000_000,
     failures: [{ kind: 'site-down', at: 1_000_000 }],
     results: [],
-    guardVerdicts: { accepted: 1, rejected: 1, reasons: ['approve is never part of an exit'] },
+    guardVerdicts: { accepted: 1, rejected: 1, unsimulated: 0, reasons: ['approve is never part of an exit'] },
   };
   test('timeToExitSec = (lastReceiptAt − firstFailureAt)/1000', () => {
     const r = buildReport({ ...base, firstFailureAt: 1_000_000, lastReceiptAt: 1_042_500 });
     expect(r.timeToExitSec).toBe(42.5);
   });
+  test('Guard verdict counts exclude unsimulated results', () => {
+    const r = buildReport({
+      ...base,
+      results: [
+        { positionId: '1', status: 'unsimulated', reasons: ['Simulation failed'], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] },
+        { positionId: '2', status: 'rejected', reasons: ['approve'], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] },
+      ],
+      guardVerdicts: tallyVerdicts([
+        { positionId: '1', status: 'unsimulated', reasons: ['Simulation failed'], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] },
+        { positionId: '2', status: 'rejected', reasons: ['approve'], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] },
+      ]),
+    });
+    expect(r.guardVerdicts).toEqual({ accepted: 0, rejected: 1, unsimulated: 1, reasons: ['approve'] });
+    expect(reportToHtml(r)).toContain('Could not simulate');
+  });
+
   test('timeToExitSec is null without both timestamps', () => {
     expect(buildReport(base).timeToExitSec).toBeNull();
   });
@@ -180,7 +200,7 @@ describe('report', () => {
     const r = buildReport({
       ...base,
       ensName: '<script>x</script>.eth',
-      results: [{ positionId: '7', status: 'recovered', reasons: [], txHashes: ['0xaa'], before: { [T0]: 1n }, after: { [T0]: 2n }, gasUsed: 1n }],
+      results: [{ positionId: '7', status: 'recovered', reasons: [], txHashes: ['0xaa'], before: { [T0]: 1n }, after: { [T0]: 2n }, gasUsed: 1n, deltas: [] }],
     });
     const html = reportToHtml(r);
     expect(html).not.toContain('<script>x</script>');
@@ -188,7 +208,7 @@ describe('report', () => {
     expect(html).toContain('Recovered');
   });
   test('report JSON-serialises bigints as strings', () => {
-    const r = buildReport({ ...base, results: [{ positionId: '7', status: 'recovered', reasons: [], txHashes: [], before: { [T0]: 1n }, after: { [T0]: 2n }, gasUsed: 3n }] });
+    const r = buildReport({ ...base, results: [{ positionId: '7', status: 'recovered', reasons: [], txHashes: [], before: { [T0]: 1n }, after: { [T0]: 2n }, gasUsed: 3n, deltas: [] }] });
     const j = JSON.parse(reportToJson(r));
     expect(j.results[0].gasUsed).toBe('3');
   });

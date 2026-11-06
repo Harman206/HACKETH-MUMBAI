@@ -8,7 +8,15 @@ export interface Sender {
   sendTransaction(tx: TxRequest): Promise<Hex>;
 }
 
-export type ExitStatus = 'recovered' | 'not-recovered' | 'rejected';
+/** rejected = the Exit Guard blocked it; unsimulated = nothing sent because the dry run failed or RPCs disagreed. */
+export type ExitStatus = 'recovered' | 'not-recovered' | 'rejected' | 'unsimulated';
+
+export interface TokenDelta {
+  token: Address;
+  before: bigint;
+  after: bigint;
+  min: bigint;
+}
 
 export interface ExitResult {
   positionId: string;
@@ -18,6 +26,8 @@ export interface ExitResult {
   before: Record<Address, bigint>;
   after: Record<Address, bigint>;
   gasUsed: bigint;
+  /** Per expected token: balance before/after and the plan's minimum. Empty until balances are read. */
+  deltas: TokenDelta[];
   /** ms timestamp of the last confirmed receipt, for time-to-exit. */
   confirmedAt?: number;
 }
@@ -58,7 +68,7 @@ function walletMessage(e: unknown): string {
 export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Promise<ExitResult> {
   const now = ctx.now ?? Date.now;
   const tokens = plan.expected.map((e) => e.token);
-  const res: ExitResult = { positionId: plan.position.id, status: 'rejected', reasons: [], txHashes: [], before: {}, after: {}, gasUsed: 0n };
+  const res: ExitResult = { positionId: plan.position.id, status: 'rejected', reasons: [], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] };
 
   if (plan.calls.length === 0) return { ...res, reasons: [plan.position.manual ?? 'Nothing to send for this position.'] };
   if (tokens.length === 0) return { ...res, reasons: ['The simulation shows nothing to recover from this position.'] };
@@ -75,8 +85,8 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
     block = await ctx.q.pinBlock();
     for (const c of plan.calls) await ctx.q.call({ to: c.to, data: c.data, from: c.from }, block);
   } catch (e) {
-    if (e instanceof CallRevertedError) return { ...res, reasons: [`Simulation failed: ${e.message}`] };
-    if (e instanceof QuorumError) return { ...res, reasons: [e.message] };
+    if (e instanceof CallRevertedError) return { ...res, status: 'unsimulated', reasons: [`Simulation failed: ${e.message}`] };
+    if (e instanceof QuorumError) return { ...res, status: 'unsimulated', reasons: [e.message] };
     throw e;
   }
 
@@ -119,6 +129,7 @@ export async function runExit(plan: ExitPlan, sender: Sender, ctx: RunCtx): Prom
       await sleep(ctx.pollMs ?? 2000);
     }
   }
+  res.deltas = plan.expected.map((e) => ({ token: e.token, before: res.before[e.token]!, after: res.after[e.token]!, min: e.min }));
   const missing = tokens.filter((t) => !(res.after[t]! > res.before[t]!));
   if (missing.length) {
     return { ...res, status: 'not-recovered', reasons: missing.map((t) => `no balance increase for ${t}`) };

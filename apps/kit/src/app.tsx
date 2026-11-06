@@ -201,7 +201,7 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
 function PositionRow(props: { p: Position; result?: ExitResult; busy: string | null; chainId: number; onExit(): void }) {
   const { p, result } = props;
   const label = result
-    ? { recovered: <b class="ok">{COPY.recovered}</b>, 'not-recovered': <b class="bad">{COPY.notRecovered}</b>, rejected: <b class="bad">{COPY.blocked}</b> }[result.status]
+    ? { recovered: <b class="ok">{COPY.recovered}</b>, 'not-recovered': <b class="bad">{COPY.notRecovered}</b>, rejected: <b class="bad">{COPY.blocked}</b>, unsimulated: <b class="warn">{COPY.unsimulated}</b> }[result.status]
     : null;
   return (
     <div style="border-top:1px solid var(--line);padding:12px 0" data-position={p.id}>

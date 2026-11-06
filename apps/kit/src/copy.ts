@@ -19,6 +19,7 @@ export const COPY = {
   recovered: 'Recovered',
   notRecovered: 'Not recovered',
   blocked: 'Blocked by the Exit Guard',
+  unsimulated: 'Could not simulate',
   downloadJson: 'Download report (JSON)',
   downloadHtml: 'Download report (HTML)',
   manual: 'Needs manual action',

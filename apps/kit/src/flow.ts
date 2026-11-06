@@ -1,7 +1,7 @@
 import type { Address, Position } from '@blackout/core';
 import type { Ctx, ExitAdapter } from '@blackout/adapters';
 import { normaliseName, readBlackoutRecords, type BlackoutRecords } from '@blackout/ens';
-import { buildReport, runExit as defaultRunExit, type ExitReport, type ExitResult, type Sender } from '@blackout/exec';
+import { buildReport, tallyVerdicts, runExit as defaultRunExit, type ExitReport, type ExitResult, type Sender } from '@blackout/exec';
 import type { Quorum } from '@blackout/quorum';
 import type { Settings } from './settings';
 import { maxSeenVersion, recordSeenVersion } from './storage';
@@ -130,7 +130,7 @@ export function createFlow(deps: FlowDeps): Flow {
       const plan = await adapter.buildExit(pos, fresh);
       result = await run(plan, deps.wallet.sender(s.account), fresh);
     } catch (e) {
-      result = { positionId: id, status: 'rejected', reasons: [message(e)], txHashes: [], before: {}, after: {}, gasUsed: 0n };
+      result = { positionId: id, status: 'unsimulated', reasons: [message(e)], txHashes: [], before: {}, after: {}, gasUsed: 0n, deltas: [] };
     }
     if (deps.drillFailures) failures = await deps.drillFailures().catch(() => failures);
     const cur = state.get();
@@ -148,7 +148,6 @@ export function createFlow(deps: FlowDeps): Flow {
     const s = state.get();
     if (s.step !== 'positions') throw new Error('No exits yet.');
     const results = Object.values(s.results);
-    const rejected = results.filter((r) => r.status === 'rejected');
     const confirmed = results.map((r) => r.confirmedAt).filter((x): x is number => typeof x === 'number');
     const firstFailureAt = failures.length ? Math.min(...failures.map((f) => f.at)) : undefined;
     return buildReport({
@@ -157,7 +156,7 @@ export function createFlow(deps: FlowDeps): Flow {
       startedAt,
       failures,
       results,
-      guardVerdicts: { accepted: results.length - rejected.length, rejected: rejected.length, reasons: rejected.flatMap((r) => r.reasons) },
+      guardVerdicts: tallyVerdicts(results),
       firstFailureAt,
       lastReceiptAt: confirmed.length ? Math.max(...confirmed) : undefined,
     });

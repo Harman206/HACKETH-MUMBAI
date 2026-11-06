@@ -26,7 +26,7 @@ function deps(over: Partial<FlowDeps> = {}) {
     discover: vi.fn(async () => [pos]),
     buildExit: vi.fn(async (p) => ({ position: p, calls: [], expected: [] }) as ExitPlan),
   };
-  const result: ExitResult = { positionId: '7', status: 'recovered', reasons: [], txHashes: ['0xaa'], before: {}, after: {}, gasUsed: 1n, confirmedAt: 5_000 };
+  const result: ExitResult = { positionId: '7', status: 'recovered', reasons: [], txHashes: ['0xaa'], before: {}, after: {}, gasUsed: 1n, confirmedAt: 5_000, deltas: [] };
   const d: FlowDeps = {
     quorumFor: () => ({ pinBlock: async () => 10n }) as unknown as Quorum,
     ens: { chainId: 11155111, universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe' },
@@ -63,7 +63,7 @@ describe('exit flow', () => {
     const report = f.report();
     expect(report.ensName).toBe('demoswap-blackout.eth');
     expect(report.kit).toEqual({ version: 3, sha256: 'ab'.repeat(32) });
-    expect(report.guardVerdicts).toEqual({ accepted: 1, rejected: 0, reasons: [] });
+    expect(report.guardVerdicts).toEqual({ accepted: 1, rejected: 0, unsimulated: 0, reasons: [] });
   });
 
   test('empty ENS name → error, nothing read', async () => {
