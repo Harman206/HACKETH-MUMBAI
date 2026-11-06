@@ -69,3 +69,6 @@ table.perm td, table.perm th { text-align: left; padding: 8px 6px; border-bottom
 .field { flex: 1 1 320px; min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; }
 .loss-box { margin-top: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--bad); }
 .scoreboard { border: 2px solid var(--accent); }
+/* Grid children must be allowed to shrink below their content (long hashes / code), or phones scroll sideways. */
+.grid > *, .cols > *, .replay > * { min-width: 0; }
+pre { max-width: 100%; }

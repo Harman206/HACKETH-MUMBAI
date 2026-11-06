@@ -131,12 +131,14 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
   const siteServer = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0]!;
     const f = join(siteDist, path === '/' ? 'index.html' : path);
+    let body: Buffer;
     try {
-      const type = f.endsWith('.html') ? 'text/html; charset=utf-8' : f.endsWith('.js') ? 'text/javascript' : f.endsWith('.css') ? 'text/css' : 'text/plain';
-      res.writeHead(200, { 'content-type': type }).end(readFileSync(f));
+      body = readFileSync(f);
     } catch {
-      res.writeHead(404).end();
+      return void res.writeHead(404).end();
     }
+    const type = f.endsWith('.html') ? 'text/html; charset=utf-8' : f.endsWith('.js') ? 'text/javascript' : f.endsWith('.css') ? 'text/css' : 'text/plain';
+    res.writeHead(200, { 'content-type': type }).end(body);
   });
   await new Promise<void>((r) => siteServer.listen(0, '127.0.0.1', r));
   const sitePort = (siteServer.address() as { port: number }).port;

@@ -49,6 +49,9 @@ test('attack theater: prepare → hijack (real drain) → outage → verify + re
 
   const [kit] = await Promise.all([context.waitForEvent('page'), site.getByRole('link', { name: 'Open the kit and exit' }).click()]);
   await kit.getByRole('button', { name: 'Connect wallet and find my positions' }).click();
+  await expect(kit.locator('[data-position], [role=alert]').first()).toBeVisible({ timeout: 60_000 });
+  const alerts = await kit.locator('[role=alert]').allTextContents();
+  expect(alerts, `kit reported: ${alerts.join(' | ')}`).toEqual([]);
   await expect(kit.locator('[data-position]').first()).toBeVisible({ timeout: 60_000 });
   await kit.getByRole('button', { name: 'Exit all' }).click();
   await expect(kit.locator('[data-status="recovered"]').first()).toBeVisible({ timeout: 90_000 });
