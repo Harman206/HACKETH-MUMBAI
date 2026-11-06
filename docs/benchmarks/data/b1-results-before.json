@@ -1,0 +1,505 @@
+{
+ "note": "Summary of b1-results.json as committed in cbf7ba7 (before the gap fixes): confusion counts per set and scenario, and S1 verdict counts per category.",
+ "meta": {
+  "gitHead": "0271a17",
+  "classifySha256": "007739f37c984bbaaa8099b63707c0f08b63c072b696f443f1f37851997d2b8e",
+  "decodeSha256": "ee0479e25971392911d958b936865bdc3a399abee0275546daef699167061519",
+  "knownContractsSha256": "f84fa5ace0df66f459d07063e2bac9440f7d8821aea1c09e34f2aab53a96f649",
+  "ranAt": "2026-11-06T20:59:53.127Z"
+ },
+ "A": {
+  "S0": {
+   "red": {
+    "tp": 134,
+    "fn": 149,
+    "fp": 123,
+    "tn": 63,
+    "tpr": 0.4734982332155477,
+    "fpr": 0.6612903225806451,
+    "precision": 0.5214007782101168
+   },
+   "any": {
+    "tp": 282,
+    "fn": 1,
+    "fp": 139,
+    "tn": 47,
+    "tpr": 0.9964664310954063,
+    "fpr": 0.7473118279569892,
+    "precision": 0.669833729216152
+   }
+  },
+  "S1": {
+   "red": {
+    "tp": 134,
+    "fn": 149,
+    "fp": 79,
+    "tn": 107,
+    "tpr": 0.4734982332155477,
+    "fpr": 0.42473118279569894,
+    "precision": 0.6291079812206573
+   },
+   "any": {
+    "tp": 282,
+    "fn": 1,
+    "fp": 88,
+    "tn": 98,
+    "tpr": 0.9964664310954063,
+    "fpr": 0.4731182795698925,
+    "precision": 0.7621621621621621
+   }
+  },
+  "S2": {
+   "red": {
+    "tp": 134,
+    "fn": 149,
+    "fp": 71,
+    "tn": 115,
+    "tpr": 0.4734982332155477,
+    "fpr": 0.3817204301075269,
+    "precision": 0.6536585365853659
+   },
+   "any": {
+    "tp": 282,
+    "fn": 1,
+    "fp": 88,
+    "tn": 98,
+    "tpr": 0.9964664310954063,
+    "fpr": 0.4731182795698925,
+    "precision": 0.7621621621621621
+   }
+  },
+  "S3": {
+   "red": {
+    "tp": 134,
+    "fn": 149,
+    "fp": 11,
+    "tn": 175,
+    "tpr": 0.4734982332155477,
+    "fpr": 0.05913978494623656,
+    "precision": 0.9241379310344827
+   },
+   "any": {
+    "tp": 282,
+    "fn": 1,
+    "fp": 11,
+    "tn": 175,
+    "tpr": 0.9964664310954063,
+    "fpr": 0.05913978494623656,
+    "precision": 0.962457337883959
+   }
+  }
+ },
+ "B": {
+  "S0": {
+   "red": {
+    "tp": 312,
+    "fn": 385,
+    "fp": 41,
+    "tn": 177,
+    "tpr": 0.44763271162123386,
+    "fpr": 0.18807339449541285,
+    "precision": 0.8838526912181303
+   },
+   "any": {
+    "tp": 552,
+    "fn": 145,
+    "fp": 96,
+    "tn": 122,
+    "tpr": 0.7919655667144907,
+    "fpr": 0.44036697247706424,
+    "precision": 0.8518518518518519
+   }
+  },
+  "S1": {
+   "red": {
+    "tp": 312,
+    "fn": 385,
+    "fp": 39,
+    "tn": 179,
+    "tpr": 0.44763271162123386,
+    "fpr": 0.17889908256880735,
+    "precision": 0.8888888888888888
+   },
+   "any": {
+    "tp": 552,
+    "fn": 145,
+    "fp": 94,
+    "tn": 124,
+    "tpr": 0.7919655667144907,
+    "fpr": 0.43119266055045874,
+    "precision": 0.8544891640866873
+   }
+  },
+  "S2": {
+   "red": {
+    "tp": 312,
+    "fn": 385,
+    "fp": 38,
+    "tn": 180,
+    "tpr": 0.44763271162123386,
+    "fpr": 0.1743119266055046,
+    "precision": 0.8914285714285715
+   },
+   "any": {
+    "tp": 552,
+    "fn": 145,
+    "fp": 94,
+    "tn": 124,
+    "tpr": 0.7919655667144907,
+    "fpr": 0.43119266055045874,
+    "precision": 0.8544891640866873
+   }
+  },
+  "S3": {
+   "red": {
+    "tp": 312,
+    "fn": 385,
+    "fp": 38,
+    "tn": 180,
+    "tpr": 0.44763271162123386,
+    "fpr": 0.1743119266055046,
+    "precision": 0.8914285714285715
+   },
+   "any": {
+    "tp": 552,
+    "fn": 145,
+    "fp": 93,
+    "tn": 125,
+    "tpr": 0.7919655667144907,
+    "fpr": 0.42660550458715596,
+    "precision": 0.8558139534883721
+   }
+  }
+ },
+ "s1ByCategory": {
+  "scamsniffer-drainers|pos|tx.eth.transfer": {
+   "n": 139,
+   "dangerous": 0,
+   "risky": 139,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|tx.approve.limited": {
+   "n": 34,
+   "dangerous": 34,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|sig.permit(EIP-2612)": {
+   "n": 6,
+   "dangerous": 6,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|tx.setApprovalForAll": {
+   "n": 61,
+   "dangerous": 61,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|tx.erc20.transfer": {
+   "n": 15,
+   "dangerous": 15,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|tx.approve.unlimited": {
+   "n": 16,
+   "dangerous": 16,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|tx.payable-call": {
+   "n": 9,
+   "dangerous": 0,
+   "risky": 9,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|sig.permit2.single": {
+   "n": 2,
+   "dangerous": 2,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|neg|tx.setApprovalForAll(false)": {
+   "n": 2,
+   "dangerous": 2,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "scamsniffer-drainers|pos|tx.other": {
+   "n": 1,
+   "dangerous": 0,
+   "risky": 0,
+   "unknown": 1,
+   "other": 0
+  },
+  "scamsniffer-drainers|neg|tx.approve.zero(revoke)": {
+   "n": 1,
+   "dangerous": 1,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "recent-benign|neg|tx.approve.unlimited": {
+   "n": 44,
+   "dangerous": 14,
+   "risky": 0,
+   "unknown": 0,
+   "other": 30
+  },
+  "recent-benign|neg|tx.approve.limited": {
+   "n": 41,
+   "dangerous": 40,
+   "risky": 0,
+   "unknown": 0,
+   "other": 1
+  },
+  "recent-benign|neg|tx.approve.zero(revoke)": {
+   "n": 5,
+   "dangerous": 4,
+   "risky": 0,
+   "unknown": 0,
+   "other": 1
+  },
+  "recent-benign|neg|tx.setApprovalForAll": {
+   "n": 12,
+   "dangerous": 12,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "recent-benign|neg|sig.permit2.single": {
+   "n": 12,
+   "dangerous": 0,
+   "risky": 0,
+   "unknown": 0,
+   "other": 12
+  },
+  "recent-benign|neg|tx.dapp-call": {
+   "n": 48,
+   "dangerous": 1,
+   "risky": 0,
+   "unknown": 30,
+   "other": 17
+  },
+  "recent-benign|neg|tx.dapp-call(with ETH)": {
+   "n": 16,
+   "dangerous": 0,
+   "risky": 9,
+   "unknown": 0,
+   "other": 7
+  },
+  "recent-benign|neg|tx.erc20.transfer": {
+   "n": 5,
+   "dangerous": 5,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Approve / sig.permit(EIP-2612)": {
+   "n": 58,
+   "dangerous": 58,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Approve / tx.approve.limited": {
+   "n": 14,
+   "dangerous": 14,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Approve / tx.increaseAllowance": {
+   "n": 6,
+   "dangerous": 6,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Approve / tx.approve.unlimited": {
+   "n": 14,
+   "dangerous": 14,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Permit / sig.permit(EIP-2612)": {
+   "n": 79,
+   "dangerous": 79,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Permit / sig.permit2.single": {
+   "n": 6,
+   "dangerous": 6,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Permit / sig.permit2.batch": {
+   "n": 20,
+   "dangerous": 20,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Permit / sig.permit(DAI)": {
+   "n": 8,
+   "dangerous": 8,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Permit / tx.approve.zero(revoke)": {
+   "n": 1,
+   "dangerous": 1,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|SetApproveForAll / tx.setApprovalForAll": {
+   "n": 106,
+   "dangerous": 106,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|NFT bulk transfer / tx.other": {
+   "n": 37,
+   "dangerous": 0,
+   "risky": 0,
+   "unknown": 37,
+   "other": 0
+  },
+  "ptxphish|pos|Proxy upgrade / tx.other": {
+   "n": 108,
+   "dangerous": 0,
+   "risky": 0,
+   "unknown": 108,
+   "other": 0
+  },
+  "ptxphish|pos|Payable: airdrop function / tx.payable-call": {
+   "n": 120,
+   "dangerous": 0,
+   "risky": 120,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|pos|Payable: wallet function / tx.payable-call": {
+   "n": 120,
+   "dangerous": 0,
+   "risky": 120,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign KOL / tx.approve.limited": {
+   "n": 12,
+   "dangerous": 11,
+   "risky": 0,
+   "unknown": 0,
+   "other": 1
+  },
+  "ptxphish|neg|Benign KOL / tx.payable-call": {
+   "n": 22,
+   "dangerous": 0,
+   "risky": 22,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign KOL / tx.other": {
+   "n": 47,
+   "dangerous": 0,
+   "risky": 1,
+   "unknown": 45,
+   "other": 1
+  },
+  "ptxphish|neg|Benign KOL / tx.erc20.transfer": {
+   "n": 14,
+   "dangerous": 14,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign KOL / tx.empty": {
+   "n": 3,
+   "dangerous": 0,
+   "risky": 0,
+   "unknown": 0,
+   "other": 3
+  },
+  "ptxphish|neg|Benign KOL / tx.approve.zero(revoke)": {
+   "n": 2,
+   "dangerous": 2,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign KOL / tx.eth.transfer": {
+   "n": 5,
+   "dangerous": 0,
+   "risky": 5,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign KOL / tx.approve.unlimited": {
+   "n": 6,
+   "dangerous": 6,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign developer / tx.approve.unlimited": {
+   "n": 3,
+   "dangerous": 3,
+   "risky": 0,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign developer / tx.other": {
+   "n": 94,
+   "dangerous": 0,
+   "risky": 22,
+   "unknown": 72,
+   "other": 0
+  },
+  "ptxphish|neg|Benign developer / tx.eth.transfer": {
+   "n": 3,
+   "dangerous": 0,
+   "risky": 3,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign developer / tx.erc20.transfer": {
+   "n": 2,
+   "dangerous": 1,
+   "risky": 0,
+   "unknown": 1,
+   "other": 0
+  },
+  "ptxphish|neg|Benign developer / tx.payable-call": {
+   "n": 2,
+   "dangerous": 0,
+   "risky": 2,
+   "unknown": 0,
+   "other": 0
+  },
+  "ptxphish|neg|Benign developer / tx.approve.limited": {
+   "n": 3,
+   "dangerous": 2,
+   "risky": 0,
+   "unknown": 0,
+   "other": 1
+  }
+ }
+}

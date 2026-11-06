@@ -67,6 +67,11 @@ describe('gap 1: proxy upgrades and ownership changes', () => {
     }
     expect(classifyRequest(send(SAFE, enc('transferOwnership', [ATTACKER])), fresh(USER)).reasons[0]).toMatch(/hands control of the contract/);
   });
+  test('real PTXPhish upgradeTo(the sender itself): an account is not code, the proxy would break → risky (asks)', () => {
+    const r = real(one('proxyUpgradeToSelf'));
+    expect(r.verdict).toBe('risky');
+    expect(r.reasons[0]).toMatch(/stop working/);
+  });
   test('ownership to your own address → not red; to a followed or well-known contract → risky, never dangerous', () => {
     expect(classifyRequest(send(SAFE, enc('transferOwnership', [USER])), fresh(USER)).verdict).toBe('unknown');
     expect(classifyRequest(send(SAFE, enc('acceptOwnership', [])), fresh(USER)).verdict).toBe('unknown');
