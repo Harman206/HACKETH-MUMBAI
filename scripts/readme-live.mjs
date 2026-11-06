@@ -29,7 +29,8 @@ const lines = [
 ];
 if (perms.length && perms.some((p) => !p.pass)) throw new Error(`refusing to publish: failing permission checks in ${base}-permissions.json`);
 const md = readFileSync(readme, 'utf8');
-const out = md.replace(/<!-- LIVE-DEPLOYMENT:START -->[\s\S]*<!-- LIVE-DEPLOYMENT:END -->/, `<!-- LIVE-DEPLOYMENT:START -->\n${lines.join('\n')}\n<!-- LIVE-DEPLOYMENT:END -->`);
-if (out === md) throw new Error('LIVE-DEPLOYMENT markers not found');
+const BLOCK = /<!-- LIVE-DEPLOYMENT:START -->[\s\S]*<!-- LIVE-DEPLOYMENT:END -->/;
+if (!BLOCK.test(md)) throw new Error('LIVE-DEPLOYMENT markers not found');
+const out = md.replace(BLOCK, `<!-- LIVE-DEPLOYMENT:START -->\n${lines.join('\n')}\n<!-- LIVE-DEPLOYMENT:END -->`);
 writeFileSync(readme, out);
 console.log(`README live section updated from ${dep}`);
