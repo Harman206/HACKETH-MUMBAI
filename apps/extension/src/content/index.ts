@@ -1,7 +1,9 @@
 /**
  * Content script (isolated world, document_start, every frame). Two jobs:
- *  1. Observe every piece of code the page runs (script elements, inline code, event handlers, javascript: URLs)
+ *  1. Observe every piece of code the page runs (script elements, inline code, event handlers, javascript: URLs,
+ *     <link rel=modulepreload>, and JS files that only show up in resource timing: import() chunks, module workers)
  *     from the first byte, hash it, and send the hashes to the worker. The page cannot see or alter this code.
+ *     Not covered: code built from strings (eval, new Function), blob:/data: workers, WebAssembly.
  *  2. Relay wallet requests from the MAIN-world shim to the worker and the worker's decision back.
  * Page messages are untrusted input: malformed ones are reported as page noise, never acted on.
  * It never reads extension storage and computes no verdicts.
@@ -25,21 +27,57 @@ export function startContent(win: Window & typeof globalThis, runtime: Runtime) 
   let loaded = false;
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
   const buffer: Element[] = [];
+  const urlBuffer: string[] = [];
 
   const send = (m: unknown) => runtime.sendMessage(m).catch(() => undefined) as Promise<SiteReply>;
+
+  const fetched = new Set<string>();
+
+  /**
+   * Hash the bytes behind a script URL. Same-origin files are read from the cache entry the page itself used
+   * (only-if-cached), so a server that cloaks re-fetches cannot hand the check different bytes. On a cache miss
+   * (no-store, evicted) and for other origins it falls back to a cache-first fetch, which a cloaking server can fool.
+   */
+  async function hashUrl(url: string): Promise<CodeItem> {
+    let text: string | null = null;
+    try {
+      if (new URL(url).origin === win.location.origin) {
+        const r = await fetch(url, { cache: 'only-if-cached', mode: 'same-origin' });
+        if (r.ok) text = await r.text();
+      }
+    } catch {
+      /* not cached, or the browser refuses only-if-cached here */
+    }
+    try {
+      if (text === null) {
+        const r = await fetch(url, { cache: 'force-cache' }); // default credentials: CDNs answer ACAO * (no cookies allowed)
+        if (r.ok) text = await r.text();
+      }
+    } catch {
+      /* unreadable */
+    }
+    return { kind: 'src', label: url, hash: text === null ? null : await scriptHash(text) };
+  }
+
+  /** Every script URL is hashed once, whichever way it was seen (element, modulepreload, resource timing). */
+  function considerUrl(url: string) {
+    if (collecting === false) return;
+    if (collecting === null) {
+      urlBuffer.push(url);
+      return;
+    }
+    if (fetched.has(url)) return;
+    fetched.add(url);
+    queue.push(hashUrl(url).then((i) => (add(i), i)));
+    schedule();
+  }
 
   async function hashScript(el: HTMLScriptElement): Promise<CodeItem | null> {
     if (!isExecutableScriptType(el.getAttribute('type'))) return null;
     const src = el.getAttribute('src');
     if (src !== null) {
-      const url = new URL(src, doc.baseURI).href;
-      try {
-        // Same page, same cache partition: the bytes the page itself got (cache-first).
-        const r = await fetch(url, { cache: 'force-cache' }); // default credentials: CDNs answer ACAO * (no cookies allowed)
-        return { kind: 'src', label: url, hash: r.ok ? await scriptHash(await r.text()) : null };
-      } catch {
-        return { kind: 'src', label: url, hash: null };
-      }
+      considerUrl(new URL(src, doc.baseURI).href);
+      return null;
     }
     return { kind: 'inline', label: `inline script #${++inline}`, hash: await scriptHash(el.textContent ?? '') };
   }
@@ -63,6 +101,10 @@ export function startContent(win: Window & typeof globalThis, runtime: Runtime) 
     if (el.tagName === 'SCRIPT' && !seen.has(el)) {
       seen.add(el);
       queue.push(hashScript(el as HTMLScriptElement).then((i) => (i && add(i), i)));
+    }
+    if (el.tagName === 'LINK' && /(^|\s)modulepreload(\s|$)/i.test(el.getAttribute('rel') ?? '')) {
+      const href = el.getAttribute('href');
+      if (href) considerUrl(new URL(href, doc.baseURI).href);
     }
     if (el.attributes.length) queue.push(hashHandlers(el).then((is) => (is.forEach(add), null)));
   }
@@ -104,15 +146,46 @@ export function startContent(win: Window & typeof globalThis, runtime: Runtime) 
   });
   observer.observe(doc, { childList: true, subtree: true, attributes: true });
 
+  // import() chunks, module workers and preloads never become <script> elements; resource timing still lists them.
+  const SCRIPT_INITIATORS = new Set(['script', 'other', 'link', 'fetch', 'xmlhttprequest']);
+  let perf: { disconnect(): void } | null = null;
+  const PO = (win as unknown as { PerformanceObserver?: new (cb: (l: { getEntries(): unknown[] }) => void) => { observe(o: unknown): void; disconnect(): void } }).PerformanceObserver;
+  if (PO) {
+    try {
+      const po = new PO((list) => {
+        for (const e of list.getEntries() as { name?: unknown; initiatorType?: unknown }[]) {
+          if (typeof e.name !== 'string' || typeof e.initiatorType !== 'string' || !SCRIPT_INITIATORS.has(e.initiatorType)) continue;
+          let u: URL;
+          try {
+            u = new URL(e.name);
+          } catch {
+            continue;
+          }
+          if ((u.protocol === 'http:' || u.protocol === 'https:') && /\.m?js$/i.test(u.pathname)) considerUrl(u.href);
+        }
+      });
+      po.observe({ type: 'resource', buffered: true });
+      perf = po;
+    } catch {
+      perf = null;
+    }
+  }
+  const stopAll = () => {
+    observer.disconnect();
+    perf?.disconnect();
+  };
+
   send({ t: 'hello' }).then((r) => {
     collecting = r?.site?.kind === 'protocol';
     if (collecting) {
       doc.querySelectorAll('*').forEach(consider);
       buffer.splice(0).forEach(consider);
+      urlBuffer.splice(0).forEach(considerUrl);
       schedule();
     } else {
       buffer.length = 0;
-      observer.disconnect();
+      urlBuffer.length = 0;
+      stopAll();
     }
   });
   win.addEventListener('load', () => {
@@ -147,7 +220,7 @@ export function startContent(win: Window & typeof globalThis, runtime: Runtime) 
       if (noise++ < 20) void send({ t: 'noise' });
     }
   });
-  return { stop: () => observer.disconnect() };
+  return { stop: stopAll };
 }
 
 declare const chrome: { runtime: Runtime } | undefined;
