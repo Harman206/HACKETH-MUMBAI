@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { INCIDENTS, HOW, REPLAY_R1, TRUSTED, NOT_TRUSTED, LIMITS } from '../src/content';
+import { INCIDENTS, HOW, REPLAY_R1, TRUSTED, NOT_TRUSTED, LIMITS, DEMO_KIT_URL } from '../src/content';
 
 const REPO = join(__dirname, '..', '..', '..');
 const evidence = [
@@ -28,4 +28,8 @@ describe('site content', () => {
     expect(NOT_TRUSTED.length).toBeGreaterThan(2);
     expect(LIMITS.join(' ')).toMatch(/smart-contract exploits/i);
   });
+});
+
+test('the demo link pre-fills the demo ENS name (the kit then asks the user to confirm it)', () => {
+  expect(DEMO_KIT_URL).toBe('blackout-kit.html?ens=demoswap-blackout.eth');
 });

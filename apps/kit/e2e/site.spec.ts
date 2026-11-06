@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { state } from './helpers';
+
+const SITE_DIST = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'site', 'dist');
 
 /** The website in public mode (no booth): live ENS proof, no third-party requests, keyboard and phone-width usable. */
 const PUBLIC_RPCS = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://1rpc.io'];
@@ -40,4 +47,37 @@ test('booth address that is not localhost falls back to public mode with a notic
   await page.goto(`${s.theater.site.split('?')[0]}?booth=https://evil.example`);
   await expect(page.getByText(/booth address must be http:\/\/localhost/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Live demo' })).toBeVisible();
+});
+
+test('after one visit, the site and the hosted kit keep opening when the website is down', async ({ page }) => {
+  // Our own copy of the site, so this test can really switch it off.
+  const server = createServer((req, res) => {
+    const path = (req.url ?? '/').split('?')[0]!;
+    let body: Buffer;
+    try {
+      body = readFileSync(join(SITE_DIST, path === '/' ? 'index.html' : path));
+    } catch {
+      return void res.writeHead(404).end();
+    }
+    const type = path.endsWith('.js') ? 'text/javascript' : path.endsWith('.css') ? 'text/css' : path.endsWith('.json') ? 'application/json' : path.endsWith('.svg') ? 'image/svg+xml' : path.endsWith('.sha256') ? 'text/plain' : 'text/html; charset=utf-8';
+    res.writeHead(200, { 'content-type': type }).end(body);
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const url = `http://localhost:${(server.address() as { port: number }).port}/`;
+
+  await page.goto(url);
+  await expect(page.getByRole('link', { name: 'Try the kit on the demo protocol' }).first()).toHaveAttribute('href', 'blackout-kit.html?ens=demoswap-blackout.eth');
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
+  await expect(page.locator('[data-offline-ready]')).toBeVisible();
+
+  server.closeAllConnections();
+  await new Promise((r) => server.close(r));
+
+  await page.goto(`${url}blackout-kit.html?ens=demoswap-blackout.eth`);
+  await expect(page.getByRole('heading', { name: 'BLACKOUT exit kit' })).toBeVisible();
+  const served: string = await page.evaluate(() => fetch('blackout-kit.html').then((r) => r.text()));
+  const want = readFileSync(join(SITE_DIST, 'blackout-kit.html.sha256'), 'utf8').split(' ')[0];
+  expect(createHash('sha256').update(served).digest('hex'), 'offline copy is byte-identical to the verified kit').toBe(want);
+  await page.goto(url);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('you can still get your money out');
 });

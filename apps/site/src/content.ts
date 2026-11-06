@@ -3,6 +3,8 @@ import deployment from '../../../contracts/deployments/sepolia.json';
 import permissions from '../../../contracts/deployments/sepolia-permissions.json';
 
 export const ENS_NAME = (deployment as { name: string }).name;
+/** Opens the hosted kit with the demo name filled in. The kit shows a "came from a link: confirm it" banner. */
+export const DEMO_KIT_URL = `blackout-kit.html?ens=${encodeURIComponent(ENS_NAME)}`;
 export const PERMISSIONS = permissions as { check: string; tx: string; status: string; expected: string; pass: boolean }[];
 export const SAFE = (deployment as { safe: string }).safe;
 export const RESOLVER = (deployment as { resolver: string }).resolver;

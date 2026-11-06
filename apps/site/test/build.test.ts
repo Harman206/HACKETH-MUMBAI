@@ -31,3 +31,13 @@ test('ships the exact kit and its sha256 next to the site', () => {
   expect(readFileSync(join(SITE, 'dist', 'blackout-kit.html')).equals(kit)).toBe(true);
   expect(readFileSync(join(SITE, 'dist', 'blackout-kit.html.sha256'), 'utf8')).toMatch(/^[0-9a-f]{64}  blackout-kit.html\n$/);
 });
+
+test('service worker: precaches the page and the exact kit; CSP allows only a same-origin worker', () => {
+  const sw = readFileSync(join(SITE, 'dist', 'sw.js'), 'utf8');
+  const list = JSON.parse(sw.match(/const PRECACHE = (\[.*?\]);/s)![1]!) as string[];
+  expect(list).toEqual(expect.arrayContaining(['./', 'blackout-kit.html', 'blackout-kit.html.sha256']));
+  expect(list.some((f) => f.startsWith('assets/') && f.endsWith('.js'))).toBe(true);
+  expect(list).not.toContain('sw.js');
+  expect(sw).toMatch(/const CACHE = 'blackout-[0-9a-f]{12}';/);
+  expect(html).toMatch(/worker-src 'self'/);
+});

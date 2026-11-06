@@ -5,7 +5,11 @@ import { LiveDemo } from './sections/LiveDemo';
 export function App() {
   const [sha, setSha] = useState<string | null>(null);
   const [live, setLive] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
   useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext) {
+      void navigator.serviceWorker.ready.then(() => setOffline(true));
+    }
     fetch('blackout-kit.html.sha256').then((r) => (r.ok ? r.text() : null)).then((t) => t && setSha(t.split(' ')[0]!)).catch(() => {});
   }, []);
   return (
@@ -28,7 +32,7 @@ export function App() {
         <How />
         <LiveDemo onLive={setLive} />
         <Trust />
-        <Download sha={sha} />
+        <Download sha={sha} offline={offline} />
         <Protocols />
       </main>
       <Footer />

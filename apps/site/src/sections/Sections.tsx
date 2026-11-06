@@ -1,4 +1,4 @@
-import { HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME } from '../content';
+import { HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL } from '../content';
 import { Icons } from './Icons';
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
@@ -12,7 +12,7 @@ export function Hero({ live }: { live: string | null }) {
         <p>{HERO.sub}</p>
         <div class="cta">
           <a class="btn" href="#demo">See the attack live</a>
-          <a class="btn ghost" href="blackout-kit.html" target="_blank" rel="noopener">Open the kit</a>
+          <a class="btn ghost" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol</a>
           <a class="btn ghost" href="#download">Download the kit</a>
         </div>
       </div>
@@ -86,7 +86,7 @@ export function Trust() {
   );
 }
 
-export function Download({ sha }: { sha: string | null }) {
+export function Download({ sha, offline }: { sha: string | null; offline: boolean }) {
   return (
     <section id="download">
       <div class="wrap">
@@ -95,8 +95,13 @@ export function Download({ sha }: { sha: string | null }) {
         <div class="cols">
           <div class="card">
             <h3>1. Use it now, or keep a copy</h3>
-            <p class="cta"><a class="btn" href="blackout-kit.html" target="_blank" rel="noopener">Open the kit</a><a class="btn ghost" href="blackout-kit.html" download>Download blackout-kit.html</a></p>
-            <p class="muted" style="margin-top:8px;font-size:14px">Opening it here works while this site is up. Keep a downloaded copy for the day it isn’t. To try it: enter <b>demoswap-blackout.eth</b> and connect a Sepolia wallet.</p>
+            <p class="cta"><a class="btn" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol</a><a class="btn ghost" href="blackout-kit.html" target="_blank" rel="noopener">Open the kit</a><a class="btn ghost" href="blackout-kit.html" download>Download blackout-kit.html</a></p>
+            <p class="muted" style="margin-top:8px;font-size:14px">The demo link fills in <b>{ENS_NAME}</b> for you; connect a Sepolia wallet. For a real protocol, type its name from its official docs.</p>
+            {offline ? (
+              <p class="ok" style="margin-top:8px;font-size:14px" data-offline-ready>✓ Saved in this browser: this page and the kit keep opening even if this website goes down. Your own downloaded copy is still the strongest backup.</p>
+            ) : (
+              <p class="muted" style="margin-top:8px;font-size:14px">Opening it here works while this site is up. Keep a downloaded copy for the day it isn’t.</p>
+            )}
             <p style="margin-top:12px">sha256 of this copy:</p>
             <p class="mono">{sha ?? 'see blackout-kit.html.sha256'}</p>
           </div>
