@@ -5,6 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 SCOPE=${VERCEL_SCOPE:-harman206s-projects}
 SOURCE_DATE_EPOCH=0 pnpm --filter @copeybara/kit build >/dev/null
+node apps/extension/scripts/build.mjs >/dev/null
 pnpm --filter @copeybara/site build >/dev/null
 rm -rf deploy/blackout/assets deploy/blackout/*.html deploy/blackout/*.sha256 deploy/blackout/demo-runs
 mkdir -p deploy/blackout && cp -R apps/site/dist/. deploy/blackout/
