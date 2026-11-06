@@ -75,6 +75,8 @@ type Answer = { ok: true; value: unknown } | { ok: false; revert: string; data?:
 
 class PathFailure extends Error {}
 class RateLimited extends PathFailure {}
+/** The provider answered, but refused this particular request. Not a dead path. */
+class RequestRefused extends Error {}
 
 /** After enough paths answered, wait this long for the rest, then decide without them. */
 const GRACE_MS = 1000;
@@ -111,11 +113,15 @@ export function createQuorum(opts: QuorumOpts): Quorum {
           const data = typeof body.error.data === 'string' ? body.error.data : undefined;
           return { ok: false, revert: body.error.message ?? 'execution reverted', data };
         }
-        throw new PathFailure(`RPC error ${body.error.code}: ${body.error.message}`);
+        const msg = `RPC error ${body.error.code}: ${body.error.message}`;
+        // Overloaded (rate/plan limits) → back off and bench the path. Anything else is this request refused
+        // (e.g. "pruned history", "block range too large"): the provider is alive, so it stays in the quorum.
+        if (body.error.code === -32005 || /limit|too many|quota/i.test(body.error.message ?? '')) throw new RateLimited(msg);
+        throw new RequestRefused(msg);
       }
       return { ok: true, value: body.result };
     } catch (e) {
-      if (e instanceof PathFailure) throw e;
+      if (e instanceof PathFailure || e instanceof RequestRefused) throw e;
       throw new PathFailure(ac.signal.aborted ? `timeout after ${timeoutMs} ms` : (e as Error).message);
     } finally {
       clearTimeout(timer);
@@ -133,6 +139,7 @@ export function createQuorum(opts: QuorumOpts): Quorum {
         return a;
       } catch (e) {
         p.lastError = (e as Error).message;
+        if (e instanceof RequestRefused) return null; // deterministic: no retry, no cooldown
         if (e instanceof RateLimited && attempt < retries) await new Promise((r) => setTimeout(r, 250 * 2 ** attempt));
       }
     }

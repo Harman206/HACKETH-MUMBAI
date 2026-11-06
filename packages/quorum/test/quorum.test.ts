@@ -188,4 +188,22 @@ describe('quorum', () => {
     f[1]!.set({ logs: [] });
     await expect(q.getLogs({ address: TO, topics: ['0x01'] }, 90n, 100n)).rejects.toMatchObject({ kind: 'DISAGREE' });
   });
+
+  test('a provider that refuses one request (pruned getLogs) is not benched for the next reads, and is not retried', async () => {
+    const f = await three([{ logsError: { code: 4444, message: 'pruned history unavailable' } }, {}, {}]);
+    const q = createQuorum({ urls: f.map((x) => x.url), ...fast });
+    expect(await q.getLogs({ address: TO }, 1n, 100n)).toEqual([]); // the other two agree
+    expect(f[0]!.calls.filter((c) => c.method === 'eth_getLogs')).toHaveLength(1); // deterministic error: no retries
+    expect(q.status()[0]!.up).toBe(true);
+    f[1]!.set({ status: 500 }); // now another provider really fails
+    expect(await q.call({ to: TO, data: '0x' }, 100n)).toBe('0x01'); // still 2 answers thanks to path 0
+  });
+
+  test('a JSON-RPC rate-limit error still benches the provider (it is overloaded, not refusing one request)', async () => {
+    const f = await three([{ callError: { code: -32005, message: 'limit exceeded' } }, {}, {}]);
+    const q = createQuorum({ urls: f.map((x) => x.url), timeoutMs: 300, retries: 0 });
+    await q.call({ to: TO, data: '0x' }, 100n);
+    expect(q.status()[0]!.up).toBe(false);
+  });
 });
+
