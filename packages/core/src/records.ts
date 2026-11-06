@@ -10,6 +10,8 @@ export const COPEYBARA_KEYS = {
   extension: 'org.copeybara.extension',
   status: 'org.copeybara.status',
   blocklist: 'org.copeybara.blocklist',
+  /** declarative exit spec for the protocol's own contracts (see ./exitspec) */
+  exits: 'org.copeybara.exits',
 } as const;
 
 export class RecordFormatError extends Error {

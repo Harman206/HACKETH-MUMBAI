@@ -1,8 +1,9 @@
 export type Address = `0x${string}`;
 export type Hex = `0x${string}`;
 
-export type AdapterId = 'uniswap-v3' | 'uniswap-v4' | 'aave-v3' | 'curve-3pool';
-export const ADAPTER_IDS: readonly AdapterId[] = ['uniswap-v3', 'uniswap-v4', 'aave-v3', 'curve-3pool'];
+/** `spec`: the protocol's own contracts, exited through the declarative org.copeybara.exits record (no adapter code). */
+export type AdapterId = 'uniswap-v3' | 'uniswap-v4' | 'aave-v3' | 'curve-3pool' | 'spec';
+export const ADAPTER_IDS: readonly AdapterId[] = ['uniswap-v3', 'uniswap-v4', 'aave-v3', 'curve-3pool', 'spec'];
 
 /** A transaction the kit wants the wallet to send. */
 export interface TxRequest {

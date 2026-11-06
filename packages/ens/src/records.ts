@@ -2,7 +2,9 @@ import { decodeAbiParameters, decodeFunctionResult, encodeFunctionData, namehash
 import { normalize, packetToBytes } from 'viem/ens';
 import {
   COPEYBARA_KEYS,
+  checkSpecAgainstManifest,
   parseBlocklist,
+  parseExitSpec,
   parseManifest,
   parseRelease,
   parseSiteRecord,
@@ -10,6 +12,7 @@ import {
   textResolverAbi,
   universalResolverAbi,
   type Address,
+  type ExitSpec,
   type Manifest,
   type ReleaseRecord,
   type StatusRecord,
@@ -26,6 +29,7 @@ export const ENS_KEYS = [
   COPEYBARA_KEYS.extension,
   COPEYBARA_KEYS.status,
   COPEYBARA_KEYS.blocklist,
+  COPEYBARA_KEYS.exits,
 ] as const;
 export type EnsKey = (typeof ENS_KEYS)[number];
 
@@ -46,6 +50,8 @@ export interface CopeybaraRecords {
   /** null only when the record is malformed (see problems); an empty record is { state: 'ok' } */
   status: StatusRecord | null;
   blocklist: string[];
+  /** declarative exits for the protocol's own contracts; null when absent, malformed or inconsistent with the manifest */
+  exitSpec?: ExitSpec | null;
   /** optional records that were present but unreadable: they never stop an exit, but callers must not show them as fine */
   problems: RecordProblem[];
   block: bigint;
@@ -130,6 +136,12 @@ export async function readCopeybaraRecords(
       return fallback;
     }
   };
+  let exitSpec = optional<ExitSpec | null>(K.exits, parseExitSpec, null);
+  const mismatch = checkSpecAgainstManifest(exitSpec, manifest);
+  if (mismatch.length) {
+    problems.push({ key: K.exits, message: mismatch.join(' ') });
+    exitSpec = null;
+  }
   return {
     name,
     url: t.url || null,
@@ -139,6 +151,7 @@ export async function readCopeybaraRecords(
     extension: t[K.extension] ? optional<ReleaseRecord | null>(K.extension, parseRelease, null) : null,
     status: optional<StatusRecord | null>(K.status, parseStatus, null),
     blocklist: optional(K.blocklist, parseBlocklist, []),
+    exitSpec,
     problems,
     block,
     resolver: got[0]!.resolver,
