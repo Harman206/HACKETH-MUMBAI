@@ -25,9 +25,10 @@
     "url": "http://demoswap.localhost:8080",
     "releaseTxs": [
       "0xd0f3285443b6a9af6039e24c96c33ffc89f3cab3062d095e10b46c724b94422d",
-      "0x1d87605fb4022bb1e958d39f4cc805894edc1282b3a8ddb27d0e0af630cba5ed"
+      "0x1d87605fb4022bb1e958d39f4cc805894edc1282b3a8ddb27d0e0af630cba5ed",
+      "0x07212a58ac250c94b5688c97fd370cbfcc90b8360be9ad147a33a3dc98f0b06a"
     ],
-    "extensionRelease": "2ba251b1d600b5aa2b2098c7e60dbd9b12dbfc86c3caee2b544b90a648a2343d",
-    "extensionReleaseVersion": 1
+    "extensionRelease": "44d7fe480b8429f12637e3670c4564b4a5e520464c661adbf0dd64f2ba2b5d67",
+    "extensionReleaseVersion": 2
   }
 }
