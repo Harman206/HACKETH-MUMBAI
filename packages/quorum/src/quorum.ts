@@ -57,6 +57,17 @@ export interface Quorum {
   ): Promise<ContractFunctionReturnType<abi, 'view' | 'pure', fn>>;
   getBalance(addr: Address, block: bigint): Promise<bigint>;
   getReceipt(hash: Hex): Promise<Receipt | null>;
+  /** eth_getLogs over [fromBlock, toBlock]; every answering path must return the same logs. */
+  getLogs(filter: { address: Address | Address[]; topics?: (Hex | Hex[] | null)[] }, fromBlock: bigint, toBlock: bigint): Promise<RpcLog[]>;
+}
+
+export interface RpcLog {
+  address: Address;
+  topics: Hex[];
+  data: Hex;
+  blockNumber: Hex;
+  transactionHash: Hex;
+  logIndex: Hex;
 }
 
 /** An answer: either a JSON-RPC result, or an execution revert (which is a real answer, not a failure). */
@@ -230,6 +241,17 @@ export function createQuorum(opts: QuorumOpts): Quorum {
     async getBalance(addr, block) {
       await ensureChain();
       return BigInt((await agreed('eth_getBalance', [addr, toHex(block)])) as string);
+    },
+
+    async getLogs(filter, fromBlock, toBlock) {
+      await ensureChain();
+      const norm = (logs: RpcLog[]) =>
+        logs.map(({ address, topics, data, blockNumber, transactionHash, logIndex }) => ({ address, topics, data, blockNumber, transactionHash, logIndex }));
+      const answers = await gather('eth_getLogs', [{ ...filter, fromBlock: toHex(fromBlock), toBlock: toHex(toBlock) }]);
+      const vals = answers.map((a) => (a.ok ? norm(a.value as RpcLog[]) : null));
+      const k = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === 'string' ? x.toLowerCase() : x));
+      if (vals.some((v) => v === null || k(v) !== k(vals[0]))) throw new QuorumError('DISAGREE', 'RPC paths disagree on eth_getLogs.');
+      return vals[0]!;
     },
 
     async getReceipt(hash) {

@@ -179,4 +179,13 @@ describe('quorum', () => {
     const q = createQuorum({ urls: f.map((x) => x.url), timeoutMs: 4000, retries: 0 });
     await expect(q.call({ to: TO, data: '0x' }, 100n)).rejects.toMatchObject({ kind: 'DISAGREE' });
   });
+
+  test('getLogs: all paths agree → logs; one differs → DISAGREE', async () => {
+    const log = { address: TO, topics: ['0x01'], data: '0x', blockNumber: '0x64', transactionHash: '0xaa', logIndex: '0x0' };
+    const f = await three([{ logs: [log] }, { logs: [log] }, { logs: [log] }]);
+    const q = createQuorum({ urls: f.map((x) => x.url), ...fast });
+    expect(await q.getLogs({ address: TO, topics: ['0x01'] }, 90n, 100n)).toEqual([log]);
+    f[1]!.set({ logs: [] });
+    await expect(q.getLogs({ address: TO, topics: ['0x01'] }, 90n, 100n)).rejects.toMatchObject({ kind: 'DISAGREE' });
+  });
 });

@@ -11,6 +11,7 @@ export interface FakeOpts {
   status?: number;
   receipt?: unknown;
   balance?: string;
+  logs?: unknown[];
 }
 
 export interface Fake {
@@ -48,6 +49,8 @@ export async function fakeRpc(initial: FakeOpts = {}): Promise<Fake> {
           return reply({ result: typeof o.callResult === 'function' ? o.callResult(params) : o.callResult });
         case 'eth_getBalance':
           return reply({ result: o.balance ?? '0x0' });
+        case 'eth_getLogs':
+          return reply({ result: o.logs ?? [] });
         case 'eth_getTransactionReceipt':
           return reply({ result: o.receipt ?? null });
         default:
