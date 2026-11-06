@@ -8,7 +8,7 @@ import { useEffect, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState, Stats } from '../shared/types';
 import { ago, getState, openPage, protocolHealth, send, short, type Tone } from './api';
-import { Badges, Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
+import { Badges, BuildProofCard, Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
 import { Copey, Icon, type IconName } from './icons';
 import { scanPositions, type Scan } from './positions';
 
@@ -336,6 +336,8 @@ function Dashboard() {
           ))}
         </div>
       </section>
+
+      <section class="dash-section"><BuildProofCard /></section>
 
       <p class="muted tiny" style="margin-top:28px;font-family:var(--mono)">Copeybara {st.version} · wallet {st.settings.account ? short(st.settings.account) : 'not set'}</p>
     </div>

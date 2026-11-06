@@ -1,4 +1,6 @@
 import type { ComponentChildren } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
+import { formatBuildProof, getBuildProof, type BuildProofView } from './build-proof';
 import type { ProtocolState, PublicState } from '../shared/types';
 import { ago, protocolHealth, short, type Tone } from './api';
 import { Brand, Icon, type IconName } from './icons';
@@ -118,6 +120,39 @@ export function ProtocolCard({ p }: { p: ProtocolState }) {
         </>
       ) : (
         <p class="small warn-text">{p.error ?? 'Reading…'}</p>
+      )}
+    </div>
+  );
+}
+
+/** "Build proof": the worker hashes the installed files and compares them with the protocol's ENS record. */
+export function BuildProofCard({ compact }: { compact?: boolean }) {
+  const [v, setV] = useState<BuildProofView | null>(null);
+  useEffect(() => {
+    void getBuildProof()
+      .then((r) => setV(r ? formatBuildProof(r) : { tone: 'grey', title: 'Build proof unavailable', detail: 'The worker did not answer.', rows: [] }))
+      .catch((e) => setV({ tone: 'grey', title: 'Build proof unavailable', detail: (e as Error).message, rows: [] }));
+  }, []);
+  if (!v) return null;
+  const icon = v.tone === 'ok' ? 'shield-check' : v.tone === 'bad' ? 'x-octagon' : v.tone === 'warn' ? 'alert-triangle' : 'shield';
+  const shortHash = (x: string) => (/^(0x)?[0-9a-f]{64}$/i.test(x) ? `${x.slice(0, 10)}…${x.slice(-8)}` : x);
+  return (
+    <div class={`card proof tone-${v.tone}${compact ? ' compact' : ''}`} data-build-proof={v.tone}>
+      <div class="proof-head">
+        <span class={`status-mark ${v.tone}`} aria-hidden="true"><Icon name={icon} size={18} /></span>
+        <div class="grow">
+          <p class="label" style="margin-bottom:3px">Build proof</p>
+          <b>{v.title}</b>
+          <p class="small muted" style="margin:2px 0 0">{v.detail}</p>
+        </div>
+      </div>
+      {v.rows.length > 0 && (
+        <details class="more">
+          <summary>Hashes</summary>
+          <dl class="kv" style="margin-top:8px">
+            {v.rows.map((r) => <><dt>{r.label}</dt><dd class="mono" title={r.value}>{shortHash(r.value)}</dd></>)}
+          </dl>
+        </details>
       )}
     </div>
   );

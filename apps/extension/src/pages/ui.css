@@ -731,3 +731,11 @@ ul.more-list b { color: var(--ink); }
 .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 .badges .pill { font-size: 11px; padding: 2px 8px 2px 6px; }
 .badges .pill .ico { width: 12px; height: 12px; }
+.card.proof { margin: 0; }
+.proof-head { display: flex; gap: 12px; align-items: flex-start; }
+.proof-head .status-mark { width: 38px; height: 38px; border-radius: 11px; }
+.proof.tone-ok { border-color: color-mix(in srgb, var(--ok) 30%, var(--line)); }
+.proof.tone-bad { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); background: linear-gradient(180deg, var(--bad-bg), var(--card) 70%); }
+.proof.compact { padding: 14px; }
+.proof.compact b { font-size: 14px; }
+.proof .kv dd { text-align: right; }

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState, SiteState } from '../shared/types';
 import { ago, getState, getTab, openPage, protocolHealth, send, short, siteText, type Tone } from './api';
-import { Badges, Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
+import { Badges, BuildProofCard, Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
 import { Copey, Icon, type IconName, type Mood } from './icons';
 import { scanPositions, type Scan } from './positions';
 
@@ -301,6 +301,8 @@ function Panel() {
         </div>
         <p class="foot-note"><Icon name="lock" size={13} />Counted on this device only. Last ENS check {ago(stats.lastSync)}.</p>
       </Section>
+
+      <section class="panel-section"><BuildProofCard compact /></section>
 
       {/* (7) footer */}
       <footer class="panel-foot">
