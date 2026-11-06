@@ -7,7 +7,7 @@
 set -euo pipefail
 
 UR=0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe # ENSv2 UniversalResolver on Sepolia
-DEFAULT_RPCS=(https://ethereum-sepolia-rpc.publicnode.com https://sepolia.gateway.tenderly.co https://1rpc.io/sepolia)
+DEFAULT_RPCS=(https://ethereum-sepolia-rpc.publicnode.com https://sepolia.gateway.tenderly.co https://rpc.sepolia.ethpandaops.io)
 
 # Normalise (lowercase) and DNS-encode a name, label lengths in BYTES.
 dns_encode() {

@@ -9,7 +9,7 @@ import { state } from './helpers';
 const SITE_DIST = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'site', 'dist');
 
 /** The website in public mode (no booth): live ENS proof, no third-party requests, keyboard and phone-width usable. */
-const PUBLIC_RPCS = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://1rpc.io'];
+const PUBLIC_RPCS = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://rpc.sepolia.ethpandaops.io'];
 
 test('website public mode: explains, reads ENS live, zero third-party requests', async ({ page }) => {
   const s = state();

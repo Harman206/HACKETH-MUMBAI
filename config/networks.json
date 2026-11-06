@@ -19,12 +19,12 @@
     "11155111": [
       "https://ethereum-sepolia-rpc.publicnode.com",
       "https://sepolia.gateway.tenderly.co",
-      "https://1rpc.io/sepolia"
+      "https://rpc.sepolia.ethpandaops.io"
     ],
     "1": [
       "https://ethereum-rpc.publicnode.com",
       "https://gateway.tenderly.co/public/mainnet",
-      "https://1rpc.io/eth"
+      "https://eth.drpc.org"
     ]
   }
 }

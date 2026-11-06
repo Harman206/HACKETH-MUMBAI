@@ -27,8 +27,8 @@ export const ANVIL_ACCOUNTS: Address[] = [
 
 /** Fork sources, tried in order (env first). Public endpoints flake; anvil only needs one. */
 export const FORK_RPCS: Record<1 | 11155111, string[]> = {
-  1: [process.env.MAINNET_RPC, 'https://ethereum-rpc.publicnode.com', 'https://1rpc.io/eth', 'https://gateway.tenderly.co/public/mainnet'].filter(Boolean) as string[],
-  11155111: [process.env.SEPOLIA_RPC, 'https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://1rpc.io/sepolia'].filter(Boolean) as string[],
+  1: [process.env.MAINNET_RPC, 'https://ethereum-rpc.publicnode.com', 'https://eth.drpc.org', 'https://gateway.tenderly.co/public/mainnet'].filter(Boolean) as string[],
+  11155111: [process.env.SEPOLIA_RPC, 'https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://rpc.sepolia.ethpandaops.io'].filter(Boolean) as string[],
 };
 
 function anvilBin(): string {

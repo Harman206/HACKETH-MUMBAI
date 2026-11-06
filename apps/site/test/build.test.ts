@@ -51,3 +51,9 @@ test('qr.svg is the QR code of the public site URL, and is precached for offline
   expect(readFileSync(join(SITE, 'dist', 'sw.js'), 'utf8')).toContain('"qr.svg"');
 });
 
+test('CSP connect-src allows exactly the origins of the default Sepolia RPCs the live proof reads through', async () => {
+  const networks = JSON.parse(readFileSync(join(SITE, '..', '..', 'config', 'networks.json'), 'utf8')) as { defaultRpcs: Record<string, string[]> };
+  const csp = html.match(/connect-src ([^;]+);/)![1]!.split(' ');
+  for (const u of networks.defaultRpcs['11155111']!) expect(csp, u).toContain(new URL(u).origin);
+});
+

@@ -22,7 +22,7 @@ export function loadEnv(file = join(REPO, 'contracts', '.env')): Record<string, 
   return { ...out, ...(process.env as Record<string, string>) };
 }
 
-const PUBLIC_SEPOLIA = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://1rpc.io/sepolia'];
+const PUBLIC_SEPOLIA = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co', 'https://rpc.sepolia.ethpandaops.io'];
 
 /** Live Sepolia: fall back across public providers (one rate-limited provider must not stall the demo). Local forks: just the fork. */
 export function transportFor(rpcUrl: string) {
