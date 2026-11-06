@@ -35,6 +35,8 @@ export function compare(e: Expected, s: OnChainState): Check[] {
   const K = COPEYBARA_KEYS;
 
   out.push(s.resolver.toLowerCase() === e.resolver.toLowerCase() ? ok('resolver', s.resolver) : fail('resolver', `ENS resolves ${e.name} through ${s.resolver}, config says ${e.resolver}`));
+  if (s.owner) out.push(s.owner.toLowerCase() === e.safe.toLowerCase() ? ok('owner', `the Safe owns ${e.name}`) : fail('owner', `${e.name} is owned by ${s.owner}, not the Safe ${e.safe}`));
+  else if (s.owner === null) out.push(warn('owner', 'not checked: the owner of this name is not in the .eth registry'));
 
   try {
     const r = parseRelease(t[K.release] ?? '');

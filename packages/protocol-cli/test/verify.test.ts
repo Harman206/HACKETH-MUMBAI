@@ -13,6 +13,7 @@ const state = (over: Partial<OnChainState> = {}, roles: Record<string, Record<st
   texts: { url: 'https://x', [K.release]: `sha256:${H};v=3`, [K.manifest]: 'M', [K.exits]: 'E', [K.site]: SITE, [K.status]: '', [K.blocklist]: '', [K.extension]: '' },
   roles: { [WEB.toLowerCase()]: { root: 0n, url: ROLE_SET_TEXT }, [WATCHER.toLowerCase()]: { root: 0n, [K.status]: ROLE_SET_TEXT, [K.blocklist]: ROLE_SET_TEXT }, ...roles },
   safe: { threshold: 2n, owners: [SAFE, SAFE, SAFE], nonce: 0n },
+  owner: SAFE,
   ...over,
 });
 const expected = { name: 'x.eth', resolver: RESOLVER, safe: SAFE, websiteKey: WEB, watcher: WATCHER, kit: { sha256: H, version: 3 }, manifest: 'M', exits: 'E' };
@@ -33,6 +34,7 @@ describe('copeybara verify', () => {
     ['watcher can write the manifest', expected, state({}, { [WATCHER.toLowerCase()]: { root: 0n, [K.status]: ROLE_SET_TEXT, [K.manifest]: ROLE_SET_TEXT } }), 'watcher key'],
     ['resolver moved', expected, state({ resolver: SAFE }), 'resolver'],
     ['owner is not a Safe', expected, state({ safe: null }), 'safe'],
+    ['the name is owned by someone else', expected, state({ owner: WEB }), 'owner'],
   ])('MISMATCH: %s → exit 1', (_n, e, s, name) => {
     const cs = compare(e, s);
     expect(failed(cs)).toBe(true);
@@ -47,11 +49,13 @@ describe('copeybara verify', () => {
 
 describe('Copeybara certified (live checks)', () => {
   const records = { problems: [], release: { sha256: H, version: 3 }, manifest: { v: 1, chains: { '1': {} } } } as never;
-  const e = { resolver: RESOLVER, websiteKey: WEB, watcher: WATCHER };
+  const e = { safe: SAFE, resolver: RESOLVER, websiteKey: WEB, watcher: WATCHER };
   test('passes for a scoped, Safe-owned, watched name', () => {
     expect(failed(certifyLive(e, state(), records))).toBe(false);
   });
   test.each([
+    ['name owned by another account', state({ owner: WEB }), records],
+    ['owner not readable', state({ owner: null }), records],
     ['1-of-n Safe', state({ safe: { threshold: 1n, owners: [SAFE], nonce: 0n } }), records],
     ['no watcher role', state({}, { [WATCHER.toLowerCase()]: { root: 0n } }), records],
     ['website key over-privileged', state({}, { [WEB.toLowerCase()]: { root: ROLE_SET_TEXT } }), records],

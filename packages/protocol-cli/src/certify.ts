@@ -36,8 +36,10 @@ const same = (a: string[], b: string[]) => a.length === b.length && [...a].sort(
  * The on-chain half of "Copeybara certified": everything a browser can re-check from ENS alone. `records` is the kit's
  * own reading (readCopeybaraRecords), or the error it threw. The CLI adds the local half (kit bytes, drill).
  */
-export function certifyLive(e: Pick<CertifiedEntry, 'resolver' | 'websiteKey' | 'watcher'>, s: OnChainState, records: CopeybaraRecords | Error): Check[] {
+export function certifyLive(e: Pick<CertifiedEntry, 'safe' | 'resolver' | 'websiteKey' | 'watcher'>, s: OnChainState, records: CopeybaraRecords | Error): Check[] {
   const out: Check[] = [];
+  if (!s.owner) out.push(fail('owner', 'could not read the name’s owner from the .eth registry (only second-level .eth names can be certified)'));
+  else out.push(s.owner.toLowerCase() === e.safe.toLowerCase() ? ok('owner', `the Safe ${s.owner}`) : fail('owner', `owned by ${s.owner}, not the Safe ${e.safe}`));
   out.push(s.resolver.toLowerCase() === e.resolver.toLowerCase() ? ok('resolver', s.resolver) : fail('resolver', `resolves through ${s.resolver}, registry says ${e.resolver}`));
   if (!s.safe) out.push(fail('safe', 'the owner is not a Safe'));
   else if (s.safe.threshold < 2n) out.push(fail('safe', `${s.safe.threshold} of ${s.safe.owners.length}: one key can change the release`));

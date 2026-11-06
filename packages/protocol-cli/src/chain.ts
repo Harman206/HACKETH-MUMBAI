@@ -1,4 +1,4 @@
-import { parseAbi } from 'viem';
+import { keccak256, parseAbi, stringToHex } from 'viem';
 import { COPEYBARA_KEYS, type Address } from '@copeybara/core';
 import { readRawTexts } from '@copeybara/ens';
 import type { Quorum } from '@copeybara/quorum';
@@ -6,6 +6,7 @@ import { ROLE_SET_TEXT, ROOT_RESOURCE, resolverAbi, textResource } from './resol
 
 export const ALL_KEYS = ['url', ...Object.values(COPEYBARA_KEYS)] as const;
 
+const registryAbi = parseAbi(['function getOwner(uint256 anyId) view returns (address)']);
 const safeAbi = parseAbi(['function getThreshold() view returns (uint256)', 'function getOwners() view returns (address[])', 'function nonce() view returns (uint256)']);
 
 export interface OnChainState {
@@ -16,7 +17,12 @@ export interface OnChainState {
   /** roles[account][key] = role bitmap on that key's resource; roles[account].root = root roles. */
   roles: Record<string, Record<string, bigint>>;
   safe: { threshold: bigint; owners: Address[]; nonce: bigint } | null;
+  /** Owner of `<label>.eth` in the ENSv2 .eth registry; null when not read (no registry given, or not a second-level .eth name). */
+  owner?: Address | null;
 }
+
+/** `<label>` of a second-level .eth name, the only kind whose owner sits in the .eth registry. */
+export const ethLabel = (name: string): string | null => /^([a-z0-9-]+)\.eth$/.exec(name.toLowerCase())?.[1] ?? null;
 
 /** Everything verify / certify / propose compare against, read through the quorum at one pinned block. */
 export async function readOnChain(o: {
@@ -26,6 +32,8 @@ export async function readOnChain(o: {
   resolver: Address;
   safe: Address;
   accounts: Address[];
+  /** ENSv2 .eth registry (config/networks.json ens.ethRegistry): also read who owns the name. */
+  ethRegistry?: Address;
 }): Promise<OnChainState> {
   const { texts, block, resolver } = await readRawTexts(o.name, ALL_KEYS, o.q, { universalResolver: o.universalResolver });
   const roles: Record<string, Record<string, bigint>> = {};
@@ -48,7 +56,12 @@ export async function readOnChain(o: {
   } catch {
     safe = null;
   }
-  return { block, resolver, texts, roles, safe };
+  const label = ethLabel(o.name);
+  const owner =
+    o.ethRegistry && label
+      ? ((await o.q.read({ address: o.ethRegistry, abi: registryAbi, functionName: 'getOwner', args: [BigInt(keccak256(stringToHex(label)))] }, block)) as Address)
+      : null;
+  return { block, resolver, texts, roles, safe, owner };
 }
 
 /** Keys an account may write (ROLE_SET_TEXT on the key's resource or at the root). */

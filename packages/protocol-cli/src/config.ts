@@ -33,6 +33,8 @@ export interface CopeybaraConfig {
   /** Chain the ENS name lives on. Default 11155111 (Sepolia, ENSv2). */
   ensChainId?: number;
   universalResolver?: Address;
+  /** ENSv2 .eth registry, to check the Safe owns the name. Default: config/networks.json (Sepolia). */
+  ethRegistry?: Address;
   /** At least 3 RPCs per chain for quorum reads. Defaults: config/networks.json. */
   rpcs?: Record<string, string[]>;
   kit: { file: string; version: number };
@@ -109,6 +111,8 @@ export function checkConfig(raw: unknown): CopeybaraConfig {
 
 export const ensChainId = (c: CopeybaraConfig) => c.ensChainId ?? networks.ens.chainId;
 export const universalResolver = (c: CopeybaraConfig) => (c.universalResolver ?? networks.ens.universalResolver) as Address;
+/** The ENSv2 .eth registry that records who owns the name (known for Sepolia only). */
+export const ethRegistry = (c: CopeybaraConfig) => (c.ethRegistry ?? (ensChainId(c) === networks.ens.chainId ? networks.ens.ethRegistry : undefined)) as Address | undefined;
 
 export function rpcsFor(c: CopeybaraConfig, chainId: number): string[] {
   const urls = c.rpcs?.[String(chainId)] ?? (networks.defaultRpcs as Record<string, string[]>)[String(chainId)];

@@ -12,7 +12,7 @@ import { readCopeybaraRecords } from '@copeybara/ens';
 import { createQuorum, type Quorum } from '@copeybara/quorum';
 import { readOnChain } from './chain';
 import { certifyLive } from './certify';
-import { ensChainId, fromConfig, loadConfig, outDir, rpcsFor, universalResolver, type LoadedConfig } from './config';
+import { ensChainId, ethRegistry, fromConfig, loadConfig, outDir, rpcsFor, universalResolver, type LoadedConfig } from './config';
 import { buildManifest } from './manifest';
 import { buildProposal, grantId } from './propose';
 import { extensionRelease, kitRelease } from './release';
@@ -111,7 +111,7 @@ async function proposeCmd(l: LoadedConfig, o: Record<string, string | boolean | 
   let nonce = o.nonce !== undefined ? BigInt(o.nonce as string) : undefined;
   if (!o.offline) {
     const accounts = [cfg.websiteKey, ...(cfg.watcher ? [cfg.watcher.key] : [])];
-    const s = await readOnChain({ q: ensQuorum(l), name: cfg.name, universalResolver: universalResolver(cfg), resolver: cfg.resolver, safe: cfg.safe, accounts });
+    const s = await readOnChain({ q: ensQuorum(l), name: cfg.name, universalResolver: universalResolver(cfg), ethRegistry: ethRegistry(cfg), resolver: cfg.resolver, safe: cfg.safe, accounts });
     if (s.resolver.toLowerCase() !== cfg.resolver.toLowerCase()) die(`${cfg.name} resolves through ${s.resolver}, not the configured resolver ${cfg.resolver}.`);
     current = s.texts;
     granted = new Set();
@@ -151,7 +151,7 @@ async function verifyChecks(l: LoadedConfig): Promise<{ checks: Check[]; block: 
   const ext = cfg.extension ? (await extensionRelease(fromConfig(l, cfg.extension.file), cfg.extension.version, cfg.extension.tree)).record : undefined;
   const siteText = await readOut(l, 'site.txt');
   const q = ensQuorum(l);
-  const s = await readOnChain({ q, name: cfg.name, universalResolver: universalResolver(cfg), resolver: cfg.resolver, safe: cfg.safe, accounts: [cfg.websiteKey, ...(cfg.watcher ? [cfg.watcher.key] : [])] });
+  const s = await readOnChain({ q, name: cfg.name, universalResolver: universalResolver(cfg), ethRegistry: ethRegistry(cfg), resolver: cfg.resolver, safe: cfg.safe, accounts: [cfg.websiteKey, ...(cfg.watcher ? [cfg.watcher.key] : [])] });
   const checks = compare(
     {
       name: cfg.name,
@@ -187,9 +187,9 @@ async function certifyCmd(l: LoadedConfig) {
   const watcher = cfg.watcher ?? die('certify: a watcher (status + blocklist only) is required for Copeybara certified.');
   const { checks, block } = await verifyChecks(l);
   const q = ensQuorum(l);
-  const s = await readOnChain({ q, name: cfg.name, universalResolver: universalResolver(cfg), resolver: cfg.resolver, safe: cfg.safe, accounts: [cfg.websiteKey, watcher.key] });
+  const s = await readOnChain({ q, name: cfg.name, universalResolver: universalResolver(cfg), ethRegistry: ethRegistry(cfg), resolver: cfg.resolver, safe: cfg.safe, accounts: [cfg.websiteKey, watcher.key] });
   const records = await readCopeybaraRecords(cfg.name, q, { universalResolver: universalResolver(cfg) }).catch((e: Error) => e);
-  const live = certifyLive({ resolver: cfg.resolver, websiteKey: cfg.websiteKey, watcher: watcher.key }, s, records);
+  const live = certifyLive({ safe: cfg.safe, resolver: cfg.resolver, websiteKey: cfg.websiteKey, watcher: watcher.key }, s, records);
   const drill = await readOut(l, 'drill.json');
   const d = drill ? (JSON.parse(drill) as { pass?: boolean; kitSha256?: string; at?: string }) : null;
   const kitSha = (await kitRelease(fromConfig(l, cfg.kit.file), cfg.kit.version)).sha256;
