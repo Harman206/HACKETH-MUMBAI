@@ -77,6 +77,9 @@ function Bars({ data }: { data: { day: string; checks: number; blocks: number }[
   return (
     <svg class="bars" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Checks and stops per day, last 7 days">
       <line x1="0" x2={W} y1={H - pad + 0.5} y2={H - pad + 0.5} class="base" />
+      {data.every((d) => d.checks + d.blocks === 0) && (
+        <text x={W / 2} y={(H - pad) / 2 + 4} text-anchor="middle" class="bar-empty">No activity yet: open a protocol site and Copeybara starts counting</text>
+      )}
       {data.map((d, i) => {
         const x = i * (bw + gap);
         const hc = y(d.checks), hb = y(d.blocks);

@@ -739,3 +739,4 @@ ul.more-list b { color: var(--ink); }
 .proof.compact { padding: 14px; }
 .proof.compact b { font-size: 14px; }
 .proof .kv dd { text-align: right; }
+.bars .bar-empty { font: 500 12px/1 var(--sans); fill: var(--muted); }
