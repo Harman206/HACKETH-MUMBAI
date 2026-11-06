@@ -33,6 +33,8 @@ export interface Manifest {
 export interface ReleaseRecord {
   sha256: string;
   version: number;
+  /** extension build proof: sha256 over the sorted "<path>\t<sha256>\n" lines of the unpacked build (optional) */
+  tree?: string;
 }
 
 export interface ExpectedDelta {
