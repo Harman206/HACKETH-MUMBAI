@@ -63,7 +63,7 @@ describe('wallet', () => {
     expect(methods.filter((m) => m !== 'eth_chainId')).toEqual(['eth_estimateGas', 'eth_sendTransaction']);
     expect(methods.some((m) => /sign/i.test(m))).toBe(false);
     // 0x186a0 = 100000 → 125000 = 0x1e848
-    expect(p.request).toHaveBeenCalledWith({ method: 'eth_sendTransaction', params: [{ from: ACC, to: ACC, data: '0x1234', value: '0x0', gas: '0x1e848' }] });
+    expect(p.request).toHaveBeenCalledWith({ method: 'eth_sendTransaction', params: [{ from: ACC, to: ACC, data: '0x1234', value: '0x0', chainId: '0xaa36a7', gas: '0x1e848' }] });
   });
 
   test('senderFrom surfaces a failing wallet estimate as a plain error and does not send', async () => {

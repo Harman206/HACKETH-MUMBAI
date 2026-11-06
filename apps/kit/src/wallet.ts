@@ -70,7 +70,7 @@ export function senderFrom(p: Eip1193, account: Address): Sender {
       if (tx.from.toLowerCase() !== account.toLowerCase()) throw new Error('Refusing to send for an account other than the connected account.');
       const have = Number(await p.request({ method: 'eth_chainId' }));
       if (have !== tx.chainId) throw new WrongChainError(tx.chainId, have);
-      const params = { from: tx.from, to: tx.to, data: tx.data, value: toHex(tx.value) };
+      const params = { from: tx.from, to: tx.to, data: tx.data, value: toHex(tx.value), chainId: toHex(tx.chainId) };
       let estimate: bigint;
       try {
         estimate = BigInt((await p.request({ method: 'eth_estimateGas', params: [params] })) as string);
