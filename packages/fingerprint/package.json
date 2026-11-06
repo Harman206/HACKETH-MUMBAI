@@ -7,12 +7,17 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./build": "./src/build.ts"
+    "./build": "./src/build.ts",
+    "./load": {
+      "types": "./src/load.d.ts",
+      "default": "./src/load.js"
+    }
   },
   "dependencies": {
     "@copeybara/core": "workspace:*",
     "@copeybara/sitecheck": "workspace:*",
     "@copeybara/ens": "workspace:*",
-    "@copeybara/quorum": "workspace:*"
+    "@copeybara/quorum": "workspace:*",
+    "tsx": "4.19.2"
   }
 }

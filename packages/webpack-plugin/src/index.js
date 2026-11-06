@@ -1,19 +1,17 @@
-import { fingerprintBuild, type PluginOptions } from '@copeybara/fingerprint/build';
-
-/** The parts of webpack's Compiler this plugin touches (structural, so no webpack dependency). */
-export interface CompilerLike {
-  options: { output: { path?: string } };
-  hooks: { afterEmit: { tapPromise(name: string, fn: (compilation: { errors: unknown[] }) => Promise<void>): void } };
-}
+import { loadFingerprintBuild } from '@copeybara/fingerprint/load';
 
 /**
  * After webpack emits: fingerprint output.path (or `dist`), write .well-known/copeybara-site.json, print / append the
  * CI summary, and add a compilation error on an unpinned third-party script so the build fails. Never publishes.
+ * Plain JS: webpack and Next.js load their config with plain Node.
  */
 export class CopeybaraWebpackPlugin {
-  constructor(private readonly o: PluginOptions & { dist?: string } = {}) {}
+  /** @param {import('@copeybara/fingerprint/build').PluginOptions & { dist?: string }} [o] */
+  constructor(o = {}) {
+    this.o = o;
+  }
 
-  apply(compiler: CompilerLike) {
+  apply(compiler) {
     compiler.hooks.afterEmit.tapPromise('CopeybaraWebpackPlugin', async (compilation) => {
       const dist = this.o.dist ?? compiler.options.output.path;
       if (!dist) {
@@ -21,6 +19,7 @@ export class CopeybaraWebpackPlugin {
         return;
       }
       try {
+        const { fingerprintBuild } = await loadFingerprintBuild();
         await fingerprintBuild(dist, this.o);
       } catch (e) {
         compilation.errors.push(e);
