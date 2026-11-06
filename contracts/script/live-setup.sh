@@ -18,13 +18,15 @@ echo "deployer $DEPLOYER balance $(cast balance $DEPLOYER --ether --rpc-url $SEP
 
 if [ ! -f "$DF" ] || [ "$(jq -r '.tokenId // empty' "$DF")" = "" ]; then
   if [ ! -f "$DF" ]; then
-    forge script script/SetupName.s.sol --sig "commit()" --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+    forge script script/SetupName.s.sol --sig "commit()" --rpc-url "$SEPOLIA_RPC" --broadcast --slow \
+      || forge script script/SetupName.s.sol --sig "commit()" --rpc-url "$SEPOLIA_RPC" --broadcast --slow --resume
     echo "committed; waiting 70 s for MIN_COMMITMENT_AGE"; sleep 70
     # local fork rehearsal only: anvil does not mine empty blocks, so advance the chain clock
     case "$SEPOLIA_RPC" in http://127.0.0.1*|http://localhost*) cast rpc evm_mine --rpc-url "$SEPOLIA_RPC" >/dev/null ;; esac
   fi
   case "$SEPOLIA_RPC" in http://127.0.0.1*|http://localhost*) cast rpc evm_mine --rpc-url "$SEPOLIA_RPC" >/dev/null ;; esac
-  forge script script/SetupName.s.sol --sig "finish()" --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  forge script script/SetupName.s.sol --sig "finish()" --rpc-url "$SEPOLIA_RPC" --broadcast --slow \
+    || forge script script/SetupName.s.sol --sig "finish()" --rpc-url "$SEPOLIA_RPC" --broadcast --slow --resume
 fi
 jq . "$DF"
 
@@ -36,21 +38,35 @@ fi
 if [ ! -f "$DF.site-published" ]; then
   env -u RELEASE -u MANIFEST_FILE SITE_HASH="$(node ../scripts/site-hash.mjs ../harness/site/app.js)" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow && touch "$DF.site-published"
 fi
-./script/permission-checks.sh
+if [ -f "$PERMISSIONS_FILE" ] && [ "$(jq '[.[] | select(.pass | not)] | length' "$PERMISSIONS_FILE")" = "0" ] && [ -z "${FORCE_PERMISSION_CHECKS:-}" ]; then
+  echo "permission checks already recorded and passing ($PERMISSIONS_FILE); set FORCE_PERMISSION_CHECKS=1 to resend"
+else
+  ./script/permission-checks.sh
+fi
 
 # Publish the real kit fingerprint as release v2 (v1 was a placeholder), once per kit build.
 ( cd .. && SOURCE_DATE_EPOCH=0 pnpm --filter @blackout/kit build >/dev/null )
 KIT_SHA=$(cut -d' ' -f1 ../apps/kit/dist/blackout-kit.html.sha256)
 if [ "$(jq -r '.kitRelease // empty' "$DF")" != "$KIT_SHA" ]; then
-  env -u MANIFEST_FILE RELEASE="sha256:$KIT_SHA;v=${KIT_VERSION:-2}" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  # Versions only go up: read the live record, publish current + 1.
+  NAME_NOW=$(jq -r .name "$DF")
+  CUR=$(../scripts/verify-kit.sh --release-only "$NAME_NOW" "$SEPOLIA_RPC" | sed -n 's/.*;v=\([0-9]*\).*/\1/p')
+  KIT_VERSION=${KIT_VERSION:-$(( ${CUR:-1} + 1 ))}
+  echo "publishing release v=$KIT_VERSION (was v=${CUR:-none})"
+  env -u MANIFEST_FILE RELEASE="sha256:$KIT_SHA;v=$KIT_VERSION" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
   jq --arg s "$KIT_SHA" '.kitRelease=$s' "$DF" > /tmp/bo.json && mv /tmp/bo.json "$DF"
 fi
-../scripts/verify-kit.sh ../apps/kit/dist/blackout-kit.html "$(jq -r .name "$DF")" "$SEPOLIA_RPC"
+# Independent check through 3 public RPCs (a local fork rehearsal can only use the fork itself).
+case "$SEPOLIA_RPC" in
+  http://127.0.0.1*|http://localhost*) ../scripts/verify-kit.sh ../apps/kit/dist/blackout-kit.html "$(jq -r .name "$DF")" "$SEPOLIA_RPC" "$SEPOLIA_RPC" "$SEPOLIA_RPC" ;;
+  *) ../scripts/verify-kit.sh ../apps/kit/dist/blackout-kit.html "$(jq -r .name "$DF")" ;;
+esac
 
 # Seed three Uniswap v3 test positions into DEMO_WALLET (your MetaMask address), once.
 POS=${POSITIONS_FILE:-${DF%.json}-positions.json}
 if [ ! -f "$POS" ]; then
-  TEST_WALLET_KEY=$DEPLOYER_KEY POSITIONS_FILE=$POS forge script script/SeedPositions.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow
+  TEST_WALLET_KEY=$DEPLOYER_KEY POSITIONS_FILE=$POS forge script script/SeedPositions.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow \
+    || TEST_WALLET_KEY=$DEPLOYER_KEY POSITIONS_FILE=$POS forge script script/SeedPositions.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow --resume
 fi
 jq . "$POS"
 

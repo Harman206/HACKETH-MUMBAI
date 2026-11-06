@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {BlackoutForkFixture} from "./SetupName.fork.t.sol";
+import {SafeExec} from "../script/lib/SafeExec.sol";
 import {
     IEnhancedAccessControl,
     IPermissionedRegistry,
@@ -34,21 +35,39 @@ contract PermissionsForkTest is BlackoutForkFixture {
 
     function test_webKey_cannotUpgradeResolver() public {
         vm.prank(webKey);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IEnhancedAccessControl.EACUnauthorizedAccountRoles.selector, 0, ENSv2Roles.ROLE_UPGRADE, webKey)
+        );
         resolver.upgradeToAndCall(c.resolverImpl, "");
     }
 
     function test_webKey_cannotGrantItselfReleaseRole() public {
         bytes memory setter = abi.encodeCall(IPermissionedResolver.setText, (ENSName.dnsEncodeEth(label), "org.blackout.release", ""));
         vm.prank(webKey);
-        vm.expectRevert();
+        vm.expectPartialRevert(IEnhancedAccessControl.EACCannotGrantRoles.selector);
         resolver.grantSetterRoles(setter, webKey);
     }
 
     function test_webKey_cannotGrantItselfRootRoles() public {
         vm.prank(webKey);
-        vm.expectRevert();
+        vm.expectPartialRevert(IEnhancedAccessControl.EACCannotGrantRoles.selector);
         resolver.grantRootRoles(ENSv2Roles.ROLE_SET_TEXT, webKey);
+    }
+
+    // Positive controls: the same calls succeed for the Safe, so the reverts above are about authority, not encoding.
+    function test_control_safe_canGrantSetterRole() public {
+        address other = makeAddr("other");
+        bytes memory setter = abi.encodeCall(IPermissionedResolver.setText, (ENSName.dnsEncodeEth(label), "org.blackout.release", ""));
+        bytes memory call_ = abi.encodeCall(IPermissionedResolver.grantSetterRoles, (setter, other));
+        assertTrue(SafeExec.exec(safe, address(resolver), call_, ownerKeys));
+        assertEq(resolver.roles(ENSName.textResource("org.blackout.release"), other), ENSv2Roles.ROLE_SET_TEXT);
+    }
+
+    function test_control_safe_canGrantRootRole() public {
+        address other = makeAddr("other");
+        bytes memory call_ = abi.encodeCall(IEnhancedAccessControl.grantRootRoles, (ENSv2Roles.ROLE_SET_TEXT, other));
+        assertTrue(SafeExec.exec(safe, address(resolver), call_, ownerKeys));
+        assertTrue(resolver.hasRootRoles(ENSv2Roles.ROLE_SET_TEXT, other));
     }
 
     function test_webKey_canWriteUrl() public {

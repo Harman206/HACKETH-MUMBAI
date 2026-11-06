@@ -23,6 +23,12 @@ dns_encode() {
 }
 
 if [ "${1:-}" = "--dns-only" ]; then dns_encode "$2"; exit 0; fi
+# --release-only <name> <rpc>: print the raw org.blackout.release record (used by the live runbook)
+if [ "${1:-}" = "--release-only" ]; then
+  CAST=$(command -v cast || echo "$HOME/.foundry/bin/cast"); N=$(printf '%s' "$2" | tr 'A-Z' 'a-z')
+  OUT=$("$CAST" call "$UR" "resolve(bytes,bytes)(bytes,address)" "$(dns_encode "$N")" "$("$CAST" calldata "text(bytes32,string)" "$("$CAST" namehash "$N")" org.blackout.release)" --rpc-url "$3" | head -1)
+  "$CAST" abi-decode "text()(string)" "$OUT" | tr -d '"'; exit 0
+fi
 
 FILE=${1:?usage: verify-kit.sh <file> <ens-name> [rpc1 rpc2 rpc3]}
 NAME=${2:?usage: verify-kit.sh <file> <ens-name> [rpc1 rpc2 rpc3]}
