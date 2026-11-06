@@ -53,7 +53,7 @@ const watcher = createWatcher({
     // RFC 6761: *.localhost is loopback. Browsers resolve it; Node's resolver may not (booth demo URLs).
     const u = new URL(url);
     if (u.hostname.endsWith('.localhost')) u.hostname = '127.0.0.1';
-    return fetch(u.href, { redirect: 'manual', signal: AbortSignal.timeout(8000) });
+    return fetch(u.href, { signal: AbortSignal.timeout(8000) }); // follow redirects like a browser (CDNs redirect)
   },
   writeText: async (name, resolver, k, value) => {
     const hash = await wallet.writeContract({ address: resolver, abi: setText, functionName: 'setText', args: [toHex(packetToBytes(name)), k, value] });
