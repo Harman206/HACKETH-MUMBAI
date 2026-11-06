@@ -1,9 +1,10 @@
-import { render } from 'preact';
+import { render, type ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState } from '../shared/types';
-import { ago, getState, ICON, openPage, send, short } from './api';
-import { ProtocolCard } from './components';
+import { ago, getState, openPage, send, short } from './api';
+import { GuardChip, ProtocolCard, TopBar } from './components';
+import { Icon, type IconName } from './icons';
 import { scanPositions, type Scan } from './positions';
 
 function Dashboard() {
@@ -33,7 +34,7 @@ function Dashboard() {
     const t = setInterval(refresh, 5000);
     return () => clearInterval(t);
   }, []);
-  if (!st) return <div class="wrap muted">Loading…</div>;
+  if (!st) return <div class="wrap muted" style="padding-top:24px">Loading…</div>;
 
   const openKit = async (name: string) => {
     setMsg(null);
@@ -49,79 +50,113 @@ function Dashboard() {
     a.click();
   };
 
+  const total = Object.values(s.requestsChecked).reduce((a, b) => a + b, 0);
+  const tiles: { key: string; n: number; label: string; tone: 'ok' | 'bad' | '' }[] = [
+    { key: 'sitesChecked', n: s.sitesChecked, label: 'protocol pages checked', tone: '' },
+    { key: 'verified', n: s.verified, label: 'verified against ENS', tone: 'ok' },
+    { key: 'mismatched', n: s.mismatched, label: 'hijacked pages stopped', tone: 'bad' },
+    { key: 'pagesBlocked', n: s.pagesBlocked.compromised + s.pagesBlocked.blocklist, label: 'fake / flagged sites blocked', tone: 'bad' },
+    { key: 'requestsChecked', n: total, label: 'wallet requests checked', tone: '' },
+    { key: 'requestsBlocked', n: s.requestsBlocked, label: 'wallet requests stopped', tone: 'bad' },
+    { key: 'dangerous', n: s.requestsChecked.dangerous, label: 'drainer patterns seen', tone: 'bad' },
+    { key: 'pageNoise', n: s.pageNoise, label: 'bogus page messages ignored', tone: '' },
+  ];
+  const head = (icon: IconName, title: string, aside?: ComponentChildren) => (
+    <div class="spread section-head">
+      <h2><Icon name={icon} size={14} />{title}</h2>
+      {aside}
+    </div>
+  );
+
   return (
     <div class="wrap">
-      <div class="spread">
-        <div class="brand"><img src={ICON} alt="" />Copeybara</div>
-        <div class="row">
-          <button class="secondary" disabled={busy} onClick={async () => { setBusy(true); await send({ t: 'sync' }); await refresh(); setBusy(false); }}>{busy ? 'Reading ENS…' : 'Check ENS now'}</button>
-          <button class="secondary" onClick={() => openPage('setup')}>Setup</button>
-        </div>
-      </div>
-      <p class="muted small">
-        Watching <span class="mono">{st.settings.account ?? 'no wallet'}</span> · last ENS check {ago(s.lastSync)}
-      </p>
-      {msg && <div class="alert bad small" data-error>{msg}</div>}
-
-      <h2 style="margin-top:20px">Your positions</h2>
-      <div class="card" data-positions>
-        {!st.settings.account && <p class="muted">Add your wallet address in setup to see your positions.</p>}
-        {scanning && <p class="muted">Finding your positions straight from the contracts…</p>}
-        {scan && !scanning && (
-          <>
-            {scan.found.length === 0 && <p class="muted">No open positions found in the protocols you follow.</p>}
-            <ul class="clean">
-              {scan.found.map((f) => (
-                <li class="spread" data-position={f.position.id}>
-                  <span>
-                    <b>{f.position.label}</b>
-                    <br />
-                    <span class="small muted">
-                      {f.protocol}
-                      {f.amounts.length > 0 && ` · ${f.amounts.map((a) => `${a.text} ${a.symbol}`).join(' + ')}`}
-                      {f.position.manual && ` · ${f.position.manual}`}
-                    </span>
-                  </span>
-                  <button onClick={() => openKit(f.protocol)}>Exit safely</button>
-                </li>
-              ))}
-            </ul>
-            {scan.errors.length > 0 && <p class="small" style="color:var(--warn)">{scan.errors.join(' · ')}</p>}
-            {scan.block !== null && <p class="muted small">Read at block {scan.block.toString()} through {st.settings.userRpcs.length + (st.settings.useDefaultRpcs ? 3 : 0)} RPCs.</p>}
-          </>
-        )}
-        {st.settings.account && <button class="secondary small" disabled={scanning} onClick={() => runScan(st)}>Scan again</button>}
-      </div>
-
-      <h2 style="margin-top:20px">Protocols you follow</h2>
-      {st.protocols.length === 0 && <p class="muted">None yet. <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}>Add one</a>.</p>}
-      {st.protocols.map((p) => (
+      <TopBar caption="Dashboard">
+        <GuardChip st={st} />
+        <button class="secondary small" disabled={busy} onClick={async () => { setBusy(true); await send({ t: 'sync' }); await refresh(); setBusy(false); }}>
+          <Icon name="refresh" size={15} />{busy ? 'Reading ENS…' : 'Check ENS now'}
+        </button>
+        <button class="secondary small" onClick={() => openPage('setup')}><Icon name="settings" size={15} />Setup</button>
+      </TopBar>
+      <div class="dash-head">
         <div>
-          <ProtocolCard p={p} />
-          <div class="row" style="margin:-6px 0 12px">
-            <button onClick={() => openKit(p.name)}>Exit safely</button>
-            <button class="secondary small" onClick={async () => { await send({ t: 'unfollow', name: p.name }); await refresh(); }}>Unfollow</button>
-          </div>
+          <p class="label" style="margin-bottom:6px"><Icon name="wallet" size={14} />Watching</p>
+          <h1 class="num" style="font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere">{st.settings.account ?? 'no wallet'}</h1>
         </div>
-      ))}
+        <p class="muted small" style="margin:0">Last ENS check {ago(s.lastSync)}</p>
+      </div>
+      {msg && <div class="alert bad small with-icon" data-error><Icon name="x-octagon" size={18} /><div>{msg}</div></div>}
 
-      <h2 style="margin-top:20px">What Copeybara did</h2>
-      <p class="muted small">Counted on this device only. Nothing is sent anywhere.</p>
-      <div class="stats" data-stats>
-        <div class="stat"><b data-stat="sitesChecked">{s.sitesChecked}</b>protocol pages checked</div>
-        <div class="stat"><b data-stat="verified">{s.verified}</b>verified against ENS</div>
-        <div class="stat"><b data-stat="mismatched">{s.mismatched}</b>hijacked pages stopped</div>
-        <div class="stat"><b data-stat="pagesBlocked">{s.pagesBlocked.compromised + s.pagesBlocked.blocklist}</b>fake / flagged sites blocked</div>
-        <div class="stat"><b data-stat="requestsChecked">{Object.values(s.requestsChecked).reduce((a, b) => a + b, 0)}</b>wallet requests checked</div>
-        <div class="stat"><b data-stat="requestsBlocked">{s.requestsBlocked}</b>wallet requests stopped</div>
-        <div class="stat"><b data-stat="dangerous">{s.requestsChecked.dangerous}</b>drainer patterns seen</div>
-        <div class="stat"><b data-stat="pageNoise">{s.pageNoise}</b>bogus page messages ignored</div>
+      <section class="dash-section">
+        {head('activity', 'What Copeybara did', <span class="tiny muted">Counted on this device only. Nothing is sent anywhere.</span>)}
+        <div class="tiles wide" data-stats>
+          {tiles.map((t) => (
+            <div class={`tile ${t.n > 0 ? t.tone : ''}`}>
+              <b data-stat={t.key}>{t.n.toLocaleString()}</b>
+              <span>{t.label}</span>
+            </div>
+          ))}
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="secondary small" onClick={exportStats}><Icon name="download" size={15} />Export JSON</button>
+          <button class="secondary small" onClick={async () => { await send({ t: 'resetStats' }); await refresh(); }}>Reset</button>
+        </div>
+      </section>
+
+      <div class="dash-grid">
+        <section class="dash-section">
+          {head('wallet', 'Your positions', st.settings.account && (
+            <button class="link" disabled={scanning} onClick={() => runScan(st)}><Icon name="refresh" size={14} />Scan again</button>
+          ))}
+          <div class="card" data-positions style="margin:0">
+            {!st.settings.account && <p class="muted">Add your wallet address in setup to see your positions.</p>}
+            {scanning && <p class="muted">Finding your positions straight from the contracts…</p>}
+            {scan && !scanning && (
+              <>
+                {scan.found.length === 0 && <p class="muted">No open positions found in the protocols you follow.</p>}
+                <ul class="clean positions">
+                  {scan.found.map((f) => (
+                    <li data-position={f.position.id}>
+                      <span class="pos-icon" aria-hidden="true"><Icon name="layers" size={17} /></span>
+                      <div class="grow">
+                        <b>{f.position.label}</b>
+                        {f.amounts.length > 0 && <div class="amounts">{f.amounts.map((a) => `${a.text} ${a.symbol}`).join(' + ')}</div>}
+                        <div class="tiny muted">
+                          {f.protocol}
+                          {f.position.manual && ` · ${f.position.manual}`}
+                        </div>
+                      </div>
+                      <button class="small-btn" onClick={() => openKit(f.protocol)}>Exit safely</button>
+                    </li>
+                  ))}
+                </ul>
+                {scan.errors.length > 0 && <p class="small warn-text">{scan.errors.join(' · ')}</p>}
+                {scan.block !== null && (
+                  <p class="foot-note" style="margin:12px 0 0">
+                    <Icon name="link" size={13} />
+                    <span>Read at block <span class="num">{scan.block.toString()}</span> through {st.settings.userRpcs.length + (st.settings.useDefaultRpcs ? 3 : 0)} RPCs.</span>
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        <section class="dash-section">
+          {head('shield', 'Protocols you follow')}
+          {st.protocols.length === 0 && <div class="card" style="margin:0"><p class="muted">None yet. <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}>Add one</a>.</p></div>}
+          {st.protocols.map((p) => (
+            <div class="proto-block">
+              <ProtocolCard p={p} />
+              <div class="proto-actions">
+                <button onClick={() => openKit(p.name)}><Icon name="log-out" size={16} />Exit safely</button>
+                <button class="secondary" onClick={async () => { await send({ t: 'unfollow', name: p.name }); await refresh(); }}>Unfollow</button>
+              </div>
+            </div>
+          ))}
+        </section>
       </div>
-      <div class="row" style="margin-top:12px">
-        <button class="secondary small" onClick={exportStats}>Export JSON</button>
-        <button class="secondary small" onClick={async () => { await send({ t: 'resetStats' }); await refresh(); }}>Reset</button>
-      </div>
-      <p class="muted small" style="margin-top:20px">Copeybara {st.version} · wallet {st.settings.account ? short(st.settings.account) : 'not set'}</p>
+
+      <p class="muted tiny" style="margin-top:28px;font-family:var(--mono)">Copeybara {st.version} · wallet {st.settings.account ? short(st.settings.account) : 'not set'}</p>
     </div>
   );
 }
