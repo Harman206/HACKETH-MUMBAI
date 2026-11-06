@@ -44,6 +44,32 @@ The **Check a transaction** tab runs the same Exit Guard on anything a live site
 | Without BLACKOUT the Curve 2022 victim loses 400,227.23 USDC; with it, 0 | Foundry `vm.transact` replay on a mainnet fork | `cd replay && forge test` · report: [docs/replay/R1.md](docs/replay/R1.md) |
 | The kit loads zero third-party code | Playwright network log: 0 third-party origins (DemoSwap: 4) | `pnpm exec playwright test e2e/no-trackers.spec.ts e2e/scan.spec.ts` |
 
+## Live demo: the Attack Theater
+
+The website (`apps/site`) explains BLACKOUT and embeds a four-chapter **real attack replication on Sepolia**:
+1. **A normal day:** a victim wallet gets 10,000 DUSD and a Uniswap v3 position.
+2. **The hijack:** DemoSwap's domain is hijacked. The fake site asks for `approve(drainer, max)`, and the attacker's bot drains the wallet within seconds. This is a real transaction, labelled *Without BLACKOUT*.
+3. **The outage:** the website and the protocol's RPC are switched off for real.
+4. **The rescue:**
+   - the saved kit matches its ENS fingerprint, and the hijacker's kit does not;
+   - the kit's Exit Guard blocks the exact request the fake site sent;
+   - the position is withdrawn straight from the contracts.
+
+   A scoreboard shows what was lost and what was recovered, with every transaction link.
+
+```bash
+pnpm --filter @blackout/kit build && pnpm --filter @blackout/site build
+pnpm --filter @blackout/harness start          # needs contracts/.env (DEPLOYER_KEY, ATTACKER_KEY) and deployments/sepolia-attack.json
+npx serve apps/site/dist -l 4173               # then open:
+#   http://localhost:4173/?booth=http://localhost:8090
+```
+
+- **Victim wallet:** use a *second* MetaMask account (e.g. "Account 2"). Never use a wallet holding real funds.
+- **To see the demo tokens in MetaMask:** go to *Import tokens* and add DUSD `0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA` and DETH `0x62715d2762949Ab8Fb124eB01f78898Feb8a596A`.
+- **No booth?** Without `?booth=`, the same section shows the public live proof: the ENS release read live, the stolen-key attacks reverting on chain, and the last recorded run.
+- **Fallback:** with `THEATER_NETWORK=local-fork THEATER_RPC=<anvil url>`, every screen carries a **LOCAL FORK** banner.
+- **Rehearsal:** `cd apps/kit && pnpm exec tsx e2e-live/rehearse-live.ts` runs all four chapters headless on real Sepolia with a throwaway victim, and records `demo-runs/latest.json`.
+
 ## Architecture
 
 ```mermaid
