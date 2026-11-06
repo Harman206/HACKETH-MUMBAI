@@ -33,7 +33,7 @@ Open `http://localhost:3000/copeybara-kit.html`, then:
 2. Connect your wallet.
 3. Press **Exit** on each position.
 
-"Recovered" appears only after a confirmed receipt **and** a positive balance change for every expected token.
+"Recovered" appears only after a confirmed receipt **and** a positive balance change for every expected token. Then a short "Saved by Copey!" moment celebrates it (inline SVG capybaras from the brand mark and an original Web Audio jingle with a chant from a local speech voice: no images, no network; mute is remembered, reduced motion gets a still version). It is decorative and lets clicks through; the position rows carry the result.
 
 While an exit runs, the kit shows each stage live (Exit Guard check → rehearsal on the RPC quorum → waiting for your wallet → waiting for a block, with the transaction link → balance check). Errors are explained in plain language with one fix: switch or add the network, get Sepolia ETH for fees, add your own RPC, or check the ENS name.
 

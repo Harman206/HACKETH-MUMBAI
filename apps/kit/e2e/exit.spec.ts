@@ -25,6 +25,14 @@ test('full exit: ENS manifest → three Uniswap v3 + one Uniswap v4 position →
     await expect(page.locator(`[data-position="${id}"] [data-status]`)).toHaveAttribute('data-status', 'recovered', { timeout: 60_000 });
   }
 
+  // "Saved by Copey!" once the batch is done (decorative: the rows above carry the result; it lets clicks through)
+  await expect(page.locator('[data-celebration]')).toBeVisible();
+  await expect(page.locator('[data-celebration-reason]')).toContainText(/^You got .+ back, straight from the contracts\.$/);
+  if (process.env.KIT_SHOT) {
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: `${process.env.KIT_SHOT}/saved-kit.png` });
+  }
+
   const stages: string[] = await page.evaluate(() => [...(window as unknown as { __stages: Set<string> }).__stages]);
   for (const st of ['checking', 'simulating', 'wallet', 'confirming', 'balances']) expect(stages, `live stage ${st} shown`).toContain(st);
 
