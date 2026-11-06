@@ -53,7 +53,8 @@ export function DevelopersPage() {
             <h1 class="page-title">{DEV_HERO.title}</h1>
             <p class="lede">{DEV_HERO.sub}</p>
             <div class="cta">
-              <a class="btn" href="#quickstart" onClick={(e) => { e.preventDefault(); document.getElementById('quickstart')?.scrollIntoView(); }}>Quick start <span aria-hidden="true">↓</span></a>
+              <a class="btn" href="#/docs/quickstart">Read the docs <span aria-hidden="true">→</span></a>
+              <a class="btn ghost" href="#/docs/agents">Build it with an AI agent</a>
               <a class="text-link" href="#/certified">Copeybara certified <span aria-hidden="true">→</span></a>
             </div>
           </div>
@@ -91,7 +92,7 @@ export function DevelopersPage() {
         <div class="wrap">
           <header class="section-head">
             <h2 class="h2-sm">Quick start: about an hour</h2>
-            <p class="lede">From an ENS name owned by your Safe to a certified exit. Nothing here signs; your Safe owners approve one batch.</p>
+            <p class="lede">From an ENS name owned by your Safe to a certified exit. Nothing here signs; your Safe owners approve one batch. Every step in detail: <a href="#/docs/quickstart">the quick start guide</a>.</p>
           </header>
           <ol class="qs">
             {QUICKSTART.map((s, i) => (
@@ -147,7 +148,7 @@ export function DevelopersPage() {
 
       <section id="cli" class="section evidence">
         <div class="wrap">
-          <header class="section-head"><h2 class="h2-sm">CLI reference</h2><p class="lede">Every output lands in .copeybara/. Run any command with --config to point at another config.</p></header>
+          <header class="section-head"><h2 class="h2-sm">CLI reference</h2><p class="lede">Every output lands in .copeybara/. Run any command with --config to point at another config. Flags and failures: <a href="#/docs/cli">CLI reference</a>.</p></header>
           <table class="cli-table">
             <thead><tr><th>Command</th><th>What it does</th><th>Writes</th></tr></thead>
             <tbody>{CLI.map(([c, what, out]) => <tr key={c}><td class="mono">copeybara {c}</td><td>{what}</td><td class="mono">{out}</td></tr>)}</tbody>

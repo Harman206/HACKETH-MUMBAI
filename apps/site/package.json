@@ -4,23 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build && node scripts/copy-kit.mjs && node scripts/write-qr.mjs && node scripts/write-sw.mjs",
+    "build": "vite build && node scripts/copy-kit.mjs && node scripts/write-docs.mjs && node scripts/write-qr.mjs && node scripts/write-sw.mjs",
     "dev": "vite"
   },
   "dependencies": {
     "@copeybara/core": "workspace:*",
     "@copeybara/ens": "workspace:*",
+    "@copeybara/protocol-cli": "workspace:*",
     "@copeybara/quorum": "workspace:*",
+    "marked": "15.0.12",
     "preact": "10.25.4",
-    "viem": "2.21.55",
-    "@copeybara/protocol-cli": "workspace:*"
+    "viem": "2.21.55"
   },
   "devDependencies": {
+    "@copeybara/widget": "workspace:*",
     "@preact/preset-vite": "2.9.4",
     "@types/qrcode": "1.5.5",
     "jsdom": "25.0.1",
     "qrcode": "1.5.4",
-    "vite": "5.4.11",
-    "@copeybara/widget": "workspace:*"
+    "vite": "5.4.11"
   }
 }

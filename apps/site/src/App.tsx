@@ -4,6 +4,7 @@ import { BrandMark } from './sections/Icons';
 import { LiveDemo } from './sections/LiveDemo';
 import { CertifiedPage } from './pages/Certified';
 import { DevelopersPage } from './pages/Developers';
+import { DocsPage } from './pages/Docs';
 import { ExtensionPage } from './pages/ExtensionPage';
 import { useRoute } from './router';
 
@@ -30,6 +31,7 @@ export function App() {
             <li><a href="#/extension" {...here('extension')}>Extension</a></li>
             <li><a href="#demo">Live demo</a></li>
             <li><a href="#/developers" {...here('developers')}>Developers</a></li>
+            <li><a href="#/docs" {...here('docs')}>Docs</a></li>
             <li><a href="#/certified" {...here('certified')}>Certified</a></li>
           </ul>
           <a class="nav-action" href="#download">Get the kit <span aria-hidden="true">↓</span></a>
@@ -40,6 +42,8 @@ export function App() {
           <DevelopersPage />
         ) : route.page === 'extension' ? (
           <ExtensionPage />
+        ) : route.page === 'docs' ? (
+          <DocsPage slug={route.slug} />
         ) : route.page === 'certified' ? (
           <CertifiedPage name={route.name} />
         ) : (
