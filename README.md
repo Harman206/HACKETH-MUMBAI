@@ -115,7 +115,7 @@ All on the protocol's ENS name (here `demoswap-blackout.eth`), read through the 
 | `org.copeybara.release` | Safe (2-of-3) | the kit's sha256 and version |
 | `org.copeybara.manifest` | Safe (2-of-3) | exit contracts and allowed functions, per chain |
 | `org.copeybara.site` | Safe (2-of-3) | the site fingerprint: the set of sha256 hashes of every script the official site may run |
-| `org.copeybara.extension` | Safe (2-of-3) | the Chrome extension zip's sha256 and version |
+| `org.copeybara.extension` | Safe (2-of-3) | the Chrome extension zip's sha256, version and tree hash: `sha256:<zip>;v=<n>;tree=<hash>` (`tree` optional; older records have only the zip hash) |
 | `org.copeybara.status` | Safe or watcher key | `ok` / `degraded` / `compromised`, a time and a short note |
 | `org.copeybara.blocklist` | Safe or watcher key | look-alike domains to block (each host and its subdomains) |
 
@@ -200,6 +200,15 @@ cd apps/extension && pnpm e2e                  # Playwright with the real unpack
 ```
 
 Install: unzip `copeybara-extension-chrome.zip` → open `chrome://extensions` → turn on **Developer mode** → **Load unpacked** and pick the folder. The setup wizard opens (wallet → protocols to follow → RPC services → done).
+
+**Verify your installed extension.** Once unzipped, the zip hash can't be checked any more, so the build also writes a tree hash: sha256 over the sorted `<path>\t<sha256 of the file>\n` lines of every file in the unpacked folder, `build-files.json` (the file list) included. The build prints it and writes `copeybara-extension-chrome.tree.sha256`. Check the folder you loaded, or the zip, against ENS from outside the browser:
+
+```bash
+scripts/verify-extension.sh ~/copeybara-extension-chrome demoswap-blackout.eth   # MATCH / MISMATCH, record read through 3 RPCs
+scripts/verify-extension.sh --rebuild copeybara-extension-chrome.zip              # rebuild this checkout, compare bytes
+```
+
+The extension does the same check from inside (worker message `buildProof`: it fetches its own files and compares with the followed protocol's record). That only catches a broken or outdated install. A modified extension can report whatever it wants about itself, so use the script for a real check.
 
 ## Watcher agent
 
