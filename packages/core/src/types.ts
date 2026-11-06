@@ -42,6 +42,12 @@ export interface ExpectedDelta {
   min: bigint;
 }
 
+/** A short note shown next to a position (e.g. what a Uniswap v4 pool's hook can do on withdrawal). Display only. */
+export interface PositionBadge {
+  tone: 'info' | 'warn';
+  text: string;
+}
+
 export interface Position {
   adapter: AdapterId;
   id: string;
@@ -49,6 +55,8 @@ export interface Position {
   tokens: Address[];
   /** Set when the kit cannot exit this position safely; explains why. */
   manual?: string;
+  /** Display-only notes, e.g. Uniswap v4 hook permissions. Never changes what the Guard allows. */
+  badges?: PositionBadge[];
   raw: unknown;
 }
 

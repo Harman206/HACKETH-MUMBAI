@@ -24,7 +24,7 @@ const manifest: Manifest = {
 const info = (lower: number, upper: number) => ((BigInt(upper) & 0xffffffn) << 32n) | ((BigInt(lower) & 0xffffffn) << 8n);
 const Q128 = 2n ** 128n;
 
-interface Pos { owner: Address; liquidity: bigint; c0?: Address; lower?: number; upper?: number }
+interface Pos { owner: Address; liquidity: bigint; c0?: Address; lower?: number; upper?: number; hooks?: Address }
 
 function stub(o: { balance: bigint; positions: Record<string, Pos>; logIds: bigint[]; logsFailBefore?: bigint; tick?: number }) {
   const calls: string[] = [];
@@ -40,7 +40,7 @@ function stub(o: { balance: bigint; positions: Record<string, Pos>; logIds: bigi
         case 'getPoolAndPositionInfo': {
           const x = o.positions[id];
           if (!x) return [{ currency0: ZERO, currency1: ZERO, fee: 0, tickSpacing: 0, hooks: ZERO }, 0n];
-          return [{ currency0: x.c0 ?? T0, currency1: T1, fee: 3000, tickSpacing: 60, hooks: ZERO }, info(x.lower ?? -600, x.upper ?? 600)];
+          return [{ currency0: x.c0 ?? T0, currency1: T1, fee: 3000, tickSpacing: 60, hooks: x.hooks ?? ZERO }, info(x.lower ?? -600, x.upper ?? 600)];
         }
         case 'symbol': return 'TKN';
         case 'getSlot0': return [sqrtPriceAtTick(tick), tick, 0, 3000];
@@ -72,6 +72,21 @@ describe('Uniswap v4 adapter', () => {
     expect(ps.map((p) => p.id)).toEqual(['v4:7']); // v3 and v4 NFT ids are separate counters: never let them collide
     expect(ps[0]!.label).toBe('Uniswap v4 #7 TKN/TKN 0.3%');
     expect(ps[0]!.tokens).toEqual([T0, T1]);
+    expect(ps[0]!.badges).toBeUndefined(); // no hook → no badges
+  });
+
+  test('discover: a hooked pool gets hook badges on the position (the label no longer carries the hook)', async () => {
+    // low 14 bits 0x0301 = BEFORE_REMOVE_LIQUIDITY | AFTER_REMOVE_LIQUIDITY | AFTER_REMOVE_LIQUIDITY_RETURNS_DELTA
+    const hooks = getAddress('0x1200000000000000000000000000000000000301');
+    const { ctx } = stub({ balance: 1n, logIds: [7n], positions: { '7': { owner: USER, liquidity: 10n ** 18n, hooks } } });
+    const [p] = await uniswapV4.discover(USER, ctx);
+    expect(p!.label).toBe('Uniswap v4 #7 TKN/TKN 0.3%');
+    expect(p!.badges).toEqual([
+      { tone: 'info', text: 'Hook 0x1200…0301' },
+      { tone: 'warn', text: "This pool's hook runs when you withdraw and can block or delay exits" },
+      { tone: 'warn', text: "This pool's hook can change how much you receive when you withdraw" },
+    ]);
+    expect((await uniswapV4.byId!('7', USER, ctx)).badges).toEqual(p!.badges);
   });
 
   test('discover: owning more than the scan found → one manual row that says how many and what to do', async () => {

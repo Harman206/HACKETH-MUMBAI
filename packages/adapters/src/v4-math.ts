@@ -1,5 +1,5 @@
 import { encodeAbiParameters, keccak256, parseAbiParameters, type Hex } from 'viem';
-import type { Address } from '@copeybara/core';
+import type { Address, PositionBadge } from '@copeybara/core';
 
 /**
  * Uniswap v4 math, ported to bigint from v4-core (TickMath.getSqrtPriceAtTick, SqrtPriceMath.getAmount{0,1}Delta,
@@ -95,4 +95,47 @@ export interface PoolKey {
 /** PoolId = keccak256(abi.encode(PoolKey)). */
 export function poolIdOf(k: PoolKey): Hex {
   return keccak256(encodeAbiParameters(parseAbiParameters('address, address, uint24, int24, address'), [k.currency0, k.currency1, k.fee, k.tickSpacing, k.hooks]));
+}
+
+/**
+ * Hook permissions live in the hook's address: v4-core Hooks.sol reads the low 14 bits as flags
+ * (BEFORE_INITIALIZE_FLAG = 1 << 13 … AFTER_REMOVE_LIQUIDITY_RETURNS_DELTA_FLAG = 1 << 0).
+ */
+export const HOOK_FLAGS = {
+  BEFORE_INITIALIZE: 1 << 13,
+  AFTER_INITIALIZE: 1 << 12,
+  BEFORE_ADD_LIQUIDITY: 1 << 11,
+  AFTER_ADD_LIQUIDITY: 1 << 10,
+  BEFORE_REMOVE_LIQUIDITY: 1 << 9,
+  AFTER_REMOVE_LIQUIDITY: 1 << 8,
+  BEFORE_SWAP: 1 << 7,
+  AFTER_SWAP: 1 << 6,
+  BEFORE_DONATE: 1 << 5,
+  AFTER_DONATE: 1 << 4,
+  BEFORE_SWAP_RETURNS_DELTA: 1 << 3,
+  AFTER_SWAP_RETURNS_DELTA: 1 << 2,
+  AFTER_ADD_LIQUIDITY_RETURNS_DELTA: 1 << 1,
+  AFTER_REMOVE_LIQUIDITY_RETURNS_DELTA: 1 << 0,
+} as const;
+export type HookFlag = keyof typeof HOOK_FLAGS;
+const ALL_HOOK_MASK = (1 << 14) - 1;
+
+/** Names of the permission flags set in a hook address (highest bit first). */
+export function hookFlags(hooks: Address): HookFlag[] {
+  const bits = Number(BigInt(hooks) & BigInt(ALL_HOOK_MASK));
+  return (Object.keys(HOOK_FLAGS) as HookFlag[]).filter((k) => (bits & HOOK_FLAGS[k]) !== 0);
+}
+
+/** Badges for a v4 position's pool hook: none without a hook, an info badge with its address, warnings for withdrawal hooks. */
+export function hookBadges(hooks: Address): PositionBadge[] {
+  if (BigInt(hooks) === 0n) return [];
+  const f = new Set(hookFlags(hooks));
+  const out: PositionBadge[] = [{ tone: 'info', text: `Hook ${hooks.slice(0, 6)}…${hooks.slice(-4)}` }];
+  if (f.has('BEFORE_REMOVE_LIQUIDITY') || f.has('AFTER_REMOVE_LIQUIDITY')) {
+    out.push({ tone: 'warn', text: "This pool's hook runs when you withdraw and can block or delay exits" });
+  }
+  if (f.has('AFTER_REMOVE_LIQUIDITY_RETURNS_DELTA')) {
+    out.push({ tone: 'warn', text: "This pool's hook can change how much you receive when you withdraw" });
+  }
+  return out;
 }

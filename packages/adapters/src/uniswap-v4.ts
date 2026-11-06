@@ -2,7 +2,7 @@ import { encodeAbiParameters, encodeFunctionData, pad, parseAbiParameters, toHex
 import { V4_ACTIONS, v4PosmAbi, v4StateViewAbi, type Address, type ExitPlan, type Position, type TxRequest } from '@copeybara/core';
 import { applySlippage, target, type Ctx, type ExitAdapter } from './types';
 import { symbolOf } from './symbols';
-import { amountsForDecrease, decodePositionInfo, feesOwed, poolIdOf, type PoolKey } from './v4-math';
+import { amountsForDecrease, decodePositionInfo, feesOwed, hookBadges, poolIdOf, type PoolKey } from './v4-math';
 
 export interface UniswapV4Raw {
   tokenId: bigint;
@@ -58,13 +58,14 @@ async function load(address: Address, tokenId: bigint, ctx: Ctx): Promise<Positi
   const native = eq(pk.currency0, ZERO);
   const [s0, s1] = await Promise.all([native ? 'ETH' : symbolOf(pk.currency0, ctx), symbolOf(pk.currency1, ctx)]);
   const raw: UniswapV4Raw = { tokenId, key: pk, poolId: poolIdOf(pk), tickLower, tickUpper, liquidity };
-  const hook = eq(pk.hooks, ZERO) ? '' : ` · hook ${short(pk.hooks)}`;
+  const badges = hookBadges(pk.hooks);
   return {
     adapter: 'uniswap-v4',
     // v3 and v4 NFT ids are independent counters: a wallet can hold v3 #N and v4 #N, so keep the kit's keys distinct.
     id: `v4:${tokenId}`,
-    label: `Uniswap v4 #${tokenId} ${s0}/${s1} ${pk.fee & 0x800000 ? 'dynamic fee' : `${pk.fee / 10_000}%`}${hook}`,
+    label: `Uniswap v4 #${tokenId} ${s0}/${s1} ${pk.fee & 0x800000 ? 'dynamic fee' : `${pk.fee / 10_000}%`}`,
     tokens: native ? [pk.currency1] : [pk.currency0, pk.currency1],
+    ...(badges.length ? { badges } : {}),
     ...(native
       ? { manual: 'This pool pays out native ETH. This kit version exits ERC-20 pairs only; withdraw it from the Uniswap app or a block explorer.' }
       : {}),
