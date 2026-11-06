@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const REPO = join(__dirname, '..');
-const docs = ['README.md', 'FEEDBACK.md', 'docs/crops.md', 'docs/ai-use.md'];
+const docs = ['README.md', 'FEEDBACK.md', 'docs/crops.md', 'docs/ai-use.md', 'docs/protocol-integration.md'];
 
 test.each(docs)('%s: every relative link points at a file that exists', (doc) => {
   const md = readFileSync(join(REPO, doc), 'utf8');
