@@ -12,6 +12,10 @@ export const WATCHED = new Set([
   'personal_sign',
   'eth_sign',
   'wallet_sendCalls',
+  // connect requests: the worker lets them through at once, except on a site imitating a followed protocol, where the
+  // user is warned before the wallet's own connect popup appears
+  'eth_requestAccounts',
+  'wallet_requestPermissions',
 ]);
 
 import { TAG_REQ, TAG_RES } from '../shared/tags';

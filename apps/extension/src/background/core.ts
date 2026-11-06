@@ -83,6 +83,25 @@ const BADGE: Record<string, { text: string; color: string; title: string }> = {
   blocklisted: { text: '!', color: '#dc2626', title: 'Copeybara: a protocol you follow lists this site as a fake.' },
 };
 
+/** Wallet connect requests: checked only for look-alike sites, before the wallet shows its own connect popup. */
+export const CONNECT_METHODS = new Set(['eth_requestAccounts', 'wallet_requestPermissions']);
+
+const escapeRe = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** `label` appears in `host` as whole '-'/'.'-separated tokens (demoswap in demoswap-airdrop.localhost, not in mydemoswapper). */
+export function hasToken(host: string, label: string): boolean {
+  return new RegExp(`(^|[.-])${escapeRe(label)}($|[.-])`).test(host);
+}
+
+/**
+ * The distinctive labels of a protocol: the first label of its official host (www. skipped) and the first label of its
+ * ENS name, each at least 4 characters (shorter ones like "app" would match half the web).
+ */
+export function protocolLabels(officialHost: string, ensName: string): string[] {
+  const first = officialHost.replace(/^www\./, '').split('.')[0] ?? '';
+  const ens = ensName.split('.')[0] ?? '';
+  return [...new Set([first, ens].map((x) => x.toLowerCase()).filter((x) => x.length >= 4))];
+}
+
 const DEFAULT_SETTINGS = (kitUrl: string): Settings => ({ account: null, userRpcs: [], useDefaultRpcs: true, kitUrl, setupDone: false });
 
 function toSnapshot(r: CopeybaraRecords, now: number): Snapshot {
@@ -118,6 +137,8 @@ export function createCore(deps: CoreDeps) {
   const tabs = new Map<number, TabState>();
   /** confirm windows opened per tab (kept apart from TabState: a page that never said hello is limited too) */
   const confirmTimes = new Map<number, number[]>();
+  /** "tabId|origin" pairs where the user chose to connect anyway on a look-alike: not asked again for that page */
+  const connectOk = new Set<string>();
   const confirms = new Map<string, { pending: PendingConfirm; resolve: (allow: boolean) => void; windowId?: number }>();
   let loaded: Promise<void> | null = null;
   let seq = 0;
@@ -183,6 +204,27 @@ export function createCore(deps: CoreDeps) {
   // ---------- tabs & site verdicts ----------
   function protocolFor(origin: string): ProtocolState | undefined {
     return protocols.find((p) => p.snapshot?.origin === origin);
+  }
+  /** A followed protocol this host pretends to be: on its blocklist, or carrying its name without being its official host. */
+  function imitated(host: string): { protocol: string; official: string } | undefined {
+    const h = host.toLowerCase().replace(/\.$/, '');
+    for (const p of protocols) {
+      const s = p.snapshot;
+      if (!s) continue;
+      const official = s.origin ?? '';
+      let officialHost = '';
+      try {
+        officialHost = official ? new URL(official).hostname : '';
+      } catch {
+        officialHost = '';
+      }
+      if (s.blocklist.some((d) => hostMatches(h, d))) return { protocol: p.name, official: official || 'no website' };
+      if (!officialHost) continue;
+      // the official host, its subdomains, and the domains above it belong to the protocol
+      if (hostMatches(h, officialHost) || hostMatches(officialHost, h)) continue;
+      if (protocolLabels(officialHost, p.name).some((l) => hasToken(h, l))) return { protocol: p.name, official };
+    }
+    return undefined;
   }
   function blocklistHit(host: string): { protocol: string; domain: string } | undefined {
     for (const p of protocols) for (const d of p.snapshot?.blocklist ?? []) if (hostMatches(host, d)) return { protocol: p.name, domain: d };
@@ -276,11 +318,30 @@ export function createCore(deps: CoreDeps) {
       const p0 = Array.isArray(msg.params) ? (msg.params[0] as { from?: unknown } | undefined) : undefined;
       return p0 && typeof p0 === 'object' && typeof p0.from === 'string' ? (p0.from as Address) : null;
     })();
-    const c: Classification = classifyRequest({ method: msg.method, params: msg.params }, {
+    let c: Classification = classifyRequest({ method: msg.method, params: msg.params }, {
       account: fromParam ?? settings.account,
       chainId: msg.chainId ?? ENS_CHAIN_ID,
       manifests,
     });
+    let context: string | null = null;
+    const connectKey = `${tabId}|${origin}`;
+    if (CONNECT_METHODS.has(msg.method) && !connectOk.has(connectKey)) {
+      let host = '';
+      try {
+        host = new URL(origin).hostname;
+      } catch {
+        host = '';
+      }
+      const fake = host ? imitated(host) : undefined;
+      if (fake) {
+        c = {
+          verdict: 'risky',
+          method: msg.method,
+          reasons: [`This site imitates ${fake.protocol} but is not its official address (${fake.official} from ENS). Don't connect your wallet here.`],
+        };
+        context = `${fake.protocol}'s official site, from its ENS records: ${fake.official}`;
+      }
+    }
     if (c.verdict === 'pass') return { decision: 'allow', verdict: 'pass', reasons: c.reasons };
     stats.requestsChecked[c.verdict]++;
 
@@ -290,7 +351,6 @@ export function createCore(deps: CoreDeps) {
       await save(['stats']);
       return { decision: 'block', verdict: c.verdict, reasons: ['Blocked: this site is not running the code its protocol published.', ...c.reasons] };
     }
-    let context: string | null = null;
     let verdict = c.verdict;
     if (site?.kind === 'protocol' && verdict === 'unknown') {
       verdict = 'risky';
@@ -323,6 +383,7 @@ export function createCore(deps: CoreDeps) {
       setTimeout(() => resolve(false), deps.confirmTimeoutMs ?? 180_000);
     });
     confirms.delete(id);
+    if (allow && CONNECT_METHODS.has(msg.method)) connectOk.add(connectKey);
     if (allow) stats.requestsAllowedAfterWarning++;
     else stats.requestsBlocked++;
     await save(['stats']);
@@ -522,6 +583,7 @@ export function createCore(deps: CoreDeps) {
     onTabRemoved(tabId: number) {
       tabs.delete(tabId);
       confirmTimes.delete(tabId);
+      for (const k of connectOk) if (k.startsWith(`${tabId}|`)) connectOk.delete(k);
     },
     onWindowRemoved(windowId: number) {
       for (const c of confirms.values()) if (c.windowId === windowId) c.resolve(false);
