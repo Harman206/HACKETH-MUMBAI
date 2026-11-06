@@ -4,7 +4,7 @@ import './ui.css';
 import type { PublicState } from '../shared/types';
 import { ago, getState, openPage, send, short } from './api';
 import { GuardChip, ProtocolCard, TopBar } from './components';
-import { Icon, type IconName } from './icons';
+import { Copey, Icon, type IconName } from './icons';
 import { scanPositions, type Scan } from './positions';
 
 function Dashboard() {
@@ -108,11 +108,11 @@ function Dashboard() {
             <button class="link" disabled={scanning} onClick={() => runScan(st)}><Icon name="refresh" size={14} />Scan again</button>
           ))}
           <div class="card" data-positions style="margin:0">
-            {!st.settings.account && <p class="muted">Add your wallet address in setup to see your positions.</p>}
+            {!st.settings.account && <div class="empty"><Copey mood="checking" size={56} /><p class="muted">Add your wallet address in setup to see your positions.</p></div>}
             {scanning && <p class="muted">Finding your positions straight from the contracts…</p>}
             {scan && !scanning && (
               <>
-                {scan.found.length === 0 && <p class="muted">No open positions found in the protocols you follow.</p>}
+                {scan.found.length === 0 && <div class="empty"><Copey mood="checking" size={56} /><p class="muted">No open positions found in the protocols you follow.</p></div>}
                 <ul class="clean positions">
                   {scan.found.map((f) => (
                     <li data-position={f.position.id}>
@@ -143,7 +143,7 @@ function Dashboard() {
 
         <section class="dash-section">
           {head('shield', 'Protocols you follow')}
-          {st.protocols.length === 0 && <div class="card" style="margin:0"><p class="muted">None yet. <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}>Add one</a>.</p></div>}
+          {st.protocols.length === 0 && <div class="card empty" style="margin:0"><Copey mood="checking" size={56} /><p class="muted">None yet. <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}>Add one</a>.</p></div>}
           {st.protocols.map((p) => (
             <div class="proto-block">
               <ProtocolCard p={p} />

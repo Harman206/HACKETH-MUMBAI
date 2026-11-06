@@ -3,8 +3,8 @@ import { useEffect, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState } from '../shared/types';
 import { getState, openPage, send, short } from './api';
-import { Chip, GuardChip, ProtocolCard, StatusMark, TopBar } from './components';
-import { Icon, type IconName } from './icons';
+import { Chip, GuardChip, ProtocolCard, TopBar } from './components';
+import { Copey, Icon, type IconName } from './icons';
 
 const STEPS = ['Welcome', 'Wallet', 'Protocols', 'Connections', 'Done'] as const;
 const SUGGESTED = 'demoswap-blackout.eth';
@@ -89,7 +89,10 @@ function Setup() {
 
       {n === 0 && (
         <div class="card step-card">
-          <h1>Your way out, even when the website is gone.</h1>
+          <div class="welcome-head">
+            <h1>Your way out, even when the website is gone.</h1>
+            <Copey mood="protected" size={128} />
+          </div>
           <ul class="feature">
             <Feature icon="shield-check" title="Checks every protocol site you open">
               against the fingerprint its team published on ENS. A hijacked site is stopped before it can ask you for anything.
@@ -225,7 +228,7 @@ function Setup() {
 
       {n === 4 && (
         <div class="card step-card done-hero">
-          <StatusMark tone="ok" size={34} />
+          <div class="copey-stage"><Copey mood="protected" size={150} /></div>
           <h1>You’re protected.</h1>
           <dl class="kv summary">
             <dt>Following</dt>

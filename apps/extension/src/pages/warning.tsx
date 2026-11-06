@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import './ui.css';
 import { send } from './api';
 import { StatusMark, TopBar } from './components';
-import { Icon } from './icons';
+import { Copey, Icon } from './icons';
 
 const q = new URLSearchParams(location.search);
 const reason = q.get('reason') as 'compromised' | 'blocklist' | 'mismatch' | null;
@@ -37,7 +37,10 @@ function Warning() {
         <span class="pill bad"><Icon name="x-octagon" size={14} />Page blocked</span>
       </TopBar>
       <div class="warn-hero" role="alert">
-        <div class="warn-glyph" aria-hidden="true"><Icon name="x-octagon" size={44} /></div>
+        <div class="copey-stage bad" aria-hidden="true">
+          <Copey mood="worried" size={156} />
+          <span class="badge"><Icon name="x-octagon" size={20} /></span>
+        </div>
         <p class="label" style="justify-content:center;color:var(--bad)">Copeybara stopped this page</p>
         <h1>{t.title}</h1>
         <p>{t.body}</p>

@@ -3,8 +3,8 @@ import { useEffect, useState } from 'preact/hooks';
 import './ui.css';
 import type { PendingConfirm } from '../shared/types';
 import { send } from './api';
-import { Chip, StatusMark, TopBar } from './components';
-import { Icon } from './icons';
+import { Chip, TopBar } from './components';
+import { Copey, Icon } from './icons';
 
 const id = new URLSearchParams(location.search).get('id') ?? '';
 
@@ -36,7 +36,7 @@ function Confirm() {
       </TopBar>
       <div class={`card risk-card ${tone}`}>
         <div class="risk-head">
-          <StatusMark tone={tone} />
+          <Copey mood="worried" size={72} class="risk-copey" />
           <div class="grow">
             <p class="label" style={`color:var(--${tone})`}>{dangerous ? 'High risk' : 'Unusual request'}</p>
             <h1>{dangerous ? 'This looks like a wallet drainer' : 'Check this request'}</h1>

@@ -1,8 +1,12 @@
 /**
  * Inline line icons (24px grid, 1.75px stroke, currentColor) and the Copeybara mark.
- * Purely presentational: no network, no fonts, nothing for a page to hook into.
+ * Purely presentational and bundled locally: no network, nothing for a page to hook into.
  */
 import type { JSX } from 'preact';
+import copeyChecking from './img/copey-checking.png';
+import copeyProtected from './img/copey-protected.png';
+import copeyVerified from './img/copey-verified.png';
+import copeyWorried from './img/copey-worried.png';
 
 const PATHS = {
   'shield-check': <><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z" /><path d="m9 12 2.2 2.2L15.5 10" /></>,
@@ -54,14 +58,27 @@ export function Icon({ name, size = 18, class: cls }: { name: IconName; size?: n
   );
 }
 
-/** The Copeybara mark (same drawing as apps/site/public/copeybara.svg): an arch with an exit arrow. */
+/** The Copeybara mark (assets/brand/copeybara-mark.svg): lime capybara on a near-black tile. */
 export function Logo({ size = 30 }: { size?: number }) {
   return (
-    <svg class="logo" viewBox="0 0 32 32" width={size} height={size} aria-hidden="true" focusable="false">
-      <rect width="32" height="32" rx="9" fill="var(--accent)" />
-      <path d="M8 21v-7a6 6 0 0 1 12 0v3m-6 4h11m-4-4 4 4-4 4" fill="none" stroke="var(--on-accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <svg class="logo" viewBox="0 0 104 104" width={size} height={size} aria-hidden="true" focusable="false">
+      <rect width="104" height="104" rx="26" fill="#141615" />
+      <path
+        fill="#c4fa4f"
+        fill-rule="evenodd"
+        transform="translate(11 17) scale(.8)"
+        d="M10 73c2-17 10-33 19-46a7 7 0 0 1-3-6 8 8 0 0 1 15-3c6-2 13-1 20 1l27 6c4 1 6 3 6 7v17c0 7-4 10-10 11l-24 2-9 11H10Zm52-36a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+      />
     </svg>
   );
+}
+
+const COPEY = { checking: copeyChecking, verified: copeyVerified, worried: copeyWorried, protected: copeyProtected };
+export type Mood = keyof typeof COPEY;
+
+/** Copey, the mascot, in one of four moods. Decorative: the text next to it carries the meaning. */
+export function Copey({ mood, size = 80, class: cls }: { mood: Mood; size?: number; class?: string }) {
+  return <img class={`copey copey-${mood}${cls ? ` ${cls}` : ''}`} src={COPEY[mood]} width={size} height={size} alt="" draggable={false} />;
 }
 
 /** Logo + wordmark, with an optional caption under the name. */

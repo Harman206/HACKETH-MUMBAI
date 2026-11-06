@@ -8,8 +8,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import './ui.css';
 import type { PublicState, SiteState } from '../shared/types';
 import { ago, getState, getTab, openPage, protocolHealth, send, short, siteText, type Tone } from './api';
-import { Chip, GuardChip, shortHealth, StatusMark, TONE_ICON, TopBar } from './components';
-import { Icon, type IconName } from './icons';
+import { Chip, GuardChip, shortHealth, TONE_ICON, TopBar } from './components';
+import { Copey, Icon, type IconName, type Mood } from './icons';
 import { scanPositions, type Scan } from './positions';
 
 interface TabInfo {
@@ -37,6 +37,9 @@ async function siteTab(): Promise<TabInfo | undefined> {
   const others = (await chrome.tabs.query({ currentWindow: true })).filter((t) => t.id !== self.id);
   return others.sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0];
 }
+
+/** Copey's mood for the site card: verified, worried (warn or bad), or still checking / nothing to check. */
+const siteMood = (t: Tone): Mood => (t === 'ok' ? 'verified' : t === 'bad' || t === 'warn' ? 'worried' : 'checking');
 
 const hostOf = (url: string | undefined) => {
   try {
@@ -158,7 +161,7 @@ function Panel() {
           {host && <span class="host" title={host}>{host}</span>}
         </div>
         <div class="site-hero">
-          <StatusMark tone={host ? s.tone : 'grey'} icon={host ? undefined : 'globe'} />
+          <Copey mood={siteMood(host ? s.tone : 'grey')} size={84} />
           <div class="grow">
             <h3 data-site-title>{host ? s.title : 'No web page open'}</h3>
             <p class="muted">{host ? s.detail : 'Open a DeFi site in this window and Copeybara will check it here.'}</p>
@@ -210,12 +213,12 @@ function Panel() {
         )}
       >
         <div class="card" data-positions>
-          {!hasWallet && <p class="muted small">Add your wallet address in setup to see what you hold.</p>}
-          {hasWallet && !hasProtocol && <p class="muted small">Follow a protocol to see your positions in it.</p>}
+          {!hasWallet && <div class="empty"><Copey mood="checking" size={52} /><p class="muted small">Add your wallet address in setup to see what you hold.</p></div>}
+          {hasWallet && !hasProtocol && <div class="empty"><Copey mood="checking" size={52} /><p class="muted small">Follow a protocol to see your positions in it.</p></div>}
           {scanning && !scan && <p class="muted small">Reading your positions straight from the contracts…</p>}
           {scan && (
             <>
-              {scan.found.length === 0 && !scanning && <p class="muted small">No open positions in the protocols you follow.</p>}
+              {scan.found.length === 0 && !scanning && <div class="empty"><Copey mood="checking" size={52} /><p class="muted small">No open positions in the protocols you follow.</p></div>}
               <ul class="clean positions">
                 {scan.found.map((f) => (
                   <li data-position={f.position.id}>
@@ -255,9 +258,12 @@ function Panel() {
       >
         <div class="card">
           {!hasProtocol && (
-            <p class="muted small">
-              None yet. <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}>Follow one in setup</a>.
-            </p>
+            <div class="empty">
+              <Copey mood="checking" size={52} />
+              <p class="muted small">
+                None yet. <a href="#" onClick={(e) => (e.preventDefault(), openPage('setup'))}>Follow one in setup</a>.
+              </p>
+            </div>
           )}
           <ul class="clean">
             {st.protocols.map((p) => {

@@ -67,6 +67,9 @@ for (const [name, entry] of [['content', 'src/content/index.ts'], ['shim', 'src/
   });
 }
 cpSync(join(ROOT, 'public'), join(STAGE, 'icons'), { recursive: true });
+// licences of the bundled UI fonts (SIL OFL 1.1 asks for them to travel with the fonts)
+mkdirSync(join(STAGE, 'fonts'), { recursive: true });
+for (const f of readdirSync(join(ROOT, 'src/pages/fonts')).filter((x) => x.startsWith('OFL-'))) cpSync(join(ROOT, 'src/pages/fonts', f), join(STAGE, 'fonts', f));
 
 const icons = Object.fromEntries([16, 32, 48, 128].map((s) => [String(s), `icons/icon-${s}.png`]));
 const contentScripts = [
