@@ -1,0 +1,26 @@
+{
+  "chainId": 11155111,
+  "wallet": "0xa9e11dfe4115c9193057533A0DAf56A59d1A7CF4",
+  "positionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
+  "poolKey": {
+    "currency0": "0x62715d2762949Ab8Fb124eB01f78898Feb8a596A",
+    "currency1": "0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA",
+    "fee": 3000,
+    "tickSpacing": 60,
+    "hooks": "0x0000000000000000000000000000000000000000"
+  },
+  "poolId": "0x50e3c5a1c12487eb6f2cd3aeaf817376e952fd8ced9347cbe01602174dea40a2",
+  "positions": {
+    "inRange": "41448",
+    "outOfRange": "41449"
+  },
+  "txs": {
+    "approve Permit2 for 0x62715d2762949Ab8Fb124eB01f78898Feb8a596A": "0xf4d0b3de24f02824af0ab9b313de83deedbde40a5e099aa21d13e2235e808d2d",
+    "Permit2 allow PositionManager for 0x62715d2762949Ab8Fb124eB01f78898Feb8a596A": "0xfadc925003e3a1347127e43b59dc0f99dd5ca2d4e1a485f317f7fc4ed86c7281",
+    "approve Permit2 for 0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA": "0x6cefe330250ad3d0eb3a8013aef13932efb46d459a11a7baa8473cf77e52a8a5",
+    "Permit2 allow PositionManager for 0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA": "0x7b29ea6af51021a404cf43aa4bd52ddf3ea3b40d486993b74f5f77bb3755065a",
+    "initialize pool at price 1": "0x2782cbba57d9691d4e26e3001baa25ac38d23e3c2fc555d8a18b5a7389b55a34",
+    "mint in-range position": "0xcd08620805813fbfbc2f8f4e47b90cb0e909e59ca5ce8a73370992bd7594fccd",
+    "mint out-of-range position": "0x017e600c7a17e55f1d310d7d7a3cd1b1c0d6f6d824f510afb77b320b0ab572d3"
+  }
+}
