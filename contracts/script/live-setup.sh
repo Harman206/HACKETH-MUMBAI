@@ -34,7 +34,7 @@ if [ "$(cast balance "$WEB_KEY_ADDR" --rpc-url "$SEPOLIA_RPC")" -lt 300000000000
 fi
 # Publish the DemoSwap main-bundle fingerprint for hijack detection (org.blackout.site), once.
 if [ ! -f "$DF.site-published" ]; then
-  env -u RELEASE -u MANIFEST_FILE SITE_HASH="sha256:$(shasum -a 256 ../harness/site/app.js | cut -d' ' -f1)" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow && touch "$DF.site-published"
+  env -u RELEASE -u MANIFEST_FILE SITE_HASH="$(node ../scripts/site-hash.mjs ../harness/site/app.js)" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow && touch "$DF.site-published"
 fi
 ./script/permission-checks.sh
 

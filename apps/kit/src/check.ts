@@ -3,6 +3,7 @@ import type { Address, Hex, Manifest } from '@blackout/core';
 import { explain, guard, type GuardCtx } from '@blackout/guard';
 
 export interface PastedTx {
+  chainId?: number;
   from?: string;
   to?: string;
   data?: string;
@@ -24,6 +25,10 @@ export function parsePasted(text: string): PastedTx {
     if (j && typeof j === 'object') {
       const out: PastedTx = {};
       for (const k of ['from', 'to', 'value'] as const) if (typeof j[k] === 'string') out[k] = j[k];
+      if (typeof j.chainId === 'string' || typeof j.chainId === 'number') {
+        const c = Number(j.chainId);
+        if (Number.isSafeInteger(c) && c > 0) out.chainId = c;
+      }
       const data = typeof j.data === 'string' ? j.data : typeof j.input === 'string' ? j.input : undefined;
       if (data) out.data = data;
       return out;
@@ -72,7 +77,8 @@ export function checkPastedText(input: { text: string; to: string; account: stri
   }
   const p = parsePasted(input.text);
   const account = input.account.trim() as Address;
-  return checkPasted({ to: p.to ?? input.to, data: p.data ?? '', value: p.value, from: p.from, chainId: input.chainId }, { account, chainId: input.chainId, manifest: input.manifest });
+  const chainId = p.chainId ?? input.chainId; // evaluate against the chain the request is actually for
+  return checkPasted({ to: p.to ?? input.to, data: p.data ?? '', value: p.value, from: p.from, chainId }, { account, chainId, manifest: input.manifest });
 }
 
 export interface SiteCheck {
@@ -81,8 +87,13 @@ export interface SiteCheck {
 }
 
 /** Hijack detection: sha256 of the live site's main bundle vs the Safe-published org.blackout.site record. */
+/** Line endings and trailing whitespace must not flip the verdict (copy-paste changes them). Same rule as scripts/site-hash.mjs. */
+export function normaliseBundle(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trimEnd() + '\n';
+}
+
 export async function siteHashCheck(bundleText: string, record: string | null): Promise<SiteCheck> {
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(bundleText));
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(normaliseBundle(bundleText)));
   const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
   if (!record) return { verdict: 'unset', sha256 };
   const want = record.trim().toLowerCase().replace(/^sha256:/, '');

@@ -84,3 +84,12 @@ describe('review C1: the pasted transaction must never choose whose account is c
     expect(r.verdict).toBe('safe-exit');
   });
 });
+
+describe('A6: chain comes from the pasted transaction when present', () => {
+  test('pasted chainId 0x1 is checked against chain 1 (not listed here) → blocked', () => {
+    const exit1 = JSON.stringify({ chainId: '0x1', to: NPM, data: encodeFunctionData({ abi: npmAbi, functionName: 'collect', args: [{ tokenId: 1n, recipient: USER, amount0Max: maxUint128, amount1Max: maxUint128 }] }) });
+    const r = checkPastedText({ text: exit1, to: '', account: USER, chainId: 11155111, manifest });
+    expect(r.verdict).toBe('blocked');
+    expect(r.sentences.join(' ')).toMatch(/chain 1/);
+  });
+});
