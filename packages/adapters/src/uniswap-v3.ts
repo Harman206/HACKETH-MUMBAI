@@ -94,6 +94,10 @@ export const uniswapV3: ExitAdapter = {
     ]
       .filter((e) => e.amount > 0n)
       .map((e) => ({ token: e.token, min: applySlippage(e.amount, ctx.slippageBps) }));
-    return { position: pos, calls: [tx(data)], expected };
+    const preview = [
+      { token: r.token0, amount: out0 },
+      { token: r.token1, amount: out1 },
+    ].filter((e) => e.amount > 0n);
+    return { position: pos, calls: [tx(data)], expected, preview };
   },
 };

@@ -24,7 +24,7 @@ function deps(over: Partial<FlowDeps> = {}) {
   const adapter: ExitAdapter = {
     id: 'uniswap-v3',
     discover: vi.fn(async () => [pos]),
-    buildExit: vi.fn(async (p) => ({ position: p, calls: [], expected: [] }) as ExitPlan),
+    buildExit: vi.fn(async (p) => ({ position: p, calls: [], expected: [], preview: [{ token: '0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA', amount: 5n * 10n ** 18n }] }) as ExitPlan),
   };
   const result: ExitResult = { positionId: '7', status: 'recovered', reasons: [], txHashes: ['0xaa'], before: {}, after: {}, gasUsed: 1n, confirmedAt: 5_000, deltas: [] };
   const d: FlowDeps = {
@@ -56,6 +56,7 @@ describe('exit flow', () => {
     expect(s.step).toBe('positions');
     if (s.step !== 'positions') return;
     expect(s.positions).toEqual([pos]);
+    expect(s.previews['7']).toEqual([{ token: '0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA', amount: 5n * 10n ** 18n }]);
     expect(s.rollbackWarning).toBe(false);
     const facts = Object.fromEntries(s.facts.map((x) => [x.label, x.value]));
     expect(facts['Release']).toBe('v3');

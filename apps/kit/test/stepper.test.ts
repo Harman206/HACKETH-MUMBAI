@@ -10,7 +10,7 @@ describe('stepper', () => {
     expect(stepOf({ step: 'loading', what: '', stage: 2 })).toBe(2);
     expect(stepOf({ step: 'loading', what: '', stage: 3 })).toBe(3);
     expect(stepOf({ step: 'error', message: 'x', stage: 2 })).toBe(2);
-    const base = { step: 'positions' as const, records: {} as never, rollbackWarning: false, account: '0x1' as never, chainId: 1, positions: [] as never[], busy: null, discoveryErrors: [] as string[], facts: [] as { label: string; value: string }[] };
+    const base = { step: 'positions' as const, records: {} as never, rollbackWarning: false, account: '0x1' as never, chainId: 1, positions: [] as never[], busy: null, discoveryErrors: [] as string[], facts: [] as { label: string; value: string }[], previews: {}, meta: {} };
     expect(stepOf({ ...base, results: {} })).toBe(3);
     expect(stepOf({ ...base, results: { a: {} as never } })).toBe(4);
   });

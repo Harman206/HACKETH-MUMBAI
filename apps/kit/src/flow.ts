@@ -7,6 +7,7 @@ import type { Settings } from './settings';
 import { maxSeenVersion, recordSeenVersion } from './storage';
 import { store, type Store } from './store';
 import { COPY } from './copy';
+import { tokenMeta, type TokenMeta } from './tokens';
 
 export type FlowState =
   | { step: 'setup' }
@@ -24,6 +25,9 @@ export type FlowState =
       discoveryErrors: string[];
       /** Plain-language facts the UI shows under "What's happening". */
       facts: { label: string; value: string }[];
+      /** Simulated payout per position id (display), and token symbols/decimals. */
+      previews: Record<string, { token: Address; amount: bigint }[]>;
+      meta: TokenMeta;
     }
   | { step: 'error'; message: string; stage?: 1 | 2 | 3 };
 
@@ -140,7 +144,17 @@ export function createFlow(deps: FlowDeps): Flow {
         { label: 'RPC providers in agreement', value: `${st.filter((p) => p.up).length} of ${st.length}` },
         { label: 'Exit contracts published for this network', value: String(Object.values(records.manifest.chains[String(s.targetChainId)] ?? {}).reduce((n, roles) => n + Object.keys(roles ?? {}).length, 0)) },
       ];
-      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors, facts });
+      const previews: Record<string, { token: Address; amount: bigint }[]> = {};
+      await Promise.all(
+        positions
+          .filter((p) => !p.manual)
+          .map(async (p) => {
+            const a = deps.adapters.find((x) => x.id === p.adapter)!;
+            previews[p.id] = (await a.buildExit(p, ctx!).catch(() => null))?.preview ?? [];
+          }),
+      );
+      const meta = typeof q.read === 'function' ? await tokenMeta(q, positions.flatMap((p) => p.tokens), ctx.block).catch(() => ({})) : {};
+      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors, facts, previews, meta });
     } catch (e) {
       return fail(message(e));
     }

@@ -9,6 +9,7 @@ import { loadSettings, rpcUrlsFor, saveSettings, type Settings } from './setting
 import { connect, discoverWallets, ensureChain, senderFrom, type Eip1193 } from './wallet';
 import { CHAIN_NAMES, DEFAULT_RPCS, ENS_CONFIG, EXPLORERS } from './config';
 import { COPY } from './copy';
+import { formatAmount, type TokenMeta } from './tokens';
 import { CheckScreen } from './screens/Check';
 import { ReleaseScreen } from './screens/Release';
 import './styles.css';
@@ -198,7 +199,7 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
         ))}
         {state.positions.length === 0 && <p class="muted" style="margin-top:12px">{COPY.noPositions}</p>}
         {state.positions.map((p) => (
-          <PositionRow p={p} result={state.results[p.id]} busy={state.busy} chainId={state.chainId} onExit={() => flow.exit(p.id)} />
+          <PositionRow p={p} result={state.results[p.id]} busy={state.busy} chainId={state.chainId} preview={state.previews[p.id] ?? []} meta={state.meta} onExit={() => flow.exit(p.id)} />
         ))}
       </div>
       {anyResult && (
@@ -215,8 +216,18 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
   );
 }
 
-function PositionRow(props: { p: Position; result?: ExitResult; busy: string | null; chainId: number; onExit(): void }) {
-  const { p, result } = props;
+function PositionRow(props: {
+  p: Position;
+  result?: ExitResult;
+  busy: string | null;
+  chainId: number;
+  preview: { token: `0x${string}`; amount: bigint }[];
+  meta: TokenMeta;
+  onExit(): void;
+}) {
+  const { p, result, meta } = props;
+  const fmt = (token: `0x${string}`, amount: bigint) =>
+    `${formatAmount(amount, meta[token]?.decimals ?? 18)} ${meta[token]?.symbol ?? `${token.slice(0, 6)}…${token.slice(-4)}`}`;
   const label = result
     ? { recovered: <b class="ok">{COPY.recovered}</b>, 'not-recovered': <b class="bad">{COPY.notRecovered}</b>, rejected: <b class="bad">{COPY.blocked}</b>, unsimulated: <b class="warn">{COPY.unsimulated}</b> }[result.status]
     : null;
@@ -225,6 +236,9 @@ function PositionRow(props: { p: Position; result?: ExitResult; busy: string | n
       <div class="row">
         <div>
           <b>{p.label}</b>
+          {props.preview.length > 0 && !result && (
+            <div class="muted" style="font-size:14px">You would receive ≈ {props.preview.map((x) => fmt(x.token, x.amount)).join(' + ')}</div>
+          )}
           {p.manual && (
             <div class="warn" style="font-size:13px">
               {COPY.manual}: {p.manual}
@@ -238,8 +252,13 @@ function PositionRow(props: { p: Position; result?: ExitResult; busy: string | n
         )}
       </div>
       {result && (
-        <div style="margin-top:6px" data-status={result.status}>
+        <div style="margin-top:6px" data-status={result.status} class={`result result-${result.status}`}>
           {label}
+          {result.deltas.length > 0 && result.status === 'recovered' && (
+            <div class="ok" style="font-size:15px;margin-top:4px">
+              {result.deltas.map((d) => `+${fmt(d.token, d.after - d.before)}`).join('   ')} back in your wallet
+            </div>
+          )}
           {result.txHashes.map((h) => (
             <div class="mono">
               <a href={`${EXPLORERS[props.chainId] ?? '#'}${h}`} target="_blank" rel="noreferrer noopener">

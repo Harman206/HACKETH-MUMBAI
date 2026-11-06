@@ -44,6 +44,7 @@ export const curve3pool: ExitAdapter = {
       position: pos,
       calls: [{ chainId: ctx.chainId, from: ctx.account, to: r.pool, data, value: 0n }],
       expected: r.coins.map((token, i) => ({ token, min: mins[i]! })).filter((_, i) => outs[i]! > 0n),
+      preview: r.coins.map((token, i) => ({ token, amount: outs[i]! })).filter((e) => e.amount > 0n),
     };
   },
 };

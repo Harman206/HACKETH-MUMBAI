@@ -64,6 +64,7 @@ export const aaveV3: ExitAdapter = {
       position: pos,
       calls: [{ chainId: ctx.chainId, from: ctx.account, to: address, data, value: 0n }],
       expected: amount > 0n ? [{ token: r.asset, min: applySlippage(amount, ctx.slippageBps) }] : [],
+      preview: amount > 0n ? [{ token: r.asset, amount }] : [],
     };
   },
 };

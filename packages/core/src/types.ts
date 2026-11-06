@@ -52,4 +52,6 @@ export interface ExitPlan {
   position: Position;
   calls: TxRequest[];
   expected: ExpectedDelta[];
+  /** Simulated amounts the exit would pay out (display only; `expected` carries the enforced minimums). */
+  preview?: { token: Address; amount: bigint }[];
 }
