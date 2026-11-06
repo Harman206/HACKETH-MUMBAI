@@ -173,8 +173,47 @@
    "unknown": [],
    "unreadable": [],
    "expect": "should be mismatch"
+  },
+  {
+   "incident": "Evasion E2, extension (synthetic)",
+   "state": "lazy chunk loaded with import(): only the chunk is malicious",
+   "evidence": "synthetic page, real built content script in Chromium",
+   "scripts": 2,
+   "verdict": "mismatch",
+   "unknown": [
+    "http://127.0.0.1:53961/x/wallet-chunk.js"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Evasion E1, extension (synthetic)",
+   "state": "server cloaks by Sec-Fetch-Dest: script loads get the drainer; cacheable response",
+   "evidence": "synthetic server, real built content script in Chromium",
+   "scripts": 1,
+   "verdict": "mismatch",
+   "unknown": [
+    "http://127.0.0.1:53961/c/app.js"
+   ],
+   "unreadable": [],
+   "expect": "mismatch"
+  },
+  {
+   "incident": "Evasion E1, extension (synthetic)",
+   "state": "same, but served Cache-Control: no-store, so the page's bytes are not in the cache",
+   "evidence": "synthetic server, real built content script in Chromium",
+   "scripts": 1,
+   "verdict": "match",
+   "unknown": [],
+   "unreadable": [],
+   "expect": "mismatch (residual: the re-fetch is cloaked)"
   }
  ],
+ "cacheProbe": {
+  "force-cache": "executed (drainer) bytes",
+  "only-if-cached": "executed (drainer) bytes",
+  "no-store": "clean bytes"
+ },
  "requests": [
   {
    "incident": "Curve 2022",

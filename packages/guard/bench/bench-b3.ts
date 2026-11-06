@@ -138,18 +138,91 @@ async function evasions() {
   srv.close();
 }
 
+/**
+ * The same evasions through the extension's live path: the real built content script (apps/extension/dist/chrome/content.js)
+ * in Chromium, with a stand-in for chrome.runtime that records the hashes it sends. Needs `node apps/extension/scripts/build.mjs`.
+ */
+let cacheProbe: Record<string, string> | null = null;
+async function extensionEvasions() {
+  const contentJs = join(REPO, 'apps', 'extension', 'dist', 'chrome', 'content.js');
+  if (!existsSync(contentJs)) {
+    console.warn('skipping the extension rows: build the extension first (node apps/extension/scripts/build.mjs)');
+    return;
+  }
+  const { chromium } = await import(join(REPO, 'apps', 'extension', 'node_modules', '@playwright', 'test', 'index.mjs'));
+  const legitChunk = 'export const connect = () => window.ethereum.request({ method: "eth_requestAccounts" });';
+  const evilChunk = 'export const connect = async () => { await window.ethereum.request({ method: "eth_sendTransaction", params: [/* approve(drainer) */] }); };';
+  const entry = 'import("/x/wallet-chunk.js").then((m) => (window.connect = m.connect));';
+  const srv = createServer((req, res) => {
+    // Cloaking server: real script loads (Sec-Fetch-Dest: script) get the drainer, anything else the legit bytes.
+    const realLoad = req.headers['sec-fetch-dest'] === 'script';
+    res.setHeader('content-type', req.url!.endsWith('/') ? 'text/html' : 'text/javascript');
+    if (req.url === '/x/') return res.end('<!doctype html><script type="module" src="/x/index.js"></script>');
+    if (req.url === '/x/index.js') return res.end(entry);
+    if (req.url === '/x/wallet-chunk.js') return res.end(evilChunk);
+    for (const [path, cache] of [['/c/', 'max-age=600'], ['/n/', 'no-store']] as const) {
+      if (req.url === path) return res.end(`<!doctype html><script src="${path}app.js"></script>`);
+      if (req.url === `${path}app.js`) {
+        res.setHeader('cache-control', cache);
+        return res.end(realLoad ? legitChunk + '\n/* + drainer */' : legitChunk);
+      }
+    }
+    res.statusCode = 404;
+    res.end();
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
+  const base = `http://127.0.0.1:${(srv.address() as any).port}`;
+  const browser = await chromium.launch({ channel: 'chromium' }); // full Chromium in new headless mode (the one the extension e2e uses)
+  const live = async (path: string): Promise<CodeItem[]> => {
+    const ctxB = await browser.newContext();
+    const page = await ctxB.newPage();
+    // A string, not a function: tsx would add __name() helpers that do not exist in the page.
+    await page.addInitScript(`window.__items = []; Object.defineProperty(window, 'chrome', { value: { runtime: { sendMessage: async (m) => {
+      if (m.t === 'scripts') window.__items.push(...m.items);
+      return m.t === 'hello' ? { site: { kind: 'protocol', protocol: 'x.eth', verdict: 'checking' } } : { site: {} };
+    } } } });`);
+    await page.addInitScript({ path: contentJs });
+    await page.goto(`${base}${path}`, { waitUntil: 'load' });
+    await page.waitForTimeout(1500);
+    const items = (await page.evaluate(() => (window as any).__items)) as CodeItem[];
+    await ctxB.close();
+    return items;
+  };
+  try {
+    const allowedE2 = [await scriptHash(entry), await scriptHash(legitChunk)]; // the protocol published every .js it built
+    row('Evasion E2, extension (synthetic)', 'lazy chunk loaded with import(): only the chunk is malicious', 'synthetic page, real built content script in Chromium', await live('/x/'), allowedE2, 'mismatch');
+    const allowedE1 = [await scriptHash(legitChunk)];
+    row('Evasion E1, extension (synthetic)', 'server cloaks by Sec-Fetch-Dest: script loads get the drainer; cacheable response', 'synthetic server, real built content script in Chromium', await live('/c/'), allowedE1, 'mismatch');
+    row('Evasion E1, extension (synthetic)', 'same, but served Cache-Control: no-store, so the page\'s bytes are not in the cache', 'synthetic server, real built content script in Chromium', await live('/n/'), allowedE1, 'mismatch (residual: the re-fetch is cloaked)');
+    // Which fetch modes see the bytes the page executed? (old content script: force-cache; new: only-if-cached first)
+    const pg = await (await browser.newContext()).newPage();
+    await pg.goto(`${base}/c/`, { waitUntil: 'load' });
+    cacheProbe = (await pg.evaluate(`(async () => {
+      const t = async (init) => {
+        try { return (await (await fetch('/c/app.js', init)).text()).includes('drainer') ? 'executed (drainer) bytes' : 'clean bytes'; } catch { return 'error'; }
+      };
+      return { 'force-cache': await t({ cache: 'force-cache' }), 'only-if-cached': await t({ cache: 'only-if-cached', mode: 'same-origin' }), 'no-store': await t({ cache: 'no-store' }) };
+    })()`)) as Record<string, string>;
+    console.log('cache probe (cacheable cloaked script):', cacheProbe);
+  } finally {
+    await browser.close();
+    srv.close();
+  }
+}
+
 async function main() {
   await ledger();
   await balancer();
   const r1 = await curve();
   await evasions();
+  await extensionEvasions();
   const reqs = [
     { incident: 'Curve 2022', evidence: 'real calldata (replay/fixtures/R1.json, tx 0xec72bb41…)', c: r1 },
     { incident: 'Ledger Connect Kit 2023 (Angel Drainer)', evidence: 'RECONSTRUCTED approve to the customer address ZachXBT attributed (0x6587…5c2d)', c: classifyRequest({ method: 'eth_sendTransaction', params: [{ from: ctx.account, to: '0xdAC17F958D2ee523a2206206994597C13D831ec7', data: encodeFunctionData({ abi: erc20, functionName: 'approve', args: ['0x658729879fca881d9526480b82ae00efc54b5c2d', maxUint256] }) }] }, ctx) },
     { incident: 'Ledger Connect Kit 2023 (Angel Drainer)', evidence: 'RECONSTRUCTED Permit2 PermitBatch to the same address', c: classifyRequest({ method: 'eth_signTypedData_v4', params: [ctx.account, JSON.stringify({ domain: { name: 'Permit2', chainId: 1, verifyingContract: '0x000000000022D473030F116dDEE9F6B43aC78BA3' }, primaryType: 'PermitBatch', types: { PermitBatch: [{ name: 'details', type: 'PermitDetails[]' }, { name: 'spender', type: 'address' }, { name: 'sigDeadline', type: 'uint256' }], PermitDetails: [{ name: 'token', type: 'address' }, { name: 'amount', type: 'uint160' }, { name: 'expiration', type: 'uint48' }, { name: 'nonce', type: 'uint48' }] }, message: { details: [{ token: '0xdAC17F958D2ee523a2206206994597C13D831ec7', amount: (2n ** 160n - 1n).toString(), expiration: '1735689600', nonce: '0' }], spender: '0x658729879fca881d9526480b82ae00efc54b5c2d', sigDeadline: '1735689600' } })] }, ctx) },
     { incident: 'Balancer 2023 / Squarespace 2024', evidence: 'no drainer request published in a primary source; see B1 for the kits (Angel/Inferno) these used', c: null },
   ];
-  writeJson('b3-results.json', { checks: out, requests: reqs.map((r) => ({ ...r, c: r.c && { verdict: r.c.verdict, reason: r.c.reasons[0] } })) });
+  writeJson('b3-results.json', { checks: out, cacheProbe, requests: reqs.map((r) => ({ ...r, c: r.c && { verdict: r.c.verdict, reason: r.c.reasons[0] } })) });
 }
 main().catch((e) => {
   console.error(e);

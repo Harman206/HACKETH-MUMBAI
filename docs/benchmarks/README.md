@@ -9,10 +9,10 @@ had to be rebuilt is labeled **reconstructed** in each report.
 | Benchmark | Report | Headline |
 |---|---|---|
 | Related work | [literature.md](literature.md) | 17 papers, reports and datasets. Used here: PTXPhish (NDSS'25), the ScamSniffer address and domain lists, MetaMask eth-phishing-detect, Ledger Connect Kit CDN artefacts, Wayback captures |
-| B1 Drainer requests | [b1-drainer-requests.md](b1-drainer-requests.md) | Approve, increaseAllowance, setApprovalForAll, EIP-2612/DAI permits and Permit2 permits to drainers: **430/430 flagged `dangerous`** across both sets. Payable "claim" scams and ETH sends: all `risky`. **Missed: 108/108 proxy-upgrade and 37/37 NFT bulk-transfer phish** (PTXPhish). Benign: **42.5%** of real dapp requests raise the red alarm on a fresh install (S1), and the S3 what-if (extended well-known table) brings that to **5.9%** |
+| B1 Drainer requests | [b1-drainer-requests.md](b1-drainer-requests.md) | First run: grants to drainers 430/430 `dangerous`, but **108/108 proxy-upgrade and 37/37 NFT bulk-transfer phish missed**, and **42.5%** of real dapp requests raised the red alarm. **After the fixes:** PTXPhish phish stopped (red or ask) **79.2% → 99.9%**, NFT bulk transfers 37/37 red, proxy upgrades 107/108 red + 1 ask. Benign red alarms **42.5% → 1.6%**, any alarm 47.3% → 4.3% |
 | B2 Look-alike domains | [b2-lookalike-domains.md](b2-lookalike-domains.md) | 14,130 real phishing domains imitating 15 DeFi brands: **0** `hostMatches` safety violations. 100% are blocked *if listed*, **0%** if not. 94–100% of each brand's ScamSniffer look-alikes are missing from MetaMask's list |
-| B3 Frontend hijacks | [b3-frontend-hijacks.md](b3-frontend-hijacks.md) | Real Ledger Connect Kit 1.1.5/1.1.6/1.1.7 payloads and the real Balancer hijack capture: all **mismatch**. Two evasions are **missed**: `import()` chunks and fetch cloaking |
-| B4 Guard robustness | below | 152 guard tests pass, including 62,300 generated property cases with 0 counterexamples |
+| B3 Frontend hijacks | [b3-frontend-hijacks.md](b3-frontend-hijacks.md) | Real Ledger Connect Kit 1.1.5/1.1.6/1.1.7 payloads and the real Balancer hijack capture: all **mismatch**. First run: two evasions missed, `import()` chunks and fetch cloaking. **After:** the extension catches the `import()` chunk and a cloaked cacheable script. Still missed: a cloaked `no-store` script, and both evasions on the watcher's static path |
+| B4 Guard robustness | below | 206 guard tests pass (152 before the fixes), including 62,300 generated property cases with 0 counterexamples |
 
 ## Reproduce
 
@@ -27,7 +27,8 @@ cd packages/guard
 ../../node_modules/.bin/tsx bench/collect-ptxphish.ts 120   # B1 Set B (PTXPhish) → data/b1-ptxphish-requests.json
 ../../node_modules/.bin/tsx bench/bench-b1.ts               # → b1-drainer-requests.md, data/b1-results.json (offline, seconds)
 ../../node_modules/.bin/tsx bench/bench-b2.ts               # → b2-lookalike-domains.md, data/b2-results.json
-../../node_modules/.bin/tsx bench/bench-b3.ts               # → data/b3-results.json (b3-frontend-hijacks.md is hand-written from it)
+../../node_modules/.bin/tsx bench/bench-b3.ts               # → data/b3-results.json (b3-frontend-hijacks.md is hand-written from it;
+                                                             #   the extension rows need `node apps/extension/scripts/build.mjs` first)
 cd ../.. && pnpm vitest run packages/guard                  # B4
 ```
 
@@ -44,11 +45,24 @@ Full report: [b1-drainer-requests.md](b1-drainer-requests.md). Raw data: [data/b
 
 **Scenarios.**
 - S0: follows nothing, built-in well-known table off.
-- S1: shipped default (Uniswap well-known table).
+- S1: shipped default (built-in well-known table).
 - S2: S1 + follows the published `config/manifest.json`.
-- S3: **what-if**, S2 + well-known entries for 1inch, 0x, CoW, Aave, Lido and OpenSea, passed through the existing `ctx.known` option.
+- S3: S2 with only the old Uniswap-only table. It shows what the new table entries buy.
 
-"red" = `dangerous`; "any" = `dangerous` or `risky`.
+"red" = `dangerous`; "any" = `dangerous` or `risky`. Both stop the request in the extension; only red defaults to Cancel.
+
+**Before → after the gap fixes** (shipped default, S1; the first run is kept in [data/b1-results-before.json](data/b1-results-before.json)):
+
+| | drainers: red | drainers: any | benign: red | benign: any |
+|---|---|---|---|---|
+| Set A | 134/283 (47.3%) → 119/283 (42.0%) | 282/283 (99.6%) → **282/283 (99.6%)** | 79/186 (42.5%) → **3/186 (1.6%)** | 88/186 (47.3%) → **8/186 (4.3%)** |
+| Set B (PTXPhish) | 312/697 (44.8%) → **455/697 (65.3%)** | 552/697 (79.2%) → **696/697 (99.9%)** | 39/218 (17.9%) → **19/218 (8.7%)** | 94/218 (43.1%) → 90/218 (41.3%) |
+
+- Set A red went *down* by 15 on purpose. Those are plain `transfer`s straight to a drainer. They now ask (`risky`) instead of alarming, because the same request is how people pay each other (gap 6). They are still stopped.
+- No drainer request in either set became `known` or `pass`, except one PTXPhish "Permit" row whose grant lookup found a real revoke tx, `approve(x, 0)`. It is now `pass`, which is right for that tx.
+- With the old Uniswap-only table (S3), benign red is 32.3%. The rest of the drop comes from revocations and plain sends.
+
+**First run (before the fixes)**, for the record:
 
 | | positives: red / any | benign FP: red / any |
 |---|---|---|
@@ -57,7 +71,7 @@ Full report: [b1-drainer-requests.md](b1-drainer-requests.md). Raw data: [data/b
 | Set A, S3 (what-if, extended table) | 47.3% / 99.6% | **11/186 (5.9%)** / 5.9% |
 | Set B (PTXPhish), S1 | 312/697 (44.8%) / **552/697 (79.2%)** | 39/218 (17.9%) / 94/218 (43.1%) |
 
-Per category (S1):
+Per category, first run (S1):
 - **Permission grants are caught every time.** Approve (limited, unlimited), increaseAllowance, setApprovalForAll, EIP-2612 and DAI permits, and Permit2 single/batch to a drainer: 119/119 in Set A and 311/311 in Set B are `dangerous`. (Set B's 312 red also counts one Permit row whose "grant" lookup found a revoke tx, `approve(x,0)`. It is a lookup artefact, flagged because of gap 3.) ERC-20 `transfer` straight to a drainer: 15/15.
 - **ETH sends and payable "claim / security update" calls** are 148/148 in Set A and 240/240 in Set B, all `risky` and never `dangerous`. The extension still stops and explains them, but without the red alarm.
 - **Misses** (`unknown`, so no prompt at all):
@@ -72,13 +86,18 @@ Per category (S1):
   - one Lido call
   - In Set B: KOL token sends (15/16 red) and contract deployments (`risky`).
 
-**Gaps found** (minimal repros in `packages/guard/bench/repro-classify-gaps.ts`; nothing in product code was changed):
-1. **Ownership/upgrade phishing is invisible.** `upgradeTo`, `upgradeToAndCall`, `transferOwnership`, `setOwner`, Safe `addOwnerWithThreshold`/`swapOwner`/`changeThreshold`, and EIP-7702 delegations decode as unknown calls. ScamSniffer attributes 31.9% of 2024 losses to `setOwner`-type phishing. *Fix:* add these selectors to the banned/decoded set in `decode.ts` and classify them `dangerous` unless the new owner/implementation is the user or a followed protocol.
-2. **NFT bulk-transfer helpers.** OpenSea TransferHelper `bulkTransfer` (0x32389b71) and similar are not decoded, so transfers of every NFT to a stranger pass as `unknown`. *Fix:* decode the TransferHelper item list (recipient per item) like the existing transfer rule.
-3. **Revocations raise the drainer alarm.** `approve(spender, 0)` and `setApprovalForAll(op, false)` are `dangerous`, with "This lets … spend …". *Fix:* amount 0 or approved=false → `pass` with "removes a permission".
-4. **Reason text reads the amount from the outer calldata.** In `classifyCall`, `amount` is `data.slice(74,138)` of the *outer* call. Inside a multicall, an unlimited approve is shown as "part of this token". The verdict stays `dangerous`; only the text is wrong. *Fix:* return the decoded amount from `decodeCall` (it already decodes the args) and use that.
-5. **Well-known table covers only Uniswap.** That is the biggest source of benign red alarms. S3 shows that adding the other large spenders (or letting manifests publish a `spenders` role) brings red FPR from 42.5% to 5.9% with no loss of detection, since no drainer in either set is a well-known contract.
-6. **Plain token sends are red.** Every ERC-20 `transfer` to an unlisted address, which is how people pay each other, is `dangerous`. Consider `risky` for a direct `transfer` from an EOA-initiated tx. Keep `dangerous` inside multicalls/batches and for `transferFrom`, where drainers hide.
+**Gaps found in the first run, and what changed.** Each fix has a test built from the benchmark's own rows
+([`packages/guard/test/classify-gaps.test.ts`](../../packages/guard/test/classify-gaps.test.ts), real requests in
+[`bench-cases.ts`](../../packages/guard/test/bench-cases.ts)). The Exit Guard still rejects every one of these calls: the new selectors are in
+`BANNED_SELECTORS`.
+1. **Ownership/upgrade phishing was invisible. Fixed.** `upgradeTo`, `upgradeToAndCall`, `transferOwnership`, `setOwner`, Safe `addOwnerWithThreshold` / `swapOwner` / `enableModule` / `setGuard` / `setFallbackHandler`, and Safe delegatecalls (inside `execTransaction`, `multiSend` or a signed `SafeTx`) are decoded. They are `dangerous` unless the new owner or code is you or a known/followed contract (then `risky`). The reason says who gets control: "This hands control of your Safe to 0x…". EIP-7702 delegations are checked where a request shows them (`authorizationList` on `eth_sendTransaction`). `changeThreshold` and removing another owner ask (`risky`); removing *you* is `dangerous`. `upgradeTo(your own account)` asks, because an account is not code and the proxy would break. Result: 107/108 red, 1/108 ask.
+2. **NFT bulk-transfer helpers. Fixed.** OpenSea TransferHelper `bulkTransfer` and ERC-1155 `safeTransferFrom` / `safeBatchTransferFrom` are decoded; anything sent to someone other than you is `dangerous`. Result: 37/37.
+3. **Revocations raised the drainer alarm. Fixed.** `approve(x, 0)`, `setApprovalForAll(x, false)`, Permit2 `approve(…, 0, …)` and `lockdown`, and permit signatures for 0 (or DAI `allowed: false`) are `pass`: "Removes a permission … This is safe." A revocation that also sends ETH to an unknown contract still asks.
+4. **Reason text read the amount from the outer calldata. Fixed.** The decoder returns each call's own amount.
+5. **Well-known table covered only Uniswap. Fixed.** [`config/known-contracts.json`](../../config/known-contracts.json) now lists 1inch (Aggregation Router v5, v6), 0x (AllowanceHolder, Exchange Proxy), CoW Protocol (Vault Relayer, Settlement), Aave v3 (Pool, ETH gateway), Lido (stETH, wstETH, Withdrawal Queue), OpenSea (Seaport 1.5/1.6, conduit, Conduit Controller) and Safe's MultiSend libraries, on mainnet and on Sepolia where the project lists a deployment. Each address comes from the project's own docs or repo (sources in the JSON) and has bytecode (`cast code`, 2026-11-07).
+6. **Plain token sends were red. Changed.** A direct ERC-20 `transfer` to an address no followed protocol publishes is now `risky`: "You are sending N units of the token at 0x… to 0x…. Make sure you know this address." Sends inside a multicall or a batch, `transferFrom` and NFT transfers stay `dangerous`. There is no drainer address list in the classifier, so a direct send to a drainer also only asks (15 rows in Set A).
+
+What still alarms on benign traffic: approvals to spenders we do not list (2 in Set A, 19 in PTXPhish's KOL/developer set), plain token sends and ETH sends (ask), contract deployments (ask), and payable calls to unknown contracts (ask).
 
 Not measured: Seaport/Blur order signatures (464 PTXPhish "free buy order" rows are attacker fills). Copeybara flags any `*Order*` typed data as `risky` by type alone. Address poisoning (226 rows) is attacker-sent, so there is no victim request.
 
@@ -97,12 +116,12 @@ See [b3-frontend-hijacks.md](b3-frontend-hijacks.md). In short:
 
 - **Real payloads, all caught.** Connect Kit 1.1.5, 1.1.6 and 1.1.7 (fetched from cdn.jsdelivr.net, which still serves them) and the Balancer 2023-09-20 hijacked-host capture are all `mismatch`. The reconstructed Curve clone (real legit bundle plus appended code) is `mismatch` too. The drainer requests are `dangerous`: the real Curve R1 approve, plus reconstructed Angel Drainer approve and Permit2 requests.
 - **The cost of floating dependencies.** Connect Kit's legitimate 1.1.8 to 1.1.12 releases are also `mismatch`, because dapps loaded `connect-kit@1`. A fingerprinted site must pin third-party versions, or every upstream release blocks it until the Safe re-publishes.
-- **Gap G1, `import()`.** Dynamically imported chunks (also Workers and `eval` of fetched code) never become `<script>` elements, so they are never hashed. A modified lazy chunk gives `match`.
-- **Gap G2, cloaking.** Both the watcher and the extension *re-fetch* script bytes. A malicious server can give the drainer to real script loads and clean bytes to the checker. Both gaps have minimal repros and suggested fixes in the B3 report.
+- **Gap G1, `import()`. Fixed in the extension.** The content script now also hashes every `.js`/`.mjs` URL that shows up in resource timing (`import()` chunks, module workers, preloads, fetched JS) and every `<link rel=modulepreload>`. With the real built content script in Chromium, a modified lazy chunk is now `mismatch` (it was `match`). Still not covered: `eval` / `new Function` of strings, `blob:`/`data:` workers, WebAssembly. The watcher's static path still only reads `<script>` tags.
+- **Gap G2, cloaking. Partly mitigated.** The extension reads same-origin scripts with `cache: 'only-if-cached'` first, so it hashes the cache entry the page itself used. A server that gives the drainer only to real script loads (`Sec-Fetch-Dest: script`) is now caught *if the response is cacheable*. Honest note: Chromium's old `force-cache` read already reused that entry (we probed it; see the B3 report), so this makes the behavior explicit rather than adding new catches. A `no-store` response is not in the cache: the extension falls back to a re-fetch, which the server can cloak, and the result is still `match`. The watcher still re-fetches with a Node user agent.
 
 ## B4: Guard robustness (existing tests)
 
-`pnpm vitest run packages/guard` on 2026-11-07: **7 files, 152 tests, all pass** in 7.0 s.
+`pnpm vitest run packages/guard` on 2026-11-07, after the gap fixes: **9 files, 206 tests, all pass** (first run: 7 files, 152 tests).
 
 - 6 fast-check properties of the fail-closed Exit Guard × 10,000 runs each: valid exits pass; a mutated recipient, target, selector, value or an injected approve always fails.
 - A Uniswap v4 action-sequence property × 2,000 runs (accept ⇔ only exit actions and every TAKE_PAIR pays the user).
