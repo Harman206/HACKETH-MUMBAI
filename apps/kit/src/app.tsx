@@ -15,6 +15,7 @@ import type { ExitProgress } from '@copeybara/exec';
 import { formatAmount, type TokenMeta } from './tokens';
 import { CheckScreen } from './screens/Check';
 import { ReleaseScreen } from './screens/Release';
+import { PositionBadges } from './screens/Badges';
 import { BrandMark, IconAlert, IconCheckCircle, IconChevron, IconDownload, IconExit, IconExternal, IconFingerprint, IconInfo, IconLayers, IconLock, IconSearch, IconShield, IconStop, IconWallet } from './screens/Icons';
 import './styles.css';
 
@@ -587,6 +588,7 @@ function PositionRow(props: {
         <span class="token-badge" aria-hidden="true">{ADAPTER_SHORT[p.adapter] ?? p.adapter.slice(0, 2).toUpperCase()}</span>
         <div class="prow-text">
           <div class="prow-title">{p.label}</div>
+          <PositionBadges badges={p.badges} />
           {props.preview.length > 0 && !result && (
             <div class="prow-preview">
               <span class="muted">You would receive ≈</span> <span class="num">{props.preview.map((x) => fmt(x.token, x.amount)).join(' + ')}</span>

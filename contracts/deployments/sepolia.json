@@ -7,8 +7,8 @@
   "secret": "0x03ffdfecc47583fc739c9ec5e4370bf1357dd3e3ebdf9d7b4148322c116b6973",
   "webKey": "0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182",
   "tokenId": 69744561349315654606744923969529915681143012943538267628858506939205983141888,
-  "kitRelease": "30e5b586c733325aaba3b59c240d9e37b5c35fb27fd766fa71fb922ed4029a8a",
-  "kitReleaseVersion": 5,
+  "kitRelease": "d0ff737b1b2d67bc1888da9e65d974c526d16aecf04708d2c80229adc04c3a4a",
+  "kitReleaseVersion": 6,
   "manifest2Sha": "304508a1ef337f70309c312532861f3bbde66040aad3309d50b93e6ca28e9b3c",
   "copeybara": {
     "migrationTxs": [
@@ -26,12 +26,15 @@
     "releaseTxs": [
       "0xd0f3285443b6a9af6039e24c96c33ffc89f3cab3062d095e10b46c724b94422d",
       "0x1d87605fb4022bb1e958d39f4cc805894edc1282b3a8ddb27d0e0af630cba5ed",
-      "0x07212a58ac250c94b5688c97fd370cbfcc90b8360be9ad147a33a3dc98f0b06a"
+      "0x07212a58ac250c94b5688c97fd370cbfcc90b8360be9ad147a33a3dc98f0b06a",
+      "0x383ab693a037836c89c79ae5a47c42338df4bd6bf614c26e26ef66bb03d79ff2",
+      "0x7361fd0cd76219990fd57a4b50408752789e1195b686bbb131f656294fe0408b"
     ],
-    "extensionRelease": "44d7fe480b8429f12637e3670c4564b4a5e520464c661adbf0dd64f2ba2b5d67",
-    "extensionReleaseVersion": 2,
+    "extensionRelease": "ee1f3223fb05ae7c95b5bc12adcb45275393a7b4871c7f220a50d7f9a2c3d56e",
+    "extensionReleaseVersion": 3,
     "siteTxs": [
       "0x920e8959026fec942666c4d4702bfdd415f79bfd41a43b33320a4b56f32e979e"
-    ]
+    ],
+    "extensionTree": "e6f297e04091882f37762da2c7bb21443740c2251755dbd9f563763bd153b908"
   }
 }
