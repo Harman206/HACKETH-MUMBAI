@@ -9,8 +9,9 @@ import { createQuorum } from '@blackout/quorum';
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** Runs the independent verifier on the tampered kit. Detected = verifier exits 1 (MISMATCH). */
-export function checkTamperedKit(tamperedFile: string, ensName: string, ensRpc: string) {
-  const r = spawnSync('bash', [join(REPO, 'scripts', 'verify-kit.sh'), tamperedFile, ensName, ensRpc], { encoding: 'utf8' });
+export function checkTamperedKit(tamperedFile: string, ensName: string, ensRpcs: string[]) {
+  const three = [ensRpcs[0], ensRpcs[1] ?? ensRpcs[0], ensRpcs[2] ?? ensRpcs[0]] as string[];
+  const r = spawnSync('bash', [join(REPO, 'scripts', 'verify-kit.sh'), tamperedFile, ensName, ...three], { encoding: 'utf8' });
   return { detected: r.status === 1 && /MISMATCH/.test(r.stdout), output: r.stdout.trim() || r.stderr.trim() };
 }
 

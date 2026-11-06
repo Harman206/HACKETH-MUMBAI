@@ -93,3 +93,14 @@ describe('A6: chain comes from the pasted transaction when present', () => {
     expect(r.sentences.join(' ')).toMatch(/chain 1/);
   });
 });
+
+describe('C3: ?check= prefill', () => {
+  test('decodes a base64url JSON request from the URL', async () => {
+    const { prefillFromUrl } = await import('../src/check');
+    const req = { to: NPM, data: '0x095ea7b3', value: '0x0' };
+    const b64 = Buffer.from(JSON.stringify(req)).toString('base64url');
+    expect(prefillFromUrl(`http://localhost:8000/?check=${b64}`)).toBe(JSON.stringify(req, null, 2));
+    expect(prefillFromUrl('http://localhost:8000/')).toBeNull();
+    expect(prefillFromUrl('http://localhost:8000/?check=%%%')).toBeNull();
+  });
+});

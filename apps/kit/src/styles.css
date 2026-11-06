@@ -50,3 +50,11 @@ ul.reasons { margin: 6px 0 0; padding-left: 18px; }
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: spin 0.9s linear infinite; flex: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+.result { border-radius: 8px; padding: 10px 12px; margin-top: 8px; border: 1px solid var(--line); }
+.result-recovered { border-color: var(--ok); }
+.result-not-recovered, .result-rejected { border-color: var(--bad); }
+.result-unsimulated { border-color: var(--warn); }
+.verdict { border-width: 2px; }
+.verdict-blocked { border-color: var(--bad); }
+.verdict-safe-exit { border-color: var(--ok); }
+.verdict-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }

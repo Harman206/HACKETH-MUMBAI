@@ -10,7 +10,7 @@ test('full exit: ENS manifest → three positions → exit all → recovered →
 
   await page.getByRole('button', { name: 'Connect wallet and find my positions' }).click();
   await expect(page.getByText(`Release v2`)).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText(s.kitSha256)).toBeAttached();
+  await expect(page.getByText(s.kitSha256).first()).toBeAttached();
   for (const id of Object.values(s.positions)) await expect(page.locator(`[data-position="${id}"]`)).toBeVisible();
 
   await page.getByRole('button', { name: 'Exit all' }).click();

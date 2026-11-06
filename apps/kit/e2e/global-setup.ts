@@ -69,10 +69,13 @@ async function buildWorld(fork: Fork, kitFile: string, sha: string) {
   await fork.testClient.increaseTime({ seconds: 61 });
   await fork.testClient.mine({ blocks: 1 });
   forge(['script', 'script/SetupName.s.sol', '--sig', 'finish()']);
+  // contracts/.env may set DEMO_WALLET (a real MetaMask address); forge auto-loads it, so pin it to the seeding key.
+  env.DEMO_WALLET = execFileSync(CAST, ['wallet', 'address', '--private-key', K[5]!], { encoding: 'utf8' }).trim();
   forge(['script', 'script/SeedPositions.s.sol']);
   const positions = JSON.parse(readFileSync(join(CONTRACTS, env.POSITIONS_FILE), 'utf8'));
   // A second wallet for the fire drill, so specs do not consume each other's positions.
   env.TEST_WALLET_KEY = K[6];
+  env.DEMO_WALLET = execFileSync(CAST, ['wallet', 'address', '--private-key', K[6]!], { encoding: 'utf8' }).trim();
   env.POSITIONS_FILE = 'deployments/rehearsal-e2e-drill-positions.json';
   forge(['script', 'script/SeedPositions.s.sol']);
   const drillPositions = JSON.parse(readFileSync(join(CONTRACTS, env.POSITIONS_FILE), 'utf8'));

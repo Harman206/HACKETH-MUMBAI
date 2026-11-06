@@ -2,13 +2,13 @@ import { useState } from 'preact/hooks';
 import { readBlackoutRecords } from '@blackout/ens';
 import type { Quorum } from '@blackout/quorum';
 import type { Settings } from '../settings';
-import { checkPastedText, siteHashCheck, type CheckResult, type SiteCheck } from '../check';
+import { checkPastedText, prefillFromUrl, siteHashCheck, type CheckResult, type SiteCheck } from '../check';
 import { ENS_CONFIG } from '../config';
 
 /** Paste what a live site asks you to sign; the Exit Guard explains whether it is a safe exit. */
 export function CheckScreen(props: { settings: Settings; quorumFor(chainId: number): Quorum }) {
   const { settings } = props;
-  const [pasted, setPasted] = useState('');
+  const [pasted, setPasted] = useState(() => (typeof location !== 'undefined' ? (prefillFromUrl(location.href) ?? '') : ''));
   const [to, setTo] = useState('');
   const [account, setAccount] = useState('');
   const [result, setResult] = useState<CheckResult | null>(null);
@@ -73,8 +73,8 @@ export function CheckScreen(props: { settings: Settings; quorumFor(chainId: numb
         </p>
       )}
       {result && (
-        <div class={`card ${result.verdict === 'blocked' ? 'error' : ''}`} role="status" data-verdict={result.verdict}>
-          <b class={result.verdict === 'blocked' ? 'bad' : 'ok'}>{result.verdict === 'blocked' ? 'Do not sign this.' : 'Safe exit.'}</b>
+        <div class={`card verdict verdict-${result.verdict}`} role="status" data-verdict={result.verdict}>
+          <div class="verdict-title">{result.verdict === 'blocked' ? '⛔ Do not sign this.' : '✅ Safe exit.'}</div>
           <ul class="reasons">
             {result.sentences.map((s) => (
               <li>{s}</li>

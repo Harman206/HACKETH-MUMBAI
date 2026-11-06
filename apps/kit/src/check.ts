@@ -99,3 +99,16 @@ export async function siteHashCheck(bundleText: string, record: string | null): 
   const want = record.trim().toLowerCase().replace(/^sha256:/, '');
   return { verdict: want === sha256 ? 'match' : 'mismatch', sha256 };
 }
+
+/** `?check=<base64url JSON>` pre-fills the Check tab (used by the Attack Theater). Returns pretty JSON or null. */
+export function prefillFromUrl(href: string): string | null {
+  try {
+    const v = new URL(href).searchParams.get('check');
+    if (!v) return null;
+    const b64 = v.replace(/-/g, '+').replace(/_/g, '/');
+    const json = JSON.parse(decodeURIComponent(escape(atob(b64))));
+    return JSON.stringify(json, null, 2);
+  } catch {
+    return null;
+  }
+}

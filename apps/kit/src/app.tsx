@@ -31,7 +31,7 @@ function useFlowState(flow: ReturnType<typeof createFlow>): FlowState {
 
 export function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings);
-  const [tab, setTab] = useState<'exit' | 'check' | 'release'>('exit');
+  const [tab, setTab] = useState<'exit' | 'check' | 'release'>(() => (typeof location !== 'undefined' && new URL(location.href).searchParams.has('check') ? 'check' : 'exit'));
   const [provider, setProvider] = useState<Eip1193 | null>(null);
 
   const flow = useMemo(() => {

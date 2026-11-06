@@ -111,7 +111,7 @@ export async function startHarness(o: HarnessOpts) {
         drains: o.theater.drains,
         verifyKits:
           o.theater.verifyKits ??
-          (async () => ({ real: checkTamperedKit(o.kitFile, o.ensName, o.ensRpcs[0]!).output, tampered: checkTamperedKit(tamperedFile, o.ensName, o.ensRpcs[0]!).output })),
+          (async () => ({ real: checkTamperedKit(o.kitFile, o.ensName, o.ensRpcs).output, tampered: checkTamperedKit(tamperedFile, o.ensName, o.ensRpcs).output })),
         switches: () => ({ site: route.siteUp ? 'up' : 'down', rpc: mode === 'docker' || rpc ? 'up' : 'down', hijack: route.hijack }),
         rescue: () => kitReport,
       })
@@ -155,7 +155,7 @@ export async function startHarness(o: HarnessOpts) {
       return json(res, { ok: true });
     }
     if (path === '/drill-report.json' || path === '/drill-report.html') {
-      const tamper = checkTamperedKit(tamperedFile, o.ensName, o.ensRpcs[0]!);
+      const tamper = checkTamperedKit(tamperedFile, o.ensName, o.ensRpcs);
       const hj = await checkHijackRequest(hijackRequest(o.token, o.drainer) as never, o.ensName, o.ensRpcs, o.universalResolver, o.chainId).catch((e) => ({ rejected: false, sentences: [String(e)] }));
       const r = assemble(failures, kitReport as never, tamper, hj);
       return path.endsWith('.json') ? json(res, r) : void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(drillReportHtml(r));
