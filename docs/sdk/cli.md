@@ -17,7 +17,7 @@ Every command except `init`, `adapter new` and `drill --sample` reads the [confi
 | `certify` | `verify` plus the [certification](certification.md) checks and the last drill | `certification.json` | any ✗ |
 | `roles-check [--live]` | proves the website and watcher keys can't write anything else; fork by default, `--live` uses `eth_call` on Sepolia | none | a forbidden write would succeed, or a Safe positive control fails |
 | `drill [--sample]` | [fire drill](drill.md) on anvil forks with the site and primary RPC off | `drill.json` | a position isn't recovered |
-| `incident --state s` | one Safe batch setting `org.copeybara.status` and the blocklist | `incident-batch.json` | `s` isn't `ok`, `degraded` or `compromised` |
+| `incident --state s` | one Safe batch setting `org.copeybara.status` and the blocklist | `incident-batch.json`, `incident-tx.json` (with `safeTxHash`) | `s` isn't `ok`, `degraded` or `compromised` |
 | `watcher [--up]` | Docker Compose for the [watcher](watcher.md) | `watcher/compose.yml`, `watcher/watcher.env.example`, `watcher/.gitignore` | `--up` and Docker fails |
 | `adapter new <name>` | scaffolds a code adapter with fork tests, Guard corpus cases and property tests | `packages/adapters/src/<name>.ts` and its tests (run inside the Copeybara repo) | a file already exists |
 

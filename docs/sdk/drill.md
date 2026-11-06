@@ -9,7 +9,7 @@ pnpm copeybara drill --sample   # a sample ERC-4626 vault described only by an e
 
 ## What it does
 
-1. Forks the ENS chain and your exit chain (1 or 11155111) with anvil.
+1. Forks the ENS chain and your exit chain (1 or 11155111) with anvil, from the first URL in your `rpcs[chainId]` (or the public defaults). Point `rpcs` at a node that has your name and contracts, for example your own fork during a rehearsal.
 2. Runs your `drill.seed` to give the drill user a real position.
 3. Writes your manifest, exit spec and a `url` on the fork as your Safe (impersonated: no key is used).
 4. Puts three RPC proxies in front of the fork, then **switches off your website and the primary RPC**.
@@ -38,7 +38,7 @@ drill: {
 },
 ```
 
-The seed runs only against the local fork. Use impersonation for any account you need; never a real key.
+The seed runs only against the local fork. Use impersonation for any account you need; never a real key. If `drill.user` already holds a position on the forked chain, `seed: async () => {}` is enough.
 
 ## Requirements
 

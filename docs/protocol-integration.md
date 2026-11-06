@@ -6,29 +6,46 @@ The same material, with the real output of each command, is on the website's Dev
 
 ## Quick start (about an hour)
 
-You need: an ENSv2 name on Sepolia owned by your Safe (2-of-3 or more) with a PermissionedResolver ([`contracts/script/SetupName.s.sol`](../contracts/script/SetupName.s.sol) does this), Node 22 and pnpm 9. The packages are not on npm yet; run them from this repository.
+You need: an ENSv2 name on Sepolia owned by your Safe (2-of-3 or more) with a PermissionedResolver, Node 22, pnpm 9 and Foundry (`anvil` for the drill). The packages are not on npm yet; run them from this repository.
+
+**No name yet?** [`contracts/script/SetupName.s.sol`](../contracts/script/SetupName.s.sol) deploys the Safe and the resolver and registers `<LABEL>.eth`, in two steps at least 60 s apart. It needs `DEPLOYER_KEY`, `OWNER_KEY_1..3`, `WEB_KEY_ADDR`, `LABEL`, `SITE_URL`, `RELEASE` and `MANIFEST_FILE`. A placeholder release (`sha256:<64 zeros>;v=1`) and an empty manifest (`{"v":1,"c":{}}`) are fine: `propose` replaces them. Leave out `WATCHER_ADDR` and `propose` grants the watcher instead. It writes the Safe and resolver addresses to `DEPLOYMENTS_FILE`.
+
+```bash
+cd contracts
+forge script script/SetupName.s.sol --sig "commit()" --rpc-url sepolia --broadcast
+# wait at least 60 s
+forge script script/SetupName.s.sol --sig "finish()" --rpc-url sepolia --broadcast
+```
+
+Then, in this repository:
 
 ```bash
 corepack enable && pnpm install
-pnpm copeybara init                       # writes copeybara.config.ts
+pnpm copeybara init                       # writes copeybara.config.ts in the repo root
 ```
 
-1. **Describe your protocol** in `copeybara.config.ts`: the ENS name, the Safe, the resolver, the website key (it may write `url` only), the watcher key (it may write `status` and `blocklist` only), the kit file and your exit contracts per chain. [`examples/demoswap/copeybara.config.ts`](../examples/demoswap/copeybara.config.ts) is the live Sepolia demo written this way.
+The config can live anywhere, for example in your own repository. Run the CLI from that directory with `node <this repo>/packages/protocol-cli/bin/copeybara.mjs <command>`, or from here with `pnpm copeybara <command> --config <path>`. Relative paths in the config (kit, ABIs, `site.dist`) and the `.copeybara/` output folder are relative to the config file.
+
+1. **Describe your protocol** in `copeybara.config.ts`: the ENS name, the Safe, the resolver, the website key (it may write `url` only), the watcher key (it may write `status` and `blocklist` only), the kit file and your exit contracts per chain. For the kit file, build it with `SOURCE_DATE_EPOCH=0 pnpm --filter @copeybara/kit build` and copy `apps/kit/dist/copeybara-kit.html` next to the config. [`examples/demoswap/copeybara.config.ts`](../examples/demoswap/copeybara.config.ts) is the live Sepolia demo written this way.
 2. **Build the records.** Each command refuses what the Exit Guard could not check.
    ```bash
    pnpm copeybara manifest --onchain       # org.copeybara.manifest (+ org.copeybara.exits)
    pnpm copeybara release                  # org.copeybara.release (+ org.copeybara.extension)
    pnpm copeybara fingerprint --dist dist  # org.copeybara.site; fails on an unpinned third-party script
    ```
-3. **Propose one Safe batch.** `pnpm copeybara propose` writes `.copeybara/safe-batch.json`: every changed record and the two scoped grants, nothing else. In Safe{Wallet}, open Transaction Builder and drag the file in; your owners sign on their own devices. With `--api --sender 0x… --signature 0x…` the CLI posts it to the Safe Transaction Service using a signature made elsewhere.
+   With an `abi` file per contract, `manifest` works offline. Without one, the function is looked up in the deployed bytecode, so the command needs an RPC (`--onchain`; `verify`, `propose` and `drill` do this by themselves).
+3. **Propose one Safe batch.** `pnpm copeybara propose` writes `.copeybara/safe-batch.json`: every record that differs from ENS and the scoped grants that are still missing (website key → `url`, watcher → `status` and `blocklist`), nothing else. In Safe{Wallet}, open Transaction Builder and drag the file in; your owners sign on their own devices. It also writes `.copeybara/safe-tx.json`: the same calls as one MultiSendCallOnly transaction with the Safe nonce and the `safeTxHash` the owners sign. With `--api --sender 0x… --signature 0x…` the CLI posts it to the Safe Transaction Service using a signature made elsewhere. Run `propose` again after the batch executes: it should say `Nothing to propose`.
 4. **Prove it.**
    ```bash
    pnpm copeybara verify                   # every record read back through 3 RPCs; exit 1 on any ✗
    pnpm copeybara roles-check --live       # forbidden writes revert, the same writes as the Safe succeed
    pnpm copeybara drill                    # fork, switch off site + primary RPC, exit a seeded position
    ```
-5. **Ship it to users:** add a build plugin, put the widget on your site, start the watcher (`pnpm copeybara watcher --up`).
-6. **Get certified:** `pnpm copeybara certify` writes `.copeybara/certification.json`. Send it to us; we add your name to [`config/certified.json`](../config/certified.json).
+   `drill` needs a `drill` entry in the config: `{ chainId, user?, seed }`, where `seed({ fork, user })` gives `user` a position on the fork. It forks the first URL in `rpcs[chainId]` when you set one, and the public Sepolia / mainnet RPCs otherwise. If the user already holds a position on that chain, `seed` can do nothing.
+5. **Ship it to users:** add a build plugin, put the widget on your site, start the watcher (`pnpm copeybara watcher`, then `--up`, which needs Docker).
+6. **Get certified:** `pnpm copeybara certify` writes `.copeybara/certification.json`. It needs a watcher, a published site fingerprint and a passing `drill.json` made with the same kit. Send it to us; we add your name to [`config/certified.json`](../config/certified.json).
+
+[`packages/protocol-cli/test/onboarding.fork.test.ts`](../packages/protocol-cli/test/onboarding.fork.test.ts) runs every step above on a Sepolia fork (`pnpm test:fork`), and [`docs/sdk-verification.md`](sdk-verification.md) has the results.
 
 ## Trust model
 
@@ -86,7 +103,7 @@ Anything that does not fit: `pnpm copeybara adapter new <name>` scaffolds a code
 
 ### Site fingerprint plugins
 
-`@copeybara/vite-plugin`, `@copeybara/next-plugin` and `@copeybara/webpack-plugin` hash every script the build ships, write `dist/.well-known/copeybara-site.json`, add a summary to the GitHub Actions job (with a diff against the live `org.copeybara.site` when `ens` is set) and fail the build on a third-party script without a matching SRI pin. Next.js App Router inline scripts cannot be fingerprinted from the client compiler; use `output: 'export'` and `copeybara fingerprint --dist out`.
+`@copeybara/vite-plugin`, `@copeybara/next-plugin` and `@copeybara/webpack-plugin` hash every script the build ships, write `dist/.well-known/copeybara-site.json` (vite and webpack; the Next.js plugin only checks `.next/static`), add a summary to the GitHub Actions job (with a diff against the live `org.copeybara.site` when `ens` is set) and fail the build on a third-party script without a matching SRI pin. Next.js App Router inline scripts cannot be fingerprinted from the client compiler; use `output: 'export'` and `copeybara fingerprint --dist out`. The plugins print the record but never write it to ENS: `copeybara fingerprint --dist <dir>` writes `.copeybara/site.txt`, which `propose` picks up.
 
 ### The widget
 
@@ -100,7 +117,7 @@ One 6.6 kB file with no dependencies. It shows the download, your ENS name, the 
 
 ### The watcher
 
-`pnpm copeybara watcher` writes `.copeybara/watcher/compose.yml` and `watcher.env.example`; put the watcher key in `watcher.env` (gitignored) and run `pnpm copeybara watcher --up`. The container runs as a non-root user with a read-only filesystem, refuses to start with any key other than the configured watcher address, and its `/healthz` turns unhealthy after four missed check intervals ([`apps/watcher/Dockerfile`](../apps/watcher/Dockerfile)).
+`pnpm copeybara watcher` writes `.copeybara/watcher/compose.yml` and `watcher.env.example`; put the watcher key in `watcher.env` (gitignored) and run `pnpm copeybara watcher --up` (Docker). The compose file takes its RPCs from the config, so `127.0.0.1` URLs there point at the container itself. The container runs as a non-root user with a read-only filesystem, refuses to start with any key other than the configured watcher address, and its `/healthz` turns unhealthy after four missed check intervals ([`apps/watcher/Dockerfile`](../apps/watcher/Dockerfile)).
 
 ### Copeybara certified
 
@@ -118,7 +135,7 @@ One 6.6 kB file with no dependencies. It shows the download, your ENS name, the 
 ## Incident runbook
 
 **Your website or DNS is hijacked.**
-1. `pnpm copeybara incident --state compromised --note "Site hijacked. Use your saved exit kit."` and add look-alike hosts with `--block host`. Sign and execute the Safe batch. The watcher does this by itself after two fingerprint mismatches in a row, so the batch may only confirm it.
+1. `pnpm copeybara incident --state compromised --note "Site hijacked. Use your saved exit kit."` and add look-alike hosts with `--block host`. It writes `.copeybara/incident-batch.json` (Transaction Builder) and `.copeybara/incident-tx.json` (one Safe transaction with its `safeTxHash`). Sign and execute it. The watcher does this by itself after two fingerprint mismatches in a row, so the batch may only confirm it.
 2. Extensions following your name block the site before it loads; the kit keeps working because it never reads status.
 3. Point users to the kit and your ENS name through channels that do not depend on the site.
 4. Fix DNS, redeploy, `copeybara fingerprint`, `copeybara propose` for the new `org.copeybara.site`, then `copeybara incident --state ok`. A compromised status set by the Safe stays until the Safe clears it.

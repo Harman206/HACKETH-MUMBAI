@@ -33,7 +33,7 @@ Removing a contract from the manifest stops new kit sessions from exiting it. Ke
    pnpm copeybara incident --state compromised --note "Website hijacked: use the exit kit" --block app-yourprotocol.xyz
    ```
 
-   Owners sign `.copeybara/incident-batch.json`. Extensions that follow your name block the site before it loads.
+   Owners sign `.copeybara/incident-batch.json` in Transaction Builder, or the `safeTxHash` in `.copeybara/incident-tx.json`. Extensions that follow your name block the site before it loads.
 3. **Do not change `url`, the release or the manifest in a panic.** Exits keep working from the records already published, and the batch above cannot touch them.
 4. **Recover the website,** redeploy, re-fingerprint and propose `org.copeybara.site`.
 5. **Clear:** `pnpm copeybara incident --state ok`. The watcher never clears a status your Safe set.

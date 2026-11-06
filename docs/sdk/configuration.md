@@ -1,6 +1,6 @@
 # Configuration
 
-Every command reads `copeybara.config.ts` from the current directory (or `--config <file>`; `.json` works too). Relative paths inside it resolve against the config file's directory. `defineConfig` only adds type checking.
+Every command reads `copeybara.config.ts` from the current directory (or `--config <file>`; `.json` works too). Relative paths inside it resolve against the config file's directory. `defineConfig` only adds type checking. The file can live outside this repository (your own repo, any folder): `@copeybara/protocol-cli` and `@copeybara/core` imports resolve to the CLI's own copies. Run it there with `node <copeybara repo>/packages/protocol-cli/bin/copeybara.mjs <command>`.
 
 ```ts
 import { defineConfig } from '@copeybara/protocol-cli';
