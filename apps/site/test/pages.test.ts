@@ -21,6 +21,9 @@ describe('routes', () => {
     ['#/extension', { page: 'extension' }],
     ['#/certified', { page: 'certified', name: null }],
     ['#/certified/DemoSwap-Blackout.eth', { page: 'certified', name: 'demoswap-blackout.eth' }],
+    ['#/docs', { page: 'docs', slug: null, anchor: null }],
+    ['#/docs/cli', { page: 'docs', slug: 'cli', anchor: null }],
+    ['#/docs/cli/flags', { page: 'docs', slug: 'cli', anchor: 'flags' }],
     ['#/nope', { page: 'home' }],
   ])('%s', (hash, want) => expect(parseRoute(hash)).toEqual(want));
 });

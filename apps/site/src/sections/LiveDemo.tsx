@@ -14,12 +14,13 @@ export function LiveDemo({ onLive }: { onLive(s: string): void }) {
   return (
     <section id="demo">
       <div class="wrap">
-        <header class="section-head">
-          <h2>{reachable ? 'Attack Theater: live' : 'Live demo'}</h2>
+        <header class="section-head" data-reveal>
+          <p class="kicker">{reachable ? 'Attack Theater' : 'Live demo'}</p>
+          <h2>{reachable ? 'Live: hijack, outage, rescue.' : 'Live on chain. Check it yourself.'}</h2>
           <p class="lede">
             {reachable
               ? 'Follow a test wallet through a site hijack, an outage, and a withdrawal using the saved kit.'
-              : 'Check the kit’s release on Sepolia, inspect the transactions that tested a stolen website key, and review the last recorded attack and recovery.'}
+              : 'This page asks Sepolia, right now, which kit release is official, and shows the last recorded rescue.'}
           </p>
         </header>
         {asked && reachable === false && (
