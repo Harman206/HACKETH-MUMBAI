@@ -26,6 +26,7 @@ beforeAll(async () => {
     primaryRpc: upstream.url, kitFile, ensName: 'x.eth', ensRpcs: ['http://127.0.0.1:1'], chainId: 11155111,
     universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', ports, mode: 'process',
     drainer: '0x00000000000000000000000000000000000d7a1e',
+    watcherUrl: 'http://127.0.0.1:1/', // never the developer's live watcher on :8095
     theater: {
       network: 'sepolia',
       prepareVictim: async () => ['0x01'],
