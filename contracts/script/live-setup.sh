@@ -25,4 +25,8 @@ jq . deployments/sepolia.json
 if [ "$(cast balance "$WEB_KEY_ADDR" --rpc-url "$SEPOLIA_RPC")" = "0" ]; then
   cast send "$WEB_KEY_ADDR" --value 0.01ether --private-key "$DEPLOYER_KEY" --rpc-url "$SEPOLIA_RPC" >/dev/null
 fi
+# Publish the DemoSwap main-bundle fingerprint for hijack detection (org.blackout.site), once.
+if [ ! -f deployments/.site-published ]; then
+  env -u RELEASE -u MANIFEST_FILE SITE_HASH="sha256:$(shasum -a 256 ../harness/site/app.js | cut -d' ' -f1)" forge script script/WriteRecords.s.sol --rpc-url "$SEPOLIA_RPC" --broadcast --slow && touch deployments/.site-published
+fi
 ./script/permission-checks.sh

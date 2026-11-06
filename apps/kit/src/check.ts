@@ -57,3 +57,17 @@ export function checkPasted(input: { to: string; data: string; value?: string; f
   const r = guard({ chainId: input.chainId, from, to: input.to as Address, data: input.data as Hex, value }, ctx);
   return { verdict: r.ok ? 'safe-exit' : 'blocked', sentences: explain(r) };
 }
+
+export interface SiteCheck {
+  verdict: 'match' | 'mismatch' | 'unset';
+  sha256: string;
+}
+
+/** Hijack detection: sha256 of the live site's main bundle vs the Safe-published org.blackout.site record. */
+export async function siteHashCheck(bundleText: string, record: string | null): Promise<SiteCheck> {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(bundleText));
+  const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  if (!record) return { verdict: 'unset', sha256 };
+  const want = record.trim().toLowerCase().replace(/^sha256:/, '');
+  return { verdict: want === sha256 ? 'match' : 'mismatch', sha256 };
+}
