@@ -31,6 +31,7 @@ interface INPM {
         returns (address pool);
     function mint(MintParams calldata p) external payable returns (uint256 tokenId, uint128, uint256, uint256);
     function decreaseLiquidity(DecreaseLiquidityParams calldata p) external payable returns (uint256, uint256);
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;
     function positions(uint256)
         external
         view
@@ -48,10 +49,12 @@ contract SeedPositions is Script {
 
     function run() external {
         uint256 key = vm.envUint("TEST_WALLET_KEY");
-        address user = vm.addr(key);
+        address seeder = vm.addr(key);
+        // Positions end up in DEMO_WALLET (e.g. your MetaMask address); defaults to the seeding key's address.
+        address user = vm.envOr("DEMO_WALLET", seeder);
         vm.startBroadcast(key);
-        DemoToken a = new DemoToken("Demo Dollar", "DUSD", 1e27, user);
-        DemoToken b = new DemoToken("Demo Ether", "DETH", 1e27, user);
+        DemoToken a = new DemoToken("Demo Dollar", "DUSD", 1e27, seeder);
+        DemoToken b = new DemoToken("Demo Ether", "DETH", 1e27, seeder);
         (address t0, address t1) = address(a) < address(b) ? (address(a), address(b)) : (address(b), address(a));
         NPM.createAndInitializePoolIfNecessary(t0, t1, FEE, PRICE_1_TO_1);
         DemoToken(t0).approve(address(NPM), type(uint256).max);
@@ -59,9 +62,10 @@ contract SeedPositions is Script {
 
         uint256 inRange = _mint(t0, t1, -6000, 6000, user);
         uint256 outOfRange = _mint(t0, t1, 600, 1200, user); // above price 1.0 → token0 only
-        uint256 owedOnly = _mint(t0, t1, -6000, 6000, user);
+        uint256 owedOnly = _mint(t0, t1, -6000, 6000, seeder);
         (,,,,,,, uint128 liq,,,,) = NPM.positions(owedOnly);
         NPM.decreaseLiquidity(INPM.DecreaseLiquidityParams(owedOnly, liq, 0, 0, block.timestamp + 3600));
+        if (user != seeder) NPM.safeTransferFrom(seeder, user, owedOnly);
         vm.stopBroadcast();
 
         string memory o = "positions";
