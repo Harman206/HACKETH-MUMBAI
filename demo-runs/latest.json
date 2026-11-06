@@ -1,0 +1,9 @@
+{
+  "network": "sepolia",
+  "victim": "0xE3e083eFb205DBd873059cD30d59b2DE9a99A483",
+  "drained": "10,000 DUSD",
+  "drainTx": "0xf92b5060fca697ffca3bcb45baa9f1ab05ce4d5f350a83bf290bfff46663075b",
+  "rescueTx": "0x05440dc82af1972ca96d8672ddfc1f59f1d937ac112739462a4172f306b6c789",
+  "recovered": "999.99 DETH + 999.99 DUSD",
+  "at": 1793965507675
+}
