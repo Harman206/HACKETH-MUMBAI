@@ -3,18 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DemoSwap</title>
+  <title>DemoSwap: provide liquidity, earn fees</title>
   <!-- A normal app frontend: several third-party origins, on purpose. -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <style>body{font-family:Inter,system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;background:#0f172a;color:#e2e8f0}
-  .card{background:#1e293b;border-radius:12px;padding:20px;margin:16px 0}button{background:#6366f1;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:600}</style>
+  <style>
+    :root{--bg:#0b1020;--card:#141b2f;--line:#24304f;--fg:#e6ebff;--muted:#94a0c4;--accent:#7c5cff}
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#2a1f6b,transparent),var(--bg);color:var(--fg)}
+    header{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;border-bottom:1px solid var(--line)}
+    .logo{font-weight:700;font-size:20px;letter-spacing:-.02em}.logo span{color:var(--accent)}
+    main{max-width:880px;margin:0 auto;padding:28px 16px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}
+    table{width:100%;border-collapse:collapse}td,th{padding:10px 6px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500;font-size:13px}
+    button{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}
+    .muted{color:var(--muted)}.lure{background:linear-gradient(90deg,#ffb020,#ff5c8a);color:#1a0b00;border-radius:12px;padding:14px 16px;margin:16px 0;font-size:15px}
+  </style>
 </head>
 <body>
-  <h1>DemoSwap</h1>
-  <p>Provide liquidity. Earn fees. (Demo app for the BLACKOUT fire drill.)</p>
-  <div class="card"><h2>Your liquidity</h2><p id="status">Connect your wallet to see positions.</p><button id="connect">Connect wallet</button></div>
+  <header><div class="logo">Demo<span>Swap</span></div><button id="connect">Connect wallet</button></header>
+  <main>
+    <!--LURE-->
+    <h1>Provide liquidity. Earn fees.</h1>
+    <p class="muted">DemoSwap is a demo app for the BLACKOUT live attack replication (Sepolia testnet).</p>
+    <div class="card">
+      <h2>Pools</h2>
+      <table><tr><th>Pool</th><th>Fee</th><th>TVL</th><th>APR</th></tr>
+        <tr><td>DETH / DUSD</td><td>0.30%</td><td>$2.1M</td><td>14.2%</td></tr>
+        <tr><td>DUSD / USDC</td><td>0.01%</td><td>$880K</td><td>3.1%</td></tr></table>
+    </div>
+    <div class="card"><h2>Your liquidity</h2><p id="status" class="muted">Connect your wallet to see positions.</p></div>
+  </main>
   <img alt="" width="1" height="1" style="display:none" src="https://www.google-analytics.com/collect?v=1&t=pageview&tid=UA-DEMO">
   <script src="/app.js"></script>
 </body>

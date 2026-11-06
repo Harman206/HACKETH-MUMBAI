@@ -22,6 +22,8 @@ export interface HarnessOpts {
   universalResolver: Address;
   token: Address;
   chainId: number;
+  /** The real demo drainer (sepolia-attack.json); the hijack asks victims to approve it. */
+  drainer?: Address;
   ports?: Partial<{ control: number; router: number; site: number; hijack: number; rpc: number }>;
   /** 'process' closes the in-process server; 'docker' runs `docker stop <service>`. */
   mode?: 'process' | 'docker';
@@ -50,7 +52,7 @@ export async function startHarness(o: HarnessOpts) {
     rpc ??= mode === 'process' ? await startRpcProxy({ port: p.rpc, upstream: o.primaryRpc }) : null;
   };
   await up();
-  const hijack = mode === 'process' ? await startHijack({ port: p.hijack, kitFile: o.kitFile, token: o.token }) : null;
+  const hijack = mode === 'process' ? await startHijack({ port: p.hijack, kitFile: o.kitFile, token: o.token, drainer: o.drainer }) : null;
   // In docker mode site/hijack/rpc-proxy are separate containers reached by service name.
   const router = await startRouter({
     port: p.router, sitePort: p.site, hijackPort: p.hijack, state: () => route,
@@ -114,7 +116,7 @@ export async function startHarness(o: HarnessOpts) {
     }
     if (path === '/drill-report.json' || path === '/drill-report.html') {
       const tamper = checkTamperedKit(tamperedFile, o.ensName, o.ensRpcs[0]!);
-      const hj = await checkHijackRequest(hijackRequest(o.token) as never, o.ensName, o.ensRpcs, o.universalResolver, o.chainId).catch((e) => ({ rejected: false, sentences: [String(e)] }));
+      const hj = await checkHijackRequest(hijackRequest(o.token, o.drainer) as never, o.ensName, o.ensRpcs, o.universalResolver, o.chainId).catch((e) => ({ rejected: false, sentences: [String(e)] }));
       const r = assemble(failures, kitReport as never, tamper, hj);
       return path.endsWith('.json') ? json(res, r) : void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(drillReportHtml(r));
     }

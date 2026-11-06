@@ -25,6 +25,7 @@ beforeAll(async () => {
   h = await startHarness({
     primaryRpc: upstream.url, kitFile, ensName: 'x.eth', ensRpcs: ['http://127.0.0.1:1'], chainId: 11155111,
     universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe', token: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', ports, mode: 'process',
+    drainer: '0x00000000000000000000000000000000000d7a1e',
   });
 });
 afterAll(async () => { await h?.stop(); await upstream?.close(); });
@@ -32,7 +33,7 @@ afterAll(async () => { await h?.stop(); await upstream?.close(); });
 describe('fire drill harness', () => {
   test('router serves DemoSwap, which loads several third-party origins', async () => {
     const html = await (await get(ports.router)).text();
-    expect(html).toContain('<h1>DemoSwap</h1>');
+    expect(html).toContain('Provide liquidity. Earn fees.');
     const origins = new Set([...html.matchAll(/(?:src|href)="(https:\/\/[^/"]+)/g)].map((m) => m[1]));
     expect(origins.size).toBeGreaterThanOrEqual(4);
   });
@@ -84,5 +85,23 @@ describe('fire drill harness', () => {
   test('control page has the three switches', async () => {
     const html = await (await fetch(`http://127.0.0.1:${ports.control}/`)).text();
     for (const s of ['site-down', 'rpc-down', 'hijack-on']) expect(html).toContain(`data-switch="${s}"`);
+  });
+
+  test('B3: the hijack asks approve(<drainer>, max) on the demo token, with the rewards lure', async () => {
+    await post('/switch/hijack-on');
+    const html = await (await get(ports.router)).text();
+    expect(html).toContain('Approve to view your rewards');
+    const req = await (await get(ports.router, '/hijack-request.json')).json();
+    expect(req.to).toBe('0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8');
+    expect(req.data.toLowerCase()).toContain('00000000000000000000000000000000000d7a1e');
+    expect(req.data.slice(0, 10)).toBe('0x095ea7b3');
+    await post('/switch/reset');
+  });
+
+  test('B3: the real DemoSwap never asks for an approval', async () => {
+    const html = await (await get(ports.router)).text();
+    expect(html).not.toContain('inject.js');
+    expect(html).not.toContain('Approve to view your rewards');
+    expect(html).toContain('Your liquidity');
   });
 });
