@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { createQuorum } from '@copeybara/quorum';
+import { CopyButton } from '../sections/Ui';
+import copeyVerified from '../../../../assets/brand/copey-verified.png';
 import networks from '../../../../config/networks.json';
 import { CERTIFIED, RULE, checkCertified, findCertified, type Verdict } from '../certified';
 import type { CertifiedEntry } from '@copeybara/protocol-cli/onchain';
@@ -40,36 +42,87 @@ function Status({ e }: { e: CertifiedEntry }) {
   );
 }
 
+const kitHref = (name: string) => `copeybara-kit.html?ens=${encodeURIComponent(name)}`;
+
+/** How a user follows a listed protocol: the extension picks it from its own bundled list (this site cannot reach the extension). */
+function FollowHelp({ e }: { e: CertifiedEntry }) {
+  return (
+    <ol class="follow-steps">
+      <li><a href="#/extension">Install the Copeybara extension</a> (Chrome, unpacked).</li>
+      <li>In setup, on the <b>Protocols</b> step, press <b>Follow {e.protocol}</b> under “Copeybara certified”.</li>
+      <li>Already set up? Dashboard → Setup → Protocols. Or type <span class="mono">{e.name}</span> <CopyButton text={e.name} label="Copy name" /></li>
+    </ol>
+  );
+}
+
+/** One listed protocol: live tick, ENS name, and the two ways to use it. */
+function ProtocolTile({ e }: { e: CertifiedEntry }) {
+  const [follow, setFollow] = useState(false);
+  return (
+    <article class="cert-card" data-certified={e.name}>
+      <div class="cert-card-top">
+        <div>
+          <h3><a href={`#/certified/${e.name}`}>{e.protocol}</a></h3>
+          <p class="mono">{e.name}</p>
+        </div>
+        <Status e={e} />
+      </div>
+      <p class="cert-meta">Listed since {e.since}{e.note && <> · <span class="muted">{e.note}</span></>}</p>
+      <div class="cert-actions">
+        <button type="button" class="btn" aria-expanded={follow} onClick={() => setFollow(!follow)}>Follow in Copeybara</button>
+        <a class="btn ghost" href={kitHref(e.name)} target="_blank" rel="noopener">Open exit kit <span aria-hidden="true">↗</span></a>
+        <a class="text-link" href={`#/certified/${e.name}`}>Live checks <span aria-hidden="true">→</span></a>
+      </div>
+      {follow && <FollowHelp e={e} />}
+    </article>
+  );
+}
+
+const MEANS = [
+  { title: 'Checked before listing', body: 'The team ran copeybara certify and sent us the report. It includes a fork drill: a real position exited with their website and main RPC switched off.' },
+  { title: 'Re-checked every time you look', body: 'This page reads the protocol’s ENS name through three independent RPCs and re-runs the rules below. If the team loosens its keys or stops publishing, the tick goes away on its own.' },
+  { title: 'Not an audit', body: 'It says nothing about contract bugs, solvency or paused contracts. It cannot see who holds the Safe keys. A badge on a protocol’s own site proves nothing; only this page’s live check counts.' },
+];
+
 function Directory() {
   return (
     <>
       <section class="section page-hero">
-        <div class="wrap">
-          <p class="eyebrow"><CertifiedTick /> Copeybara certified</p>
-          <h1 class="page-title">A tick you can check yourself.</h1>
-          <p class="lede">
-            Protocols we onboard get the Copeybara certified tick. It is not a logo we hand out: every time this page opens, it reads the protocol’s ENS
-            name through three independent RPCs and re-runs the checks below. If a team loosens its keys or stops publishing, the tick goes away on
-            its own.
-          </p>
+        <div class="wrap cert-hero-layout">
+          <div>
+            <p class="eyebrow"><CertifiedTick size={18} /> Copeybara certified</p>
+            <h1 class="page-title">A tick you can check yourself.</h1>
+            <p class="lede">
+              Certified means a protocol’s users can still get out when its website is gone: the exit kit, the exit contracts and the keys that
+              can change them are all published on ENS, and locked down. We check before listing. This page checks again, live, every time.
+            </p>
+          </div>
+          <img class="page-copey" src={copeyVerified} alt="" width={200} height={200} />
         </div>
       </section>
       <section class="section tight">
         <div class="wrap">
-          <h2 class="h2-sm">Certified protocols</h2>
-          <table class="cert-table">
-            <thead><tr><th>Protocol</th><th>ENS name</th><th>Since</th><th>Live status</th></tr></thead>
-            <tbody>
-              {CERTIFIED.map((e) => (
-                <tr key={e.name}>
-                  <td><a href={`#/certified/${e.name}`}>{e.protocol}</a>{e.note && <small class="muted"> · testnet demo</small>}</td>
-                  <td class="mono">{e.name}</td>
-                  <td>{e.since}</td>
-                  <td><Status e={e} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <h2 class="h2-sm">What certified means</h2>
+          <div class="cap-grid means">
+            {MEANS.map((m, i) => (
+              <article key={m.title} class="cap">
+                <p class="cap-pkg mono">{i + 1}</p>
+                <h3>{m.title}</h3>
+                <p>{m.body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section id="directory" class="section evidence">
+        <div class="wrap">
+          <header class="section-head">
+            <h2 class="h2-sm">Certified protocols</h2>
+            <p class="lede">Follow one in the Copeybara extension, or open its exit kit. The kit checks itself against the protocol’s ENS name before it does anything.</p>
+          </header>
+          <div class="cert-grid">
+            {CERTIFIED.map((e) => <ProtocolTile key={e.name} e={e} />)}
+          </div>
         </div>
       </section>
       <section class="section tight">
@@ -84,25 +137,14 @@ function Directory() {
           </ol>
         </div>
       </section>
-      <section class="section tight">
-        <div class="wrap cols">
-          <div class="card">
-            <h3>Get certified</h3>
-            <ol class="plain-list">
-              <li>Set up with the <a href="#/developers">Copeybara SDK</a>: config, one Safe batch, watcher.</li>
-              <li>Run <code>copeybara drill</code>, then <code>copeybara certify</code>.</li>
-              <li>Send us <code>.copeybara/certification.json</code>. We review it and add your name to <code>config/certified.json</code> in the public repo.</li>
-              <li>Add <code>&lt;copeybara-exit ens="you.eth" certified&gt;</code> to your site. It links here; it never draws the tick itself.</li>
-            </ol>
+      <section class="section cert-band">
+        <div class="wrap cert-band-layout">
+          <CertifiedTick size={64} />
+          <div>
+            <h2 class="h2-sm">Run a protocol?</h2>
+            <p class="lede">Set up with the Copeybara SDK, pass <code>copeybara certify</code>, send us the report. A guided setup, about an hour.</p>
           </div>
-          <div class="card">
-            <h3>What it does not mean</h3>
-            <ul class="plain-list">
-              <li>It is not a smart-contract audit. It says nothing about exploits, solvency or paused contracts.</li>
-              <li>It cannot see who holds the Safe keys. Three keys on one laptop pass the 2-of-3 check.</li>
-              <li>A badge on a protocol’s own website proves nothing. Only this page’s live check counts, and you should reach it by typing the address.</li>
-            </ul>
-          </div>
+          <a class="btn" href="#/developers/onboarding">Add your protocol <span aria-hidden="true">→</span></a>
         </div>
       </section>
     </>
@@ -139,6 +181,13 @@ function Detail({ name }: { name: string }) {
               {error ? 'Couldn’t reach enough RPC providers to check. Reload to try again.' : !v ? 'Reading ENS through three Sepolia providers…' : v.certified ? `Copeybara certified · re-checked live at Sepolia block ${v.block}` : `Certification suspended · checked at Sepolia block ${v.block}`}
             </p>
           </div>
+        </div>
+        <div class="cert-actions detail">
+          <a class="btn ghost" href={kitHref(e.name)} target="_blank" rel="noopener">Open exit kit <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="card follow-card">
+          <h3>Follow {e.protocol} in Copeybara</h3>
+          <FollowHelp e={e} />
         </div>
         {e.note && <p class="card notice cert-note">{e.note}</p>}
         {v && (

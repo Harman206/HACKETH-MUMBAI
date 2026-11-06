@@ -23,44 +23,6 @@ export const CAPABILITIES = [
   { pkg: 'copeybara certify', title: 'Copeybara certified', body: 'verify, the certified rules and a passing drill, in one report. Certified protocols get a tick that this site re-checks live from ENS.' },
 ];
 
-export interface Step { title: string; body: string; code?: string }
-export const QUICKSTART: Step[] = [
-  {
-    title: 'Get the CLI',
-    body: 'The packages are not on npm yet; run them from the repository. Node 22 and pnpm 9.',
-    code: `git clone ${REPO_URL} copeybara && cd copeybara\ncorepack enable && pnpm install\npnpm copeybara init          # writes copeybara.config.ts`,
-  },
-  {
-    title: 'Describe your protocol',
-    body: 'Your ENS name, the Safe that owns it, the two scoped keys and your exit contracts. Built-in adapters cover Uniswap v3/v4, Aave v3 and Curve 3pool; anything ERC-4626-shaped needs only a declarative exit.',
-  },
-  {
-    title: 'Build the records',
-    body: 'Each command refuses what the Exit Guard could not check: a function missing from the ABI or bytecode, a banned selector like approve, or an exit that needs ETH or a signature.',
-    code: 'pnpm copeybara manifest --onchain   # org.copeybara.manifest + org.copeybara.exits\npnpm copeybara release              # kit (+ extension) sha256 → org.copeybara.release\npnpm copeybara fingerprint --dist dist   # org.copeybara.site; fails on unpinned third-party scripts',
-  },
-  {
-    title: 'Propose one Safe batch',
-    body: 'Open Safe{Wallet} → Transaction Builder → drag in .copeybara/safe-batch.json. Or post it to the Safe Transaction Service with a signature made elsewhere. The batch can only touch Copeybara records and the two scoped grants; anything else is refused before the file is written.',
-    code: 'pnpm copeybara propose                       # → .copeybara/safe-batch.json + safe-tx.json (safeTxHash)\npnpm copeybara propose --api --sender 0x… --signature 0x…',
-  },
-  {
-    title: 'Prove it',
-    body: 'verify reads every record back through three RPCs. roles-check sends each forbidden write as the website and watcher keys (it must revert) next to the same write as the Safe (it must succeed). The drill exits a real position on a fork with your site and primary RPC off.',
-    code: 'pnpm copeybara verify\npnpm copeybara roles-check --live\npnpm copeybara drill',
-  },
-  {
-    title: 'Ship it to users',
-    body: 'Add the build plugin, put the widget on your site, and start the watcher.',
-    code: 'pnpm copeybara watcher --up    # docker compose, healthcheck, key from a gitignored watcher.env',
-  },
-  {
-    title: 'Get certified',
-    body: 'certify runs verify, the certified rules and checks the last drill used this exact kit. Send us the report to be listed.',
-    code: 'pnpm copeybara certify        # → .copeybara/certification.json',
-  },
-];
-
 export const CONFIG_SAMPLE = `import { defineConfig } from '@copeybara/protocol-cli';
 import { erc4626Kind } from '@copeybara/core';
 
@@ -117,19 +79,19 @@ export const CLI = [
   ['adapter new <name>', 'Scaffolds a code adapter with a fork test, Guard corpus cases and a property test.', 'packages/adapters/…'],
 ] as const;
 
-/** Captured from `pnpm copeybara verify` in examples/demoswap against Sepolia, 7 Nov 2026. */
+/** Captured from `pnpm copeybara verify` in examples/demoswap (kit v7) against Sepolia, 7 Nov 2026. */
 export const VERIFY_OUTPUT = `$ pnpm copeybara verify
-demoswap-blackout.eth at Sepolia block 12079041 (3 RPCs, ≥2 agreeing):
+demoswap-blackout.eth at Sepolia block 12079453 (3 RPCs, ≥2 agreeing):
 ✓ resolver     0x642cD108b4EA8cb1e7617213533FfE1AcE8BDE82
 ✓ owner        the Safe owns demoswap-blackout.eth
-✓ release      MATCH v=6 d0ff737b1b2d67bc1888da9e65d974c526d16aecf04708d2c80229adc04c3a4a
+✓ release      MATCH v=7 301d3e86cd7ba9de29b2925394a1bb6ab24a52b5652edb25ffa54858ae66b2b3
 ✓ manifest     MATCH
 ✓ exits        none (no declarative exits)
 ✓ site         3 scripts published (run copeybara fingerprint to compare with a build)
 ✓ website key  0xA2f199fEd2Fecf201422C71e1E53C76Fd6f4d182 may write url only
 ✓ watcher key  0xeBbcD4fC4265dbb7Fc7b2df00f1fD7B89FA1EfF8 may write status + blocklist only
 ✓ safe         2 of 3 signers
-✓ status       v=1;state=ok;at=1793995840
+✓ status       v=1;state=ok;at=1793998799
 ✓ kit view     the kit reads every record without a problem
 
 verify: OK`;
@@ -170,4 +132,192 @@ export const NON_GOALS = [
   'No hosted backend, no analytics, no custody: everything runs from your repo, your Safe and public RPCs.',
   'No protection against smart-contract exploits, stolen user keys, or paused or insolvent contracts.',
   'No signing: the SDK proposes; your Safe signers decide.',
+];
+
+/* ---------- "Add your protocol": the guided onboarding on the Developers page ---------- */
+
+export interface Cmd { code: string; note?: string }
+export interface OnbStep {
+  id: string;
+  /** short name for the progress rail */
+  short: string;
+  title: string;
+  /** what you do, in one or two plain sentences */
+  does: string;
+  cmds: Cmd[];
+  /** what you should see (real output, shortened with …) */
+  see: string;
+  /** what "done" means for this step */
+  done: string;
+  links?: { href: string; label: string }[];
+  extra?: 'config' | 'plugins' | 'runbook';
+}
+
+const GH = (path: string) => `${REPO_URL}/blob/main/${path}`;
+
+export const ONBOARDING: OnbStep[] = [
+  {
+    id: 'install',
+    short: 'Install',
+    title: 'Install the CLI',
+    does: 'You need Node 22, pnpm 9, and an ENSv2 name on Sepolia owned by your Safe (2 of 3 or more) with a PermissionedResolver. The packages are not on npm yet, so run them from the repository.',
+    cmds: [{ code: `git clone ${REPO_URL} copeybara\ncd copeybara\ncorepack enable && pnpm install\npnpm copeybara help` }],
+    see: `copeybara <command> [--config copeybara.config.ts]
+
+  init                     write a copeybara.config.ts to fill in
+  manifest [--onchain]     build org.copeybara.manifest (+ org.copeybara.exits); …
+  …
+Nothing here signs. Owners approve the Safe batch on their own devices.`,
+    done: 'The help text prints.',
+    links: [{ href: GH('contracts/script/SetupName.s.sol'), label: 'No ENS name yet? SetupName.s.sol sets one up' }],
+  },
+  {
+    id: 'init',
+    short: 'Config',
+    title: 'Write your config',
+    does: 'init writes copeybara.config.ts. Fill in your ENS name, the Safe that owns it, its resolver, the website key (it may write url only), the watcher key (status and blocklist only), your kit file and your exit contracts.',
+    cmds: [{ code: 'pnpm copeybara init' }],
+    see: 'wrote copeybara.config.ts: fill in the addresses, then run copeybara manifest',
+    done: 'Every 0x… in the config is a real address.',
+    links: [{ href: GH('examples/demoswap/copeybara.config.ts'), label: 'The live demo’s config' }],
+    extra: 'config',
+  },
+  {
+    id: 'exits',
+    short: 'Exits',
+    title: 'Describe your exits',
+    does: 'Built-in adapters cover Uniswap v3 and v4, Aave v3 and Curve 3pool. For your own contracts, add a declarative exit (one function, described in exits) instead of adapter code. manifest refuses anything the Exit Guard could not check; release hashes your kit.',
+    cmds: [
+      { code: 'pnpm copeybara manifest --onchain', note: 'org.copeybara.manifest, plus org.copeybara.exits if you have spec exits' },
+      { code: 'pnpm copeybara release', note: 'your kit’s sha256 for org.copeybara.release' },
+    ],
+    see: `org.copeybara.manifest → .copeybara/manifest.txt
+{"v":1,"c":{"1":{"aave-v3":{"pool":{"a":"0x8787…A4E2","s":["0x69328dec"]}}, …}}}
+org.copeybara.release → .copeybara/release.txt
+sha256:301d3e86…ae66b2b3;v=7`,
+    done: 'Both commands write their file with no “problem” lines.',
+    links: [{ href: '#exits', label: 'How declarative exits work' }],
+  },
+  {
+    id: 'fingerprint',
+    short: 'Fingerprint',
+    title: 'Fingerprint your site',
+    does: 'Add the plugin for your bundler. Every build hashes the scripts it ships, writes .well-known/copeybara-site.json, adds a summary to your CI job, and fails on a third-party script without a matching SRI pin. Then turn the build into the record.',
+    cmds: [{ code: 'pnpm copeybara fingerprint --dist dist', note: 'or --url https://app.yourprotocol.xyz for a deployed page' }],
+    see: `### Copeybara site fingerprint · yourprotocol.eth
+
+✓ 4 script hash(es)
+…
+org.copeybara.site → .copeybara/site.txt`,
+    done: 'site.txt is written and no script is unpinned.',
+    extra: 'plugins',
+  },
+  {
+    id: 'propose',
+    short: 'Propose',
+    title: 'Propose one Safe batch',
+    does: 'propose reads what ENS says now and builds one batch: every changed record and the two scoped key grants. Unchanged records are skipped. Root roles, upgrades and other names are refused before the file is written.',
+    cmds: [{ code: 'pnpm copeybara propose' }],
+    see: `Safe 0x3ae0…057F on chain 11155111 — 6 call(s), one batch:
+  1. setText org.copeybara.release = sha256:…;v=1
+  2. setText org.copeybara.manifest = {"v":1,"c":{…}}
+  3. setText org.copeybara.site = v=2;sha256=…
+  4. grant website key 0xA2f1… write access to url only
+  5. grant watcher 0xeBbc… write access to org.copeybara.status only
+  6. grant watcher 0xeBbc… write access to org.copeybara.blocklist only
+
+Transaction Builder file → .copeybara/safe-batch.json`,
+    done: 'You have .copeybara/safe-batch.json and every call is one you expected.',
+  },
+  {
+    id: 'sign',
+    short: 'Sign',
+    title: 'Sign it in your Safe',
+    does: 'In Safe{Wallet}, open Apps → Transaction Builder and drag in .copeybara/safe-batch.json. Check each call against what propose printed, create the batch, and have your owners sign on their own devices. Then execute it.',
+    cmds: [{ code: 'pnpm copeybara propose --api --sender 0xYourOwner --signature 0xTheirSignature', note: 'Optional: post it to the Safe Transaction Service with a signature made on the owner’s device (needs safeTxService in the config)' }],
+    see: 'The batch in your Safe queue with the same calls propose printed, then executed with at least 2 signatures.',
+    done: 'The batch is executed on Sepolia.',
+  },
+  {
+    id: 'verify',
+    short: 'Verify',
+    title: 'Verify and check the roles',
+    does: 'verify reads every record back through three RPCs at one block. roles-check sends each forbidden write as the website and watcher keys (it must revert) next to the same write as the Safe (it must succeed).',
+    cmds: [{ code: 'pnpm copeybara verify' }, { code: 'pnpm copeybara roles-check --live' }],
+    see: `${VERIFY_OUTPUT}
+
+$ pnpm copeybara roles-check --live
+roles-check (live) demoswap-blackout.eth at block 12079469, eth_call through 3 RPCs:
+✓ website key     write url                            allowed
+✓ website key     write org.copeybara.release          reverted
+✓ Safe (control)  write org.copeybara.release          allowed
+…
+✓ watcher         upgrade the resolver                 reverted
+
+roles-check: OK (35 calls)`,
+    done: 'Both end in OK. Any ✗ exits with code 1.',
+  },
+  {
+    id: 'certify',
+    short: 'Certify',
+    title: 'Get certified',
+    does: 'drill forks the chain, switches off your site and primary RPC, and exits a seeded position. certify runs verify, the certified rules, and checks that the drill used this exact kit. Send us certification.json and we add you to the directory.',
+    cmds: [{ code: 'pnpm copeybara drill' }, { code: 'pnpm copeybara certify' }],
+    see: `✓ certify: website key       url only
+✓ certify: watcher           status + blocklist only
+✓ drill                      recovered on a fork with the site and primary RPC off (…)
+
+report → .copeybara/certification.json
+certify: PASS — send certification.json to Copeybara to be listed with the certified tick.`,
+    done: 'certify prints PASS and you have sent us the report.',
+    links: [
+      { href: `${REPO_URL}/issues/new?title=${encodeURIComponent('Certify: yourprotocol.eth')}`, label: 'Send the report (opens a GitHub issue)' },
+      { href: '#/certified', label: 'What certified checks' },
+    ],
+  },
+  {
+    id: 'widget',
+    short: 'Widget',
+    title: 'Add the widget to your footer',
+    does: 'Serve copeybara-exit.js from your own site and put the element in your footer. It tells users where the verified kit is and how to check it. It makes no requests, calls no wallet and stores nothing. Include it in your site fingerprint like any other script.',
+    cmds: [{ code: 'cp packages/widget/copeybara-exit.js your-site/public/' }, { code: WIDGET_EMBED, note: 'In your footer' }],
+    see: 'The card from the live preview below, in your footer, with your ENS name and kit sha256.',
+    done: 'The widget shows on your live site.',
+    links: [{ href: '#widget', label: 'See the widget running' }],
+  },
+  {
+    id: 'watcher',
+    short: 'Watcher',
+    title: 'Run the watcher',
+    does: 'The watcher checks your live site against the fingerprint and probes look-alike domains. Its key can write only status and blocklist. Put the key in watcher.env (gitignored); the container refuses any other key.',
+    cmds: [
+      { code: 'pnpm copeybara watcher' },
+      { code: 'cp .copeybara/watcher/watcher.env.example .copeybara/watcher/watcher.env', note: 'then set WATCHER_KEY in watcher.env' },
+      { code: 'pnpm copeybara watcher --up' },
+    ],
+    see: `wrote .copeybara/watcher/compose.yml and watcher.env.example
+next: cp .copeybara/watcher/watcher.env.example .copeybara/watcher/watcher.env, set WATCHER_KEY, then copeybara watcher --up`,
+    done: 'docker compose ps shows the watcher as healthy.',
+  },
+  {
+    id: 'runbook',
+    short: 'Runbook',
+    title: 'Keep the incident runbook handy',
+    does: 'If your site or DNS is hijacked, one Safe batch marks your name compromised and blocks look-alike domains. Extensions following your name block the site before it loads. The exit kit ignores status, so exits keep working.',
+    cmds: [{ code: 'pnpm copeybara incident --state compromised --note "Site hijacked. Use your saved exit kit." --block yourprotocol-claim.xyz' }],
+    see: `  setText org.copeybara.status = v=1;state=compromised;at=…;note=Site%20hijacked.%20Use%20your%20saved%20exit%20kit.
+  setText org.copeybara.blocklist = {"v":1,"domains":["yourprotocol-claim.xyz"]}
+Safe batch → .copeybara/incident-batch.json`,
+    done: 'Your team knows where this page is.',
+    links: [{ href: GH('docs/protocol-integration.md#incident-runbook'), label: 'Full runbook' }],
+    extra: 'runbook',
+  },
+];
+
+/** What to do after a hijack, and when a key leaks. Short version of docs/protocol-integration.md → Incident runbook. */
+export const RUNBOOK = [
+  { when: 'Site or DNS hijacked', then: 'Run incident --state compromised with --block for look-alikes, sign the batch. The watcher may already have done it. Point users to the kit and your ENS name.' },
+  { when: 'Fixed', then: 'Redeploy, fingerprint, propose the new site record, then incident --state ok. A compromised status set by the Safe stays until the Safe clears it.' },
+  { when: 'Website key leaked', then: 'It can only change url. Revoke its role through the Safe, rotate it, update websiteKey and propose the new grant.' },
+  { when: 'Watcher key leaked', then: 'It can only raise or clear warnings. contracts/script/watcher-role.sh revoke, then rotate and re-grant.' },
 ];

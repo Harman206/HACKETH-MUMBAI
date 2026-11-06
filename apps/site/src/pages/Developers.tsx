@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { ENS_NAME, EXTENSION } from '../content';
-import { CAPABILITIES, CI_SUMMARY, CLI, CONFIG_SAMPLE, DEV_FACTS, DEV_HERO, GUARANTEES, NON_GOALS, PLUGINS, QUICKSTART, SPEC_RULES, SPEC_SAMPLE, VERIFY_OUTPUT, WIDGET_EMBED } from '../developers';
+import { CAPABILITIES, CI_SUMMARY, CLI, DEV_FACTS, DEV_HERO, GUARANTEES, NON_GOALS, PLUGINS, SPEC_RULES, SPEC_SAMPLE, VERIFY_OUTPUT, WIDGET_EMBED } from '../developers';
 import { useSha } from '../sections/Sections';
+import { Code, Lnk } from '../sections/Ui';
 import { CertifiedTick } from './Certified';
+import { Onboarding } from './Onboarding';
 
 const WIDGET = 'copeybara-exit.js';
 
@@ -33,15 +35,6 @@ function WidgetDemo() {
   return <div ref={host} class="widget-host" data-widget-demo />;
 }
 
-function Code({ children, label }: { children: string; label?: string }) {
-  return (
-    <figure class="code">
-      {label && <figcaption>{label}</figcaption>}
-      <pre><code>{children}</code></pre>
-    </figure>
-  );
-}
-
 export function DevelopersPage() {
   const widgetSha = useSha(WIDGET);
   return (
@@ -53,7 +46,8 @@ export function DevelopersPage() {
             <h1 class="page-title">{DEV_HERO.title}</h1>
             <p class="lede">{DEV_HERO.sub}</p>
             <div class="cta">
-              <a class="btn" href="#quickstart" onClick={(e) => { e.preventDefault(); document.getElementById('quickstart')?.scrollIntoView(); }}>Quick start <span aria-hidden="true">↓</span></a>
+              <Lnk class="btn" href="#onboarding">Add your protocol <span aria-hidden="true">↓</span></Lnk>
+              <Lnk href="#cli">CLI reference <span aria-hidden="true">↓</span></Lnk>
               <a class="text-link" href="#/certified">Copeybara certified <span aria-hidden="true">→</span></a>
             </div>
           </div>
@@ -87,26 +81,7 @@ export function DevelopersPage() {
         </div>
       </section>
 
-      <section id="quickstart" class="section evidence">
-        <div class="wrap">
-          <header class="section-head">
-            <h2 class="h2-sm">Quick start: about an hour</h2>
-            <p class="lede">From an ENS name owned by your Safe to a certified exit. Nothing here signs; your Safe owners approve one batch.</p>
-          </header>
-          <ol class="qs">
-            {QUICKSTART.map((s, i) => (
-              <li key={s.title}>
-                <span class="qs-n" aria-hidden="true">{i + 1}</span>
-                <div>
-                  <h3>{s.title}</h3>
-                  <p>{s.body}</p>
-                  {i === 1 ? <Code label="copeybara.config.ts">{CONFIG_SAMPLE}</Code> : s.code && <Code>{s.code}</Code>}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+      <Onboarding />
 
       <section id="exits" class="section">
         <div class="wrap section-split">
@@ -115,7 +90,7 @@ export function DevelopersPage() {
             <p class="lede">For your own contracts, publish how to exit instead of writing adapter code. erc4626Kind() produces this for any ERC-4626 vault; the drill proves it on a fork with a sample vault described by the spec alone.</p>
             <ul class="plain-list spec-rules">{SPEC_RULES.map((r) => <li key={r}>{r}</li>)}</ul>
           </header>
-          <Code label="org.copeybara.exits · kinds.vault">{SPEC_SAMPLE}</Code>
+          <Code label="org.copeybara.exits · kinds.vault" copy>{SPEC_SAMPLE}</Code>
         </div>
       </section>
 
@@ -126,7 +101,7 @@ export function DevelopersPage() {
             <p class="lede">Your build writes the fingerprint; the Safe publishes it. Every build gets a CI summary that compares it with what ENS says now.</p>
           </header>
           <div class="cols three">
-            {PLUGINS.map((p) => <Code key={p.name} label={p.name}>{p.code}</Code>)}
+            {PLUGINS.map((p) => <Code key={p.name} label={p.name} copy>{p.code}</Code>)}
           </div>
           <Code label="GitHub Actions job summary">{CI_SUMMARY}</Code>
         </div>
@@ -139,7 +114,7 @@ export function DevelopersPage() {
             <p class="lede">This is the real <code>&lt;copeybara-exit&gt;</code>, loaded from <a href={WIDGET}>{WIDGET}</a> on this site. Publish its sha256 in your site fingerprint like any other script.</p>
             <p class="checksum">sha256 of {WIDGET}</p>
             <p class="mono" data-widget-sha>{widgetSha ?? <a href={`${WIDGET}.sha256`}>Open the checksum file</a>}</p>
-            <Code label="Embed">{WIDGET_EMBED}</Code>
+            <Code label="Embed" copy>{WIDGET_EMBED}</Code>
           </header>
           <WidgetDemo />
         </div>

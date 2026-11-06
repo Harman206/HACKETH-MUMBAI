@@ -2,6 +2,35 @@ import { useEffect, useState } from 'preact/hooks';
 import { EXTENSION, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, PROTOCOL_STEPS, REPLAY_R1, TRUSTED, ENS_NAME, DEMO_KIT_URL, SITE_URL, OLD_NAME_NOTE } from '../content';
 import { BrandMark, ExitIllustration } from './Icons';
 import { ExtensionPreview } from './ExtensionPreview';
+import { CertifiedTick } from '../pages/Certified';
+import copeyVerified from '../../../../assets/brand/copey-verified.png';
+import copeyChecking from '../../../../assets/brand/copey-checking.png';
+import copeyProtected from '../../../../assets/brand/copey-protected.png';
+import { REPO_URL } from '../developers';
+
+/** The three ways in, shown under the hero: users, protocol teams, and anyone checking a protocol. */
+const PATHS = [
+  { href: '#/extension', who: 'Use DeFi', title: 'Get the extension', body: 'Checks protocol sites against ENS and holds drainer requests before your wallet sees them.', img: copeyProtected },
+  { href: '#/developers/onboarding', who: 'Run a protocol', title: 'Add your protocol', body: 'A guided setup: CLI, one Safe batch, site fingerprint, widget, watcher. About an hour.', img: copeyChecking },
+  { href: '#/certified', who: 'Check a protocol', title: 'Copeybara certified', body: 'A tick re-checked live from ENS every time you look. Follow certified protocols in one click.', img: copeyVerified },
+];
+
+export function Paths() {
+  return (
+    <nav class="paths" aria-label="Start here">
+      {PATHS.map((p) => (
+        <a key={p.href} class="path" href={p.href}>
+          <img src={p.img} alt="" width={72} height={72} loading="lazy" />
+          <span>
+            <small>{p.who}</small>
+            <b>{p.title} <span aria-hidden="true">→</span></b>
+            <span class="path-body">{p.body}</span>
+          </span>
+        </a>
+      ))}
+    </nav>
+  );
+}
 
 const etherscan = (h: string) => `https://etherscan.io/tx/${h}`;
 
@@ -15,8 +44,8 @@ export function Hero({ live }: { live: string | null }) {
             <p class="hero-summary">{HERO.sub}</p>
             <div class="cta">
               <a class="btn" href="#download">Get the exit kit <span aria-hidden="true">↓</span></a>
-              <a class="text-link" href="#demo">See the demo <span aria-hidden="true">↗</span></a>
-              <a class="text-link" href="#extension">Get the extension <span aria-hidden="true">↓</span></a>
+              <a class="btn ghost" href="#/extension">Get the extension <span aria-hidden="true">→</span></a>
+              <a class="text-link" href="#demo">See the demo <span aria-hidden="true">↓</span></a>
             </div>
           </div>
           <a class="hero-art" href="#how">
@@ -28,6 +57,7 @@ export function Hero({ live }: { live: string | null }) {
           <span><i aria-hidden="true" />{live ?? 'Sepolia testnet demo'}</span>
           <a class="text-link" href={DEMO_KIT_URL} target="_blank" rel="noopener">Try the kit on the demo protocol <span aria-hidden="true">↗</span></a>
         </div>
+        <Paths />
       </div>
     </section>
   );
@@ -236,6 +266,14 @@ export function Footer() {
           <p>MIT-licensed; source release coming soon. Built at ETHGlobal Mumbai.</p>
           <p class="muted">{OLD_NAME_NOTE}</p>
         </div>
+        <nav class="foot-nav" aria-label="Footer">
+          <a href="#download">Exit kit</a>
+          <a href="#/extension">Extension</a>
+          <a href="#/developers/onboarding">Add your protocol</a>
+          <a href="#/developers">Developers</a>
+          <a href="#/certified"><CertifiedTick size={15} /> Certified</a>
+          <a href={REPO_URL} target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+        </nav>
         <QrCard />
       </div>
     </footer>

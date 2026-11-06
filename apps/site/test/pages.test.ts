@@ -6,7 +6,7 @@ import { COPEYBARA_KEYS } from '@copeybara/core';
 import { ROLE_SET_TEXT, type OnChainState } from '@copeybara/protocol-cli/onchain';
 import { parseRoute } from '../src/router';
 import { CERTIFIED, RULE, checkCertified, findCertified } from '../src/certified';
-import { CLI, QUICKSTART, VERIFY_OUTPUT } from '../src/developers';
+import { CLI, ONBOARDING, VERIFY_OUTPUT } from '../src/developers';
 
 const REPO = join(__dirname, '..', '..', '..');
 const K = COPEYBARA_KEYS;
@@ -16,6 +16,8 @@ describe('routes', () => {
     ['', { page: 'home' }],
     ['#how', { page: 'home' }],
     ['#/developers', { page: 'developers' }],
+    ['#/developers/onboarding', { page: 'developers', section: 'onboarding' }],
+    ['#/developers/<script>', { page: 'developers' }],
     ['#/extension', { page: 'extension' }],
     ['#/certified', { page: 'certified', name: null }],
     ['#/certified/DemoSwap-Blackout.eth', { page: 'certified', name: 'demoswap-blackout.eth' }],
@@ -74,7 +76,44 @@ describe('developer page copy', () => {
     expect(VERIFY_OUTPUT).toContain(`MATCH v=${d.kitReleaseVersion} ${d.kitRelease}`);
     expect(VERIFY_OUTPUT).toContain('verify: OK');
   });
-  test('the quick start only uses commands that exist', () => {
-    for (const s of QUICKSTART) for (const m of (s.code ?? '').matchAll(/pnpm copeybara ([a-z-]+)/g)) expect(CLI.some(([x]) => x.split(' ')[0] === m[1]), m[1]).toBe(true);
+  test('onboarding: every command and flag is one the CLI has', () => {
+    const main = readFileSync(join(REPO, 'packages', 'protocol-cli', 'src', 'main.ts'), 'utf8');
+    const options = main.match(/options: \{([\s\S]*?)\n {4}\},\n {2}\}\);/)![1]!;
+    const flags = new Set([...options.matchAll(/^\s+'?([a-z-]+)'?: \{ type/gm)].map((m) => m[1]));
+    let n = 0;
+    for (const s of ONBOARDING) {
+      for (const c of s.cmds) {
+        for (const line of c.code.split('\n')) {
+          const m = line.match(/^pnpm copeybara ([a-z-]+)(.*)$/);
+          if (!m) continue;
+          n++;
+          expect(m[1] === 'help' || CLI.some(([x]) => x.split(' ')[0] === m[1]), `${s.id}: ${m[1]}`).toBe(true);
+          for (const f of m[2]!.matchAll(/--([a-z-]+)/g)) expect(flags.has(f[1]), `${s.id}: --${f[1]}`).toBe(true);
+        }
+      }
+    }
+    expect(n).toBeGreaterThanOrEqual(12);
+  });
+  test('onboarding: the flow a protocol team follows, in order, each step with a command (or the Safe), output and a done check', () => {
+    expect(ONBOARDING.map((s) => s.id)).toEqual(['install', 'init', 'exits', 'fingerprint', 'propose', 'sign', 'verify', 'certify', 'widget', 'watcher', 'runbook']);
+    for (const s of ONBOARDING) {
+      expect(s.cmds.length, s.id).toBeGreaterThan(0);
+      expect(s.see.length, s.id).toBeGreaterThan(20);
+      expect(s.done.length, s.id).toBeGreaterThan(5);
+      for (const l of s.links ?? []) expect(l.href, s.id).toMatch(/^(https:\/\/github\.com\/|#)/);
+    }
+  });
+  test('onboarding: the output shown is what the CLI prints', () => {
+    const src = (f: string) => readFileSync(join(REPO, 'packages', 'protocol-cli', 'src', f), 'utf8');
+    const all = ['main.ts', 'watcher.ts', 'roles.ts'].map(src).join('\n');
+    const see = (id: string) => ONBOARDING.find((s) => s.id === id)!.see;
+    expect(all).toContain('fill in the addresses, then run copeybara manifest');
+    expect(see('init')).toContain('fill in the addresses, then run copeybara manifest');
+    expect(all).toContain('Transaction Builder file → ');
+    expect(see('propose')).toContain('Transaction Builder file → .copeybara/safe-batch.json');
+    expect(see('watcher')).toContain('wrote .copeybara/watcher/compose.yml and watcher.env.example');
+    expect(all).toContain('certify: PASS — send certification.json to Copeybara to be listed with the certified tick.');
+    expect(see('certify')).toContain('certify: PASS — send certification.json to Copeybara to be listed with the certified tick.');
+    expect(see('verify')).toContain(VERIFY_OUTPUT);
   });
 });

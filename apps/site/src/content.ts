@@ -37,7 +37,7 @@ export const EXTENSION = {
     'Unzip copeybara-extension-chrome.zip into a folder you will keep.',
     'Open chrome://extensions in Chrome. Other Chromium browsers such as Brave and Edge use the same steps but are not tested.',
     'Turn on Developer mode (top right).',
-    'Click Load unpacked and choose the unzipped folder. The setup wizard opens by itself.',
+    'Click Load unpacked and choose the unzipped folder. The setup wizard opens by itself: pick a Copeybara-certified protocol to follow, or type its ENS name.',
   ],
   watcher: 'Protocols can also run the Copeybara watcher. It fingerprints the official site, probes look-alike domains, and can write only two ENS records, status and blocklist, which warn about or block websites. Nothing it writes can block an exit.',
   note: 'Sepolia testnet preview, installed unpacked from the zip; no store listing yet. Checks inside a web page are best effort, because a hostile page can get around code running in it. The blocks you can rely on are the ones applied before a flagged site loads.',

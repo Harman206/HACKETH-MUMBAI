@@ -1,6 +1,7 @@
 import { BLOCKS, EXT_HERO, EXT_LIMITS, LAYERS, VERDICTS, VERIFY_INSTALL } from '../extension';
 import { Extension } from '../sections/Sections';
 import { ExtensionPreview } from '../sections/ExtensionPreview';
+import { Lnk } from '../sections/Ui';
 
 export function ExtensionPage() {
   return (
@@ -12,8 +13,9 @@ export function ExtensionPage() {
             <h1 class="page-title">{EXT_HERO.title}</h1>
             <p class="lede">{EXT_HERO.sub}</p>
             <div class="cta">
-              <a class="btn" href="#extension">Download <span aria-hidden="true">↓</span></a>
-              <a class="text-link" href="#/developers">For protocol teams <span aria-hidden="true">→</span></a>
+              <Lnk class="btn" href="#extension">Download <span aria-hidden="true">↓</span></Lnk>
+              <a class="text-link" href="#/certified">Certified protocols <span aria-hidden="true">→</span></a>
+              <a class="text-link" href="#/developers/onboarding">For protocol teams <span aria-hidden="true">→</span></a>
             </div>
           </div>
           <ExtensionPreview />
