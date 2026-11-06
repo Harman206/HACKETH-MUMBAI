@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "../../node_modules/.tsbuild/watcher", "types": ["node"] },
+  "references": [{ "path": "../../packages/core" }, { "path": "../../packages/ens" }, { "path": "../../packages/quorum" }, { "path": "../../packages/sitecheck" }],
+  "include": ["src", "test"]
+}
