@@ -165,3 +165,21 @@ describe("worker: {t:'buildProof'}", () => {
     expect(await core.handleMessage({ t: 'buildProof' }, page)).toEqual({ error: expect.stringMatching(/build-files\.json/) });
   });
 });
+
+describe('pages/build-proof formatBuildProof', async () => {
+  const { formatBuildProof } = await import('../src/pages/build-proof');
+  const base = { version: '0.1.0', treeHash: goodTree, files: 4 };
+  test.each([
+    ['match', { ...base, ens: { name: NAME, version: 4, tree: goodTree, zip: ZIP }, verdict: 'match' as const }, 'ok'],
+    ['mismatch', { ...base, ens: { name: NAME, version: 4, tree: 'ee'.repeat(32), zip: ZIP }, verdict: 'mismatch' as const }, 'bad'],
+    ['old-record', { ...base, ens: { name: NAME, version: 2, tree: null, zip: ZIP }, verdict: 'old-record' as const }, 'grey'],
+    ['no-record', { ...base, ens: null, verdict: 'no-record' as const }, 'grey'],
+  ])('%s', (_, r, tone) => {
+    const v = formatBuildProof(r);
+    expect(v.tone).toBe(tone);
+    expect(v.rows.find((x) => x.label === 'Tree hash')?.value).toBe(goodTree);
+  });
+  test('error', () => {
+    expect(formatBuildProof({ error: 'boom' })).toMatchObject({ tone: 'warn', detail: 'boom' });
+  });
+});
