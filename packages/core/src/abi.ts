@@ -46,3 +46,21 @@ export const universalResolverAbi = parseAbi([
 export const textResolverAbi = parseAbi([
   'function text(bytes32 node, string key) view returns (string)',
 ]);
+
+/** Uniswap v4 PositionManager: the exit entry point plus the reads discovery needs. */
+export const v4PosmAbi = parseAbi([
+  'function modifyLiquidities(bytes unlockData, uint256 deadline) payable',
+  'function balanceOf(address owner) view returns (uint256)',
+  'function ownerOf(uint256 id) view returns (address)',
+  'function getPositionLiquidity(uint256 tokenId) view returns (uint128)',
+  'struct PoolKey { address currency0; address currency1; uint24 fee; int24 tickSpacing; address hooks; }',
+  'function getPoolAndPositionInfo(uint256 tokenId) view returns (PoolKey poolKey, uint256 info)',
+  'event Transfer(address indexed from, address indexed to, uint256 indexed id)',
+]);
+
+/** Uniswap v4 StateView (read-only lens over the PoolManager). */
+export const v4StateViewAbi = parseAbi([
+  'function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)',
+  'function getFeeGrowthInside(bytes32 poolId, int24 tickLower, int24 tickUpper) view returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128)',
+  'function getPositionInfo(bytes32 poolId, address owner, int24 tickLower, int24 tickUpper, bytes32 salt) view returns (uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128)',
+]);

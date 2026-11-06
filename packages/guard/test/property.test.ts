@@ -3,8 +3,9 @@ import fc from 'fast-check';
 import { encodeFunctionData, getAddress, maxUint128, type Hex } from 'viem';
 import { BANNED_SELECTORS, npmAbi, SEL, type Address, type TxRequest } from '@blackout/core';
 import { guard } from '../src';
-import { aaveWithdrawData, approveData, curveRemoveData, multicallData, USER } from './helpers';
-import { AAVE_POOL, CURVE_POOL, ctx1, NPM_MAINNET, tx } from './manifest-fixture';
+import { aaveWithdrawData, approveData, curveRemoveData, multicallData, USER, v4 } from './helpers';
+import { V4_ACTIONS } from '@blackout/core';
+import { AAVE_POOL, CURVE_POOL, ctx1, NPM_MAINNET, POSM_MAINNET, tx } from './manifest-fixture';
 
 const RUNS = 10_000;
 const ALLOWED = new Set<string>([SEL.multicall, SEL.decreaseLiquidity, SEL.collect, SEL.aaveWithdraw, SEL.curveRemoveLiquidity]);
@@ -95,3 +96,23 @@ describe('guard properties', () => {
     for (const s of ALLOWED) expect(BANNED_SELECTORS.has(s as Hex)).toBe(false);
   });
 });
+
+describe('Uniswap v4 property: an exit is accepted exactly when every payout goes to the user and only exit actions appear', () => {
+  const EXIT_ACTIONS = [V4_ACTIONS.DECREASE_LIQUIDITY, V4_ACTIONS.BURN_POSITION, V4_ACTIONS.TAKE_PAIR];
+  const ALL = Object.values(V4_ACTIONS);
+  const step = fc.record({ code: fc.constantFrom(...ALL), to: fc.oneof(fc.constant(USER), otherAddr), id: u(64), liq: u(128) });
+  test('accept ⇔ (all actions in the exit set) ∧ (every TAKE_PAIR pays the user)', () => {
+    fc.assert(
+      fc.property(fc.array(step, { minLength: 1, maxLength: 5 }), (steps) => {
+        const params = steps.map((s) =>
+          s.code === V4_ACTIONS.DECREASE_LIQUIDITY ? v4.decrease(s.id, s.liq) : s.code === V4_ACTIONS.BURN_POSITION ? v4.burn(s.id) : s.code === V4_ACTIONS.TAKE_PAIR ? v4.takePair(s.to) : v4.sweep(s.to),
+        );
+        const ok = guard(tx(POSM_MAINNET, v4.call(steps.map((s) => s.code), params)), ctx1).ok;
+        const shouldAccept = steps.every((s) => (EXIT_ACTIONS as number[]).includes(s.code) && (s.code !== V4_ACTIONS.TAKE_PAIR || s.to === USER));
+        expect(ok).toBe(shouldAccept);
+      }),
+      { numRuns: 2_000 },
+    );
+  });
+});
+

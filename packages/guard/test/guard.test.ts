@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { explain, guard, type GuardReason } from '../src';
-import { approveData, ATTACKER, aaveWithdrawData, collectData, curveRemoveData, decreaseData, multicallData, USER } from './helpers';
-import { AAVE_POOL, CURVE_LP, CURVE_POOL, ctx1, ctxSepolia, NPM_MAINNET, NPM_SEPOLIA, tx } from './manifest-fixture';
+import { approveData, ATTACKER, aaveWithdrawData, collectData, curveRemoveData, decreaseData, multicallData, USER, v4 } from './helpers';
+import { V4_ACTIONS as A } from '@blackout/core';
+import { AAVE_POOL, CURVE_LP, CURVE_POOL, ctx1, ctxSepolia, NPM_MAINNET, NPM_SEPOLIA, POSM_MAINNET, POSM_SEPOLIA, tx } from './manifest-fixture';
 
 const codes = (r: { reasons: GuardReason[] }) => r.reasons.map((x) => x.code);
 const uniExit = multicallData([decreaseData(), collectData(USER)]);
@@ -92,3 +93,37 @@ describe('explain', () => {
     expect(explain(guard(tx(NPM_MAINNET, uniExit), ctx1))[0]).toMatch(/safe exit/i);
   });
 });
+
+describe('Uniswap v4 (modifyLiquidities action list)', () => {
+  test('accepts DECREASE_LIQUIDITY + TAKE_PAIR to the user, on Sepolia and mainnet', () => {
+    expect(guard(tx(POSM_SEPOLIA, v4.exit(), { chainId: 11155111 }), ctxSepolia)).toEqual({ ok: true, reasons: [] });
+    expect(guard(tx(POSM_MAINNET, v4.exit()), ctx1)).toEqual({ ok: true, reasons: [] });
+  });
+
+  test('accepts BURN_POSITION + TAKE_PAIR (recipient comparison is case-insensitive)', () => {
+    const data = v4.call([A.BURN_POSITION, A.TAKE_PAIR], [v4.burn(), v4.takePair(USER.toLowerCase() as `0x${string}`)]);
+    expect(guard(tx(POSM_MAINNET, data), ctx1).ok).toBe(true);
+  });
+
+  test('TAKE_PAIR to the attacker → RECIPIENT, explained in plain words', () => {
+    const r = guard(tx(POSM_MAINNET, v4.exit(ATTACKER)), ctx1);
+    expect(codes(r)).toEqual(['RECIPIENT']);
+    expect(explain(r).join(' ')).toMatch(/not your connected account/);
+  });
+
+  test('SETTLE_PAIR → BANNED with a reason that says why', () => {
+    const r = guard(tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, A.SETTLE_PAIR, A.TAKE_PAIR], [v4.decrease(), v4.settlePair(), v4.takePair()])), ctx1);
+    expect(codes(r)).toEqual(['BANNED']);
+    expect(explain(r)).toEqual(['Uniswap v4 action SETTLE_PAIR can pull tokens from your wallet (through an existing Permit2 allowance). Exits never pay in.']);
+  });
+
+  test('a v4 exit to the v3 position manager → SELECTOR', () => {
+    expect(codes(guard(tx(NPM_MAINNET, v4.exit()), ctx1))).toEqual(['SELECTOR']);
+  });
+
+  test('unknown action / count mismatch → DECODE (fail closed)', () => {
+    expect(codes(guard(tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, 0x30], [v4.decrease(), '0x'])), ctx1))).toEqual(['DECODE']);
+    expect(codes(guard(tx(POSM_MAINNET, v4.call([A.DECREASE_LIQUIDITY, A.TAKE_PAIR], [v4.decrease()])), ctx1))).toEqual(['DECODE']);
+  });
+});
+

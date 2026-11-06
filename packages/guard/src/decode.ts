@@ -1,5 +1,5 @@
-import { decodeFunctionData, getAddress, parseAbi, type Abi } from 'viem';
-import { aavePoolAbi, curve3poolAbi, npmAbi, SEL, SIGS, type Address, type Hex } from '@blackout/core';
+import { decodeAbiParameters, decodeFunctionData, getAddress, parseAbi, parseAbiParameters, type Abi } from 'viem';
+import { aavePoolAbi, curve3poolAbi, npmAbi, SEL, SIGS, V4_ACTIONS, v4PosmAbi, type Address, type Hex } from '@blackout/core';
 
 export interface Decoded {
   selector: Hex;
@@ -11,6 +11,8 @@ export interface Decoded {
   nested: Decoded[];
   /** For banned calls: the spender / receiver, when decodable. Used only for explanations. */
   counterparty?: Address;
+  /** Set on a step that is never part of an exit (e.g. a Uniswap v4 SETTLE action); the plain reason. */
+  forbidden?: string;
 }
 
 export class DecodeError extends Error {
@@ -47,6 +49,67 @@ function decodeWith(abi: Abi, data: Hex): { functionName: string; args: readonly
   }
 }
 
+const V4_NAMES = Object.fromEntries(Object.entries(V4_ACTIONS).map(([k, v]) => [v, k])) as Record<number, string>;
+
+/** Why each v4 action outside the exit set is refused (plain words, shown to the user). */
+function v4Forbidden(name: string): string {
+  if (/^SETTLE|CLOSE_CURRENCY|INCREASE|MINT_POSITION|DONATE/.test(name)) {
+    return `Uniswap v4 action ${name} can pull tokens from your wallet (through an existing Permit2 allowance). Exits never pay in.`;
+  }
+  if (/^SWAP/.test(name)) return `Uniswap v4 action ${name} swaps your tokens. Exits never swap.`;
+  return `Uniswap v4 action ${name} can send tokens somewhere other than the exit's single payout to you. Exits use only TAKE_PAIR to your account.`;
+}
+
+const v4Param = (types: string, data: Hex, action: string) => {
+  try {
+    return decodeAbiParameters(parseAbiParameters(types), data);
+  } catch {
+    throw new DecodeError(`Uniswap v4 ${action} parameters could not be decoded`);
+  }
+};
+
+/**
+ * Uniswap v4 PositionManager.modifyLiquidities(abi.encode(bytes actions, bytes[] params), deadline).
+ * Exit set: DECREASE_LIQUIDITY, BURN_POSITION, TAKE_PAIR (recipient pinned by the Guard).
+ * Every other known action is forbidden with a reason; unknown codes or malformed data fail closed.
+ */
+function decodeV4(data: Hex, selector: Hex): Decoded {
+  const { args } = decodeWith(v4PosmAbi, data);
+  let actions: Hex;
+  let params: readonly Hex[];
+  try {
+    [actions, params] = decodeAbiParameters(parseAbiParameters('bytes, bytes[]'), args[0] as Hex);
+  } catch {
+    throw new DecodeError('Uniswap v4 unlockData could not be decoded');
+  }
+  const codes = (actions.slice(2).match(/../g) ?? []).map((h) => parseInt(h, 16));
+  if (codes.length === 0) throw new DecodeError('Uniswap v4 call has no actions');
+  if (codes.length !== params.length) throw new DecodeError(`Uniswap v4 call has ${codes.length} actions but ${params.length} parameter blocks`);
+  const recipients: Address[] = [];
+  const nested: Decoded[] = [];
+  codes.forEach((code, i) => {
+    const name = V4_NAMES[code];
+    if (!name) throw new DecodeError(`unknown Uniswap v4 action 0x${code.toString(16).padStart(2, '0')}`);
+    const p = params[i]!;
+    switch (code) {
+      case V4_ACTIONS.DECREASE_LIQUIDITY:
+        v4Param('uint256, uint256, uint128, uint128, bytes', p, name);
+        return;
+      case V4_ACTIONS.BURN_POSITION:
+        v4Param('uint256, uint128, uint128, bytes', p, name);
+        return;
+      case V4_ACTIONS.TAKE_PAIR: {
+        const [, , recipient] = v4Param('address, address, address', p, name);
+        recipients.push(getAddress(recipient as Address));
+        return;
+      }
+      default:
+        nested.push({ selector, name: `v4 ${name}`, recipients: [], paysCaller: false, nested: [], forbidden: v4Forbidden(name) });
+    }
+  });
+  return { selector, name: 'modifyLiquidities (Uniswap v4)', recipients, paysCaller: false, nested };
+}
+
 /** Decode a call the kit (or a pasted request) wants to send. Throws DecodeError on anything unknown. */
 export function decodeCall(data: Hex, depth = 0): Decoded {
   if (typeof data !== 'string' || !/^0x[0-9a-fA-F]*$/.test(data) || data.length < 10) {
@@ -77,6 +140,8 @@ export function decodeCall(data: Hex, depth = 0): Decoded {
     case SEL.curveRemoveLiquidity:
       decodeWith(curve3poolAbi, data);
       return { ...base, name: 'remove_liquidity', paysCaller: true };
+    case SEL.v4ModifyLiquidities:
+      return decodeV4(data, selector);
   }
 
   const banned = BANNED[selector];

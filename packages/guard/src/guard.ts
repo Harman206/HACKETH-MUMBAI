@@ -89,10 +89,12 @@ export function guard(tx: TxRequest, ctx: GuardCtx): GuardResult {
     reasons.push({ code: 'CALLER', detail: `this pool pays the sender ${tx.from}, not ${ctx.account}`, subject: tx.from });
   }
 
-  // 6. Always banned
+  // 6. Always banned (selectors, and forbidden steps inside a call such as v4 SETTLE/SWEEP)
   for (const c of calls) {
     if (BANNED_SELECTORS.has(c.selector)) {
       reasons.push({ code: 'BANNED', detail: `${c.name} is never part of an exit`, subject: c.counterparty });
+    } else if (c.forbidden) {
+      reasons.push({ code: 'BANNED', detail: c.forbidden });
     }
   }
 

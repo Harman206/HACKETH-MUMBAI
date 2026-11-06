@@ -24,13 +24,17 @@ export function parseManifest(text: string): Manifest {
   if (!isObj(raw.c)) throw new ManifestError('The exit manifest has no chain list.');
 
   const chains: Record<string, ChainManifest> = {};
+  const unknown: string[] = [];
   for (const [chainId, protos] of Object.entries(raw.c)) {
     if (!CHAIN_RE.test(chainId)) throw new ManifestError(`The exit manifest lists an invalid chain ID "${chainId}".`);
     if (!isObj(protos)) throw new ManifestError(`Chain ${chainId} in the exit manifest is not an object.`);
     const cm: ChainManifest = {};
     for (const [proto, targets] of Object.entries(protos)) {
+      // Forward compatible: a newer manifest may list protocols an older saved kit does not know.
+      // They are skipped (so never become allowed targets) instead of making the whole record unusable.
       if (!(ADAPTER_IDS as readonly string[]).includes(proto)) {
-        throw new ManifestError(`The exit manifest lists an unknown protocol "${proto}" on chain ${chainId}.`);
+        unknown.push(`${proto} on chain ${chainId}`);
+        continue;
       }
       if (!isObj(targets)) throw new ManifestError(`Protocol ${proto} on chain ${chainId} is not an object.`);
       const entries: Record<string, TargetEntry> = {};
@@ -41,7 +45,7 @@ export function parseManifest(text: string): Manifest {
     }
     chains[chainId] = cm;
   }
-  return { v: 1, chains };
+  return unknown.length ? { v: 1, chains, unknown } : { v: 1, chains };
 }
 
 function parseTarget(t: unknown, where: string): TargetEntry {

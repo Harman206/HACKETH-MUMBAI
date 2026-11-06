@@ -1,8 +1,8 @@
 export type Address = `0x${string}`;
 export type Hex = `0x${string}`;
 
-export type AdapterId = 'uniswap-v3' | 'aave-v3' | 'curve-3pool';
-export const ADAPTER_IDS: readonly AdapterId[] = ['uniswap-v3', 'aave-v3', 'curve-3pool'];
+export type AdapterId = 'uniswap-v3' | 'uniswap-v4' | 'aave-v3' | 'curve-3pool';
+export const ADAPTER_IDS: readonly AdapterId[] = ['uniswap-v3', 'uniswap-v4', 'aave-v3', 'curve-3pool'];
 
 /** A transaction the kit wants the wallet to send. */
 export interface TxRequest {
@@ -25,6 +25,8 @@ export type ChainManifest = Partial<Record<AdapterId, Record<string, TargetEntry
 export interface Manifest {
   v: 1;
   chains: Record<string, ChainManifest>;
+  /** Protocols the record lists that this kit version does not know ("name on chain N"). Skipped, never allowed. */
+  unknown?: string[];
 }
 
 /** Decoded org.blackout.release record. */

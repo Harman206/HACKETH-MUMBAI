@@ -9,6 +9,7 @@ export const SIGS = {
     collect: 'collect((uint256,address,uint128,uint128))',
     aaveWithdraw: 'withdraw(address,uint256,address)',
     curveRemoveLiquidity: 'remove_liquidity(uint256,uint256[3])',
+    v4ModifyLiquidities: 'modifyLiquidities(bytes,uint256)',
   },
   banned: [
     'approve(address,uint256)',
@@ -38,6 +39,7 @@ export const SEL = {
   collect: sel(SIGS.exits.collect),
   aaveWithdraw: sel(SIGS.exits.aaveWithdraw),
   curveRemoveLiquidity: sel(SIGS.exits.curveRemoveLiquidity),
+  v4ModifyLiquidities: sel(SIGS.exits.v4ModifyLiquidities),
   approve: sel('approve(address,uint256)'),
   increaseAllowance: sel('increaseAllowance(address,uint256)'),
   permit2612: sel('permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'),
@@ -62,6 +64,40 @@ export const BANNED_SELECTORS: ReadonlySet<Hex> = new Set(SIGS.banned.map(sel));
 /** Exit selectors per adapter, used when writing a manifest. */
 export const EXIT_SELECTORS = {
   'uniswap-v3': { positionManager: [SEL.multicall, SEL.decreaseLiquidity, SEL.collect] },
+  'uniswap-v4': { positionManager: [SEL.v4ModifyLiquidities], stateView: [] as Hex[] },
   'aave-v3': { pool: [SEL.aaveWithdraw] },
   'curve-3pool': { pool: [SEL.curveRemoveLiquidity], lpToken: [] as Hex[] },
+} as const;
+
+/**
+ * Uniswap v4 PositionManager action codes (v4-periphery src/libraries/Actions.sol).
+ * modifyLiquidities(abi.encode(bytes actions, bytes[] params), deadline) runs them in order.
+ */
+export const V4_ACTIONS = {
+  INCREASE_LIQUIDITY: 0x00,
+  DECREASE_LIQUIDITY: 0x01,
+  MINT_POSITION: 0x02,
+  BURN_POSITION: 0x03,
+  INCREASE_LIQUIDITY_FROM_DELTAS: 0x04,
+  MINT_POSITION_FROM_DELTAS: 0x05,
+  SWAP_EXACT_IN_SINGLE: 0x06,
+  SWAP_EXACT_IN: 0x07,
+  SWAP_EXACT_OUT_SINGLE: 0x08,
+  SWAP_EXACT_OUT: 0x09,
+  DONATE: 0x0a,
+  SETTLE: 0x0b,
+  SETTLE_ALL: 0x0c,
+  SETTLE_PAIR: 0x0d,
+  TAKE: 0x0e,
+  TAKE_ALL: 0x0f,
+  TAKE_PORTION: 0x10,
+  TAKE_PAIR: 0x11,
+  CLOSE_CURRENCY: 0x12,
+  CLEAR_OR_TAKE: 0x13,
+  SWEEP: 0x14,
+  WRAP: 0x15,
+  UNWRAP: 0x16,
+  MINT_6909: 0x17,
+  BURN_6909: 0x18,
+  UNWIND_WITH_FALLBACK: 0x19,
 } as const;

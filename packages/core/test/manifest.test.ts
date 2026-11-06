@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { encodeManifest, ManifestError, parseManifest, SEL, type Manifest } from '../src';
+import { encodeManifest, EXIT_SELECTORS, ManifestError, parseManifest, SEL, V4_ACTIONS, type Manifest } from '../src';
 
 const NPM = '0x1238536071E1c677A632429e3655c799b22cDA52';
 const POOL = '0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7';
@@ -41,11 +41,25 @@ describe('manifest codec', () => {
     ['{"v":2,"c":{}}', 'unsupported version'],
     ['{"v":1,"c":{"1":{"curve-3pool":{"pool":{"a":"0x1234","s":[]}}}}}', 'address'],
     [`{"v":1,"c":{"1":{"curve-3pool":{"pool":{"a":"${POOL}","s":["0xabcdef"]}}}}}`, 'selector'],
-    [`{"v":1,"c":{"1":{"sushiswap":{"pool":{"a":"${POOL}","s":[]}}}}}`, 'protocol'],
     [`{"v":1,"c":{"one":{}}}`, 'chain'],
   ];
   test.each(bad)('rejects %j with a message about %s', (text, phrase) => {
     expect(() => parseManifest(text)).toThrow(ManifestError);
     expect(() => parseManifest(text)).toThrow(new RegExp(phrase));
+  });
+
+  test('forward compatible: a protocol this kit does not know is skipped and listed, not fatal', () => {
+    const text = `{"v":1,"c":{"1":{"curve-3pool":{"pool":{"a":"${POOL}","s":["${SEL.curveRemoveLiquidity}"]}},"sushiswap":{"pool":{"a":"${POOL}","s":["0x12345678"]}}}}}`;
+    const parsed = parseManifest(text);
+    expect(Object.keys(parsed.chains['1']!)).toEqual(['curve-3pool']);
+    expect(parsed.unknown).toEqual(['sushiswap on chain 1']);
+    // an unknown protocol never becomes an allowed target
+    expect(JSON.stringify(parsed.chains)).not.toContain('0x12345678');
+  });
+
+  test('uniswap-v4 is a known protocol with modifyLiquidities as its only exit selector', () => {
+    expect(SEL.v4ModifyLiquidities).toBe('0xdd46508f');
+    expect(EXIT_SELECTORS['uniswap-v4']).toEqual({ positionManager: ['0xdd46508f'], stateView: [] });
+    expect(V4_ACTIONS).toMatchObject({ DECREASE_LIQUIDITY: 0x01, BURN_POSITION: 0x03, SETTLE_PAIR: 0x0d, TAKE: 0x0e, TAKE_PAIR: 0x11, SWEEP: 0x14 });
   });
 });

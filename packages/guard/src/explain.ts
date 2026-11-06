@@ -9,6 +9,10 @@ export function explain(r: GuardResult): string[] {
   for (const x of r.reasons) {
     switch (x.code) {
       case 'BANNED': {
+        if (x.detail.startsWith('Uniswap v4 action')) {
+          out.push(x.detail);
+          break;
+        }
         const name = x.detail.replace(/ is never part of an exit$/, '');
         out.push(
           /approve|permit|setApprovalForAll|increaseAllowance/i.test(name)
