@@ -6,7 +6,8 @@
  *    the hijack clone also reachable as the look-alike http://demoswap-rewards.localhost:<port>;
  *  - three seeded Uniswap v3 positions for the test wallet; the built kit served on http://localhost;
  *  - the watcher agent in-process, ticked on demand through a small control server;
- *  - a plain "unknown dapp" page that asks for a drainer approval, and hostile pages.
+ *  - a plain "unknown dapp" page that asks for a drainer approval, and hostile pages;
+ *  - the Demo Portal (harness control server) that drives the scenarios a human runs in the live demo.
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -89,9 +90,18 @@ async function buildWorld(fork: Fork) {
   const hp = { control: await free(), router: await free(), site: await free(), hijack: await free(), rpc: await free() };
   const label = `copeybara-e2e-${Date.now()}`;
   const wallet = addr(K[5]);
+  // the built kit on http://localhost (listening now: the harness links to it)
+  const kitPort = await free();
+  const kitServer = createServer((req, res) => {
+    const path = (req.url ?? '/').split('?')[0];
+    if (path === '/copeybara-kit.html' || path === '/') return void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(kitHtml);
+    res.writeHead(404).end();
+  });
+  await new Promise<void>((r) => kitServer.listen(kitPort, '127.0.0.1', r));
   const harness = await startHarness({
     primaryRpc: fork.url, kitFile, ensName: `${label}.eth`, ensRpcs: rpcs, chainId: 11155111, universalResolver: UR,
     token: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', ports: hp, mode: 'process',
+    kitUrl: `http://localhost:${kitPort}`, watcherUrl: 'http://127.0.0.1:1/', // the e2e watcher runs in-process (no status server)
   });
   const siteUrl = `http://demoswap.localhost:${hp.router}`;
   const items = await fetchCodeItems(`http://127.0.0.1:${hp.site}/`, nodeFetch);
@@ -114,14 +124,7 @@ async function buildWorld(fork: Fork) {
   forge(['script', 'script/SeedPositions.s.sol']);
   const positions = JSON.parse(readFileSync(join(CONTRACTS, env.POSITIONS_FILE), 'utf8'));
 
-  // kit + plain pages ("unknown dapp", hostile pages) on two more origins
-  const kitPort = await free();
-  const kitServer = createServer((req, res) => {
-    const path = (req.url ?? '/').split('?')[0];
-    if (path === '/copeybara-kit.html' || path === '/') return void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(kitHtml);
-    res.writeHead(404).end();
-  });
-  await new Promise<void>((r) => kitServer.listen(kitPort, '127.0.0.1', r));
+  // plain pages ("unknown dapp", hostile pages) on one more origin
   const pagesPort = await free();
   const approve = hijackRequest('0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8');
   const pagesServer = createServer((req, res) => {
@@ -188,6 +191,8 @@ async function buildWorld(fork: Fork) {
       pagesAlt: `http://localhost:${pagesPort}`,
       control: `http://127.0.0.1:${ctlPort}`,
       drainer: approve,
+      // the Demo Portal, served by the harness control server
+      portal: `http://localhost:${hp.control}`,
     }),
   );
 

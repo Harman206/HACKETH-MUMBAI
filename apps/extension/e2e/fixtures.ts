@@ -22,6 +22,8 @@ export interface World {
   pagesAlt: string;
   control: string;
   drainer: { to: string; data: string };
+  /** Demo Portal (harness control server) */
+  portal: string;
 }
 export const world = (): World => JSON.parse(readFileSync(join(HERE, '.state.json'), 'utf8'));
 
