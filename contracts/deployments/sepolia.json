@@ -20,7 +20,7 @@
     ],
     "watcher": "0xeBbcD4fC4265dbb7Fc7b2df00f1fD7B89FA1EfF8",
     "urlTx": "0xf21794dd7b39ae5418e79b96889995e2bfc2cee7813fc4bcb3a7ade7c1b0dd1b",
-    "site": "v=2;sha256=056153931800b9f227b3e824c767c48261c47f5d0096b195acca8a022b8c0838,f43f86068fa8f2da9d2f5f5b07eee3c5b4bc3f20821932b346ccde76157a89f2,fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a",
+    "site": "v=2;sha256=056153931800b9f227b3e824c767c48261c47f5d0096b195acca8a022b8c0838,dfa57fd2a25603b89791011964fff352d38c817a259ef304a1cdda1a87fe1699,fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a",
     "manifestSha": "304508a1ef337f70309c312532861f3bbde66040aad3309d50b93e6ca28e9b3c",
     "url": "http://demoswap.localhost:8080",
     "releaseTxs": [
@@ -29,6 +29,9 @@
       "0x07212a58ac250c94b5688c97fd370cbfcc90b8360be9ad147a33a3dc98f0b06a"
     ],
     "extensionRelease": "44d7fe480b8429f12637e3670c4564b4a5e520464c661adbf0dd64f2ba2b5d67",
-    "extensionReleaseVersion": 2
+    "extensionReleaseVersion": 2,
+    "siteTxs": [
+      "0x920e8959026fec942666c4d4702bfdd415f79bfd41a43b33320a4b56f32e979e"
+    ]
   }
 }
