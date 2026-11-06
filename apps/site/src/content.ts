@@ -46,8 +46,8 @@ export const HOW = [
     body: 'Before your wallet sees anything, the Exit Guard checks it: is it one of the protocol’s published contracts? Does the money go to you? Is it an approval? No approvals, no ETH, no other recipient. Ever.',
   },
   {
-    title: 'Three servers must agree',
-    body: 'Your browser learns blockchain facts from servers. One could lie or be down, so BLACKOUT asks three. If they disagree, it stops instead of guessing.',
+    title: 'Several servers must agree',
+    body: 'Your browser learns blockchain facts from servers. One could lie or be down, so BLACKOUT asks three: at least two must answer, and if any that answer disagree, it stops instead of guessing.',
   },
 ] as const;
 

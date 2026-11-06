@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { ENS_NAME } from '../content';
 import { theaterApi } from './api';
-import { CHAPTERS, gate, kitLinks, scoreboard, type TState } from './chapters';
+import { CHAPTERS, gate, kitLinks, scoreboard, verifyVerdict, type TState } from './chapters';
 
 const tx = (h: string, fork: boolean) => (fork ? null : `https://sepolia.etherscan.io/tx/${h}`);
 
@@ -133,8 +133,21 @@ export function Theater({ base }: { base: string }) {
         {why(4)}
         {s.verify && (
           <div class="cols" style="margin-top:12px">
-            <div class="card"><b>Saved kit</b><p class={/^MATCH/.test(s.verify.real) ? 'ok' : 'bad'}>{s.verify.real}</p></div>
-            <div class="card"><b>Kit served by the hijacked site</b><p class={/^MISMATCH/.test(s.verify.tampered) ? 'ok' : 'bad'}>{s.verify.tampered}</p></div>
+            {[
+              { title: 'Saved kit', out: s.verify.real, want: 'match' },
+              { title: 'Kit served by the hijacked site', out: s.verify.tampered, want: 'mismatch' },
+            ].map((k) => {
+              const v = verifyVerdict(k.out);
+              return (
+                <div class="card">
+                  <b>{k.title}</b>
+                  <p class={v === 'unverified' ? 'warn' : v === k.want ? 'ok' : 'bad'}>
+                    {v === 'match' ? '✓ Fingerprint matches ENS' : v === 'mismatch' ? '✕ Fingerprint does NOT match ENS' : '… Could not verify right now (an RPC provider failed); try again'}
+                  </p>
+                  <p class="mono">{k.out}</p>
+                </div>
+              );
+            })}
           </div>
         )}
       </article>

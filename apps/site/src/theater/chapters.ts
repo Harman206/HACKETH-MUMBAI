@@ -55,7 +55,7 @@ export function scoreboard(s: TState) {
   return {
     lost: sums(drains.map((d) => [d.token, BigInt(d.amount)])),
     recovered: sums(results.flatMap((r) => (r.deltas ?? []).map((d) => [d.token, BigInt(d.after) - BigInt(d.before)] as [string, bigint]))),
-    timeToExitSec: first !== null && last.length ? Math.round(Math.max(...last) - first) / 1000 : null,
+    timeToExitSec: first !== null && last.length ? Math.round((Math.max(...last) - first) / 100) / 10 : null, // one decimal
     drainTxs: drains.map((d) => d.drainTx!),
     rescueTxs: results.flatMap((r) => r.txHashes),
   };
@@ -66,4 +66,11 @@ const b64url = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/
 export function kitLinks(s: TState, ensName: string, hijack: { to: string; data: string; value: string }) {
   const exit = `${s.links.kit}/?ens=${encodeURIComponent(ensName)}&drill=${encodeURIComponent(s.links.control)}`;
   return { exit, check: `${exit}&check=${b64url(JSON.stringify(hijack))}` };
+}
+
+/** Verifier output → verdict. A provider failure is "could not verify", never shown as a fake kit. */
+export function verifyVerdict(out: string): 'match' | 'mismatch' | 'unverified' {
+  if (/^MATCH\b/.test(out)) return 'match';
+  if (/^MISMATCH\b/.test(out)) return 'mismatch';
+  return 'unverified';
 }

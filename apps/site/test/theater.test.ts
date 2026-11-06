@@ -41,6 +41,7 @@ describe('chapters', () => {
       rescue: { results: [{ status: 'recovered', txHashes: ['0xr'], confirmedAt: 52_500, deltas: [{ token: DUSD, before: '0', after: (999n * 10n ** 18n).toString(), min: '1' }, { token: DETH, before: '5', after: (5n + 10n ** 18n).toString(), min: '1' }] }] },
     };
     expect(scoreboard(s)).toEqual({ lost: ['10,000 DUSD'], recovered: ['999 DUSD', '1 DETH'], timeToExitSec: 42.5, drainTxs: ['0xd'], rescueTxs: ['0xr'] });
+    expect(scoreboard({ ...s, failures: [{ kind: 'site-down', at: 10_000 }], rescue: { results: [{ status: 'recovered', txHashes: ['0xr'], confirmedAt: 18_231, deltas: [] }] } }).timeToExitSec).toBe(8.2);
   });
 
   test('kit links: drill settings and the pre-filled hijack check', () => {
@@ -48,5 +49,15 @@ describe('chapters', () => {
     expect(l.exit).toBe('http://localhost:8000/?ens=demoswap-blackout.eth&drill=http%3A%2F%2Flocalhost%3A8090');
     const check = new URL(l.check);
     expect(JSON.parse(Buffer.from(check.searchParams.get('check')!, 'base64url').toString())).toEqual({ to: DUSD, data: '0x095ea7b3', value: '0x0' });
+  });
+});
+
+describe('verify verdicts (review #5)', () => {
+  test('MATCH / MISMATCH / could not verify are distinct', async () => {
+    const { verifyVerdict } = await import('../src/theater/chapters');
+    expect(verifyVerdict('MATCH v=3 abc')).toBe('match');
+    expect(verifyVerdict('MISMATCH expected a got b')).toBe('mismatch');
+    expect(verifyVerdict('RPCS DISAGREE on the release record')).toBe('unverified');
+    expect(verifyVerdict('')).toBe('unverified');
   });
 });
