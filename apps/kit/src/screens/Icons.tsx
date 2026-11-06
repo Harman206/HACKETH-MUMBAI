@@ -1,11 +1,17 @@
 /** Inline SVG line icons (1.75 stroke) and the Copeybara mark. Inline only: the kit is a single file. */
 import type { ComponentChildren } from 'preact';
 
+/** The Copeybara mark (assets/brand/copeybara-mark.svg): lime capybara on a near-black rounded tile. */
 export function BrandMark({ size = 32 }: { size?: number }) {
   return (
-    <svg class="brandmark" viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
-      <rect width="32" height="32" rx="9" class="brandmark-bg" />
-      <path d="M8 21v-7a6 6 0 0 1 12 0v3m-6 4h11m-4-4 4 4-4 4" fill="none" class="brandmark-fg" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    <svg class="brandmark" viewBox="0 0 104 104" width={size} height={size} aria-hidden="true">
+      <rect width="104" height="104" rx="26" fill="#141615" />
+      <path
+        fill="#c4fa4f"
+        fill-rule="evenodd"
+        transform="translate(11 17) scale(.8)"
+        d="M10 73c2-17 10-33 19-46a7 7 0 0 1-3-6 8 8 0 0 1 15-3c6-2 13-1 20 1l27 6c4 1 6 3 6 7v17c0 7-4 10-10 11l-24 2-9 11H10Zm52-36a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+      />
     </svg>
   );
 }

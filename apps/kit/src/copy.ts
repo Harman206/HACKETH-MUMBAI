@@ -19,10 +19,16 @@ export const COPY = {
   exit: 'Exit',
   exitAll: 'Exit all',
   exitHelp: 'Press Exit on a position, or Exit all. Your wallet asks you to confirm each withdrawal; every one goes only to your own address.',
-  how: [
-    { title: 'Enter the protocol’s ENS name.', body: 'Copy it from the protocol’s docs, never from a link or this file.' },
-    { title: 'Connect your wallet.', body: 'It only shares your address. The kit never sees your keys.' },
-    { title: 'Pick positions and press Exit.', body: 'Your wallet asks you to confirm each withdrawal.' },
+  how: (network: string) => [
+    { title: 'Type the protocol’s ENS name', body: 'Copy it from the protocol’s docs, e.g. demoswap-blackout.eth. Never trust a name from a link.' },
+    { title: `Connect MetaMask on ${network}`, body: 'Only your address is shared. The kit never sees your keys and never asks you to sign a message.' },
+    { title: 'Press Exit', body: 'MetaMask asks you to confirm each withdrawal. Every one pays out only to your own address.' },
+  ],
+  checksTitle: 'What the kit checks before anything is sent',
+  checks: [
+    { title: 'Official release', body: 'Reads the kit fingerprint and the list of exit contracts from the protocol’s ENS name.' },
+    { title: '3 RPCs agree', body: 'Three independent providers must give the same answer, or the kit stops.' },
+    { title: 'Exit Guard', body: 'Every transaction must withdraw to you only: no approvals, no transfers, no ETH sent.' },
   ],
   exiting: 'Exiting…',
   recovered: 'Recovered',

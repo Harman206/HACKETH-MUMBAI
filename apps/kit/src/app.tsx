@@ -177,11 +177,6 @@ export function App() {
           <div class="label">Emergency withdrawal</div>
           <h1>{COPY.title}</h1>
           <p class="lede">{COPY.tagline}</p>
-          <ul class="hero-points">
-            <li><IconShield size={16} /> Exit Guard checks every transaction</li>
-            <li><IconLayers size={16} /> 3 independent RPC providers must agree</li>
-            <li><IconLock size={16} /> No server, no analytics, no signatures</li>
-          </ul>
         </section>
         {ensFromLink && settings.ensName === ensFromLink && (
           <div class="notice warn-notice" role="alert" data-ens-from-link>
@@ -311,19 +306,42 @@ function NoWalletHint({ chainId }: { chainId: number }) {
   );
 }
 
-function HowItWorks() {
+function HowItWorks({ network }: { network: string }) {
   return (
     <ol class="how" aria-label="How this works">
-      {COPY.how.map((h, i) => (
+      {COPY.how(network).map((h, i) => (
         <li>
           <span class="how-n">{i + 1}</span>
           <span>
             <b>{h.title}</b>
-            <span class="muted"> {h.body}</span>
+            <span class="muted">{h.body}</span>
           </span>
         </li>
       ))}
     </ol>
+  );
+}
+
+const CHECK_ICONS = [IconFingerprint, IconLayers, IconShield];
+
+function Checks() {
+  return (
+    <section class="checks" aria-label={COPY.checksTitle}>
+      <div class="label">{COPY.checksTitle}</div>
+      <ul>
+        {COPY.checks.map((c, i) => {
+          const I = CHECK_ICONS[i]!;
+          return (
+            <li>
+              <span class="check-icon"><I size={16} /></span>
+              <span>
+                <b>{c.title}.</b> <span class="muted">{c.body}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -336,7 +354,8 @@ function Setup(props: { settings: Settings; update(p: Partial<Settings>): void; 
       {props.walletHint && <NoWalletHint chainId={settings.targetChainId} />}
       <section class="how-wrap">
         <div class="label">How this works</div>
-        <HowItWorks />
+        <HowItWorks network={CHAIN_NAMES[settings.targetChainId] ?? `chain ${settings.targetChainId}`} />
+        <Checks />
       </section>
       <div class="card form">
         <div class="field">
