@@ -1,4 +1,4 @@
-import type { Address, Position } from '@blackout/core';
+import type { Address, AdapterId, Position } from '@blackout/core';
 import type { Ctx, ExitAdapter } from '@blackout/adapters';
 import { normaliseName, readBlackoutRecords, type BlackoutRecords } from '@blackout/ens';
 import { buildReport, tallyVerdicts, runExit as defaultRunExit, type ExitProgress, type ExitReport, type ExitResult, type Sender } from '@blackout/exec';
@@ -34,6 +34,10 @@ export type FlowState =
       batch: { done: number; total: number } | null;
       /** The wallet's native balance for network fees, when the RPCs could read it. */
       fees: { balance: bigint; low: boolean } | null;
+      /** Adapters that can add a position by ID (listed on this chain and not fully discoverable). */
+      addable: AdapterId[];
+      /** Calm, non-blocking notes (e.g. manifest protocols this kit version does not know). */
+      notes: string[];
     }
   | { step: 'error'; message: string; stage?: 1 | 2 | 3 };
 
@@ -77,6 +81,8 @@ export interface Flow {
   start(s: Settings): Promise<void>;
   exit(id: string): Promise<void>;
   exitAll(): Promise<void>;
+  /** Add a position the scan could not find. Resolves to null on success, or a plain error message. */
+  addById(adapter: AdapterId, id: string): Promise<string | null>;
   report(): ExitReport;
 }
 
@@ -167,7 +173,10 @@ export function createFlow(deps: FlowDeps): Flow {
       const meta = typeof q.read === 'function' ? await tokenMeta(q, positions.flatMap((p) => p.tokens), ctx.block).catch(() => ({})) : {};
       const balance = typeof q.getBalance === 'function' ? await q.getBalance(account, ctx.block).catch(() => null) : null;
       const fees = balance === null ? null : { balance, low: balance < LOW_FEE_BALANCE };
-      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors, facts, previews, meta, progress: {}, batch: null, fees });
+      const listed = records.manifest.chains[String(s.targetChainId)] ?? {};
+      const addable = deps.adapters.filter((a) => a.byId && listed[a.id]).map((a) => a.id);
+      const notes = (records.manifest.unknown ?? []).map((u) => `The protocol also lists exits for ${u}, which this kit version does not support. A newer kit release may.`);
+      state.set({ step: 'positions', records, rollbackWarning, account, chainId: s.targetChainId, positions, results: {}, busy: null, discoveryErrors, facts, previews, meta, progress: {}, batch: null, fees, addable, notes });
     } catch (e) {
       return fail(message(e));
     }
@@ -218,6 +227,30 @@ export function createFlow(deps: FlowDeps): Flow {
     setBatch(null);
   }
 
+  async function addById(adapterId: AdapterId, id: string): Promise<string | null> {
+    const s = state.get();
+    if (s.step !== 'positions' || !ctx) return 'Find your positions first.';
+    const adapter = deps.adapters.find((a) => a.id === adapterId);
+    if (!adapter?.byId || !s.addable.includes(adapterId)) return 'This protocol does not support adding a position by ID.';
+    try {
+      const fresh = { ...ctx, block: await ctx.q.pinBlock() };
+      const p = await adapter.byId(id, s.account, fresh);
+      const cur0 = state.get();
+      if (cur0.step === 'positions' && cur0.positions.some((x) => x.adapter === p.adapter && x.id === p.id)) return `${p.label} is already listed.`;
+      const preview = p.manual ? [] : ((await adapter.buildExit(p, fresh).catch(() => null))?.preview ?? []);
+      const extra = typeof fresh.q.read === 'function' ? await tokenMeta(fresh.q, p.tokens, fresh.block).catch(() => ({})) : {};
+      const cur = state.get();
+      if (cur.step !== 'positions') return null;
+      // Keep the "N more not found" row last.
+      const rest = cur.positions.filter((x) => !x.manual || x.raw !== null);
+      const tail = cur.positions.filter((x) => x.manual && x.raw === null);
+      state.set({ ...cur, positions: [...rest, p, ...tail], previews: { ...cur.previews, [p.id]: preview }, meta: { ...cur.meta, ...extra } });
+      return null;
+    } catch (e) {
+      return message(e);
+    }
+  }
+
   function report(): ExitReport {
     const s = state.get();
     if (s.step !== 'positions') throw new Error('No exits yet.');
@@ -236,5 +269,5 @@ export function createFlow(deps: FlowDeps): Flow {
     });
   }
 
-  return { state, start, exit, exitAll, report };
+  return { state, start, exit, exitAll, addById, report };
 }

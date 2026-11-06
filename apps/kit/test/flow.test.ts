@@ -244,3 +244,49 @@ describe('exit flow: live status (usability)', () => {
     expect(f.state.get()).toMatchObject({ step: 'error', message: 'User rejected the request.', stage: 2 });
   });
 });
+
+describe('exit flow: add a position by ID (Uniswap v4 NFTs are not enumerable)', () => {
+  const v4pos: Position = { adapter: 'uniswap-v4', id: '41', label: 'Uniswap v4 #41', tokens: [], raw: {} };
+  const v4manifest: Manifest = { v: 1, chains: { '11155111': { ...manifest.chains['11155111'], 'uniswap-v4': { positionManager: { address: NPM, selectors: ['0xdd46508f'] } } } } };
+  const v4adapter = (byId: ExitAdapter['byId']): ExitAdapter => ({
+    id: 'uniswap-v4',
+    discover: async () => [],
+    buildExit: vi.fn(async (p) => ({ position: p, calls: [], expected: [], preview: [{ token: '0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA', amount: 7n }] }) as ExitPlan),
+    byId,
+  });
+
+  test('offered only for adapters with byId that the manifest lists on this chain', async () => {
+    const { d, adapter } = deps({ readRecords: vi.fn(async () => records({ manifest: v4manifest })) });
+    const f = createFlow({ ...d, adapters: [adapter, v4adapter(async () => v4pos)] });
+    await f.start(settings);
+    expect(f.state.get()).toMatchObject({ step: 'positions', addable: ['uniswap-v4'] });
+    const g = createFlow({ ...d, readRecords: vi.fn(async () => records()), adapters: [adapter, v4adapter(async () => v4pos)] });
+    await g.start(settings);
+    expect(g.state.get()).toMatchObject({ step: 'positions', addable: [] });
+  });
+
+  test('a found position joins the list with its preview; errors come back as plain text; duplicates are refused', async () => {
+    const byId = vi.fn(async (id: string) => {
+      if (id === '42') throw new Error('Uniswap v4 position #42 is owned by 0x2222…2222, not your wallet.');
+      return v4pos;
+    });
+    const { d, adapter } = deps({ readRecords: vi.fn(async () => records({ manifest: v4manifest })) });
+    const f = createFlow({ ...d, adapters: [adapter, v4adapter(byId)] });
+    await f.start(settings);
+    expect(await f.addById('uniswap-v4', '42')).toMatch(/not your wallet/);
+    expect(await f.addById('uniswap-v4', '41')).toBeNull();
+    const s = f.state.get();
+    expect(s.step === 'positions' && s.positions.map((p) => p.id)).toEqual(['7', '41']);
+    expect(s.step === 'positions' && s.previews['41']).toEqual([{ token: '0x79c2D3B20e12c95243C2FeBaE903999912fc6EcA', amount: 7n }]);
+    expect(await f.addById('uniswap-v4', '41')).toMatch(/already listed/);
+    expect(byId).toHaveBeenCalledWith('41', ACC, expect.objectContaining({ account: ACC }));
+  });
+
+  test('protocols the manifest lists but this kit does not know are shown as a calm note', async () => {
+    const { d } = deps({ readRecords: vi.fn(async () => records({ manifest: { ...manifest, unknown: ['morpho-blue on chain 11155111'] } })) });
+    const f = createFlow(d);
+    await f.start(settings);
+    expect(f.state.get()).toMatchObject({ step: 'positions', notes: [expect.stringMatching(/morpho-blue on chain 11155111.*newer kit/)] });
+  });
+});
+

@@ -16,6 +16,8 @@ export interface ExitAdapter {
   id: AdapterId;
   discover(user: Address, ctx: Ctx): Promise<Position[]>;
   buildExit(pos: Position, ctx: Ctx): Promise<ExitPlan>;
+  /** For protocols whose positions cannot all be discovered (v4 NFTs): load one by id, only if `user` owns it. */
+  byId?(id: string, user: Address, ctx: Ctx): Promise<Position>;
 }
 
 /** amount × (10000 − bps) / 10000, floored. */

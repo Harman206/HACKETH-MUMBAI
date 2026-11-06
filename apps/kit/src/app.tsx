@@ -266,6 +266,9 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
         {state.discoveryErrors.map((e) => (
           <p class="warn" role="alert" style="margin-top:12px">{e}</p>
         ))}
+        {state.notes.map((n) => (
+          <p class="muted" style="margin-top:12px;font-size:14px" data-note>{n}</p>
+        ))}
         {state.positions.length === 0 && <p class="muted" style="margin-top:12px">{COPY.noPositions}</p>}
         {state.positions.map((p) => (
           <PositionRow
@@ -280,6 +283,9 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
           />
         ))}
       </div>
+      {state.addable.map((a) => (
+        <AddById adapter={a} flow={flow} busy={!!state.busy} />
+      ))}
       {anyResult && (
         <div class="card row">
           <button class="secondary" onClick={() => download('blackout-exit-report.json', reportToJson(flow.report()), 'application/json')}>
@@ -291,6 +297,38 @@ function Positions({ state, flow }: { state: Extract<FlowState, { step: 'positio
         </div>
       )}
     </>
+  );
+}
+
+const ADAPTER_NAMES: Record<string, string> = { 'uniswap-v3': 'Uniswap v3', 'uniswap-v4': 'Uniswap v4', 'aave-v3': 'Aave v3', 'curve-3pool': 'Curve 3pool' };
+
+/** For positions discovery cannot list exhaustively (Uniswap v4 NFTs): the user types the ID, the kit checks ownership. */
+function AddById({ adapter, flow, busy }: { adapter: import('@blackout/core').AdapterId; flow: ReturnType<typeof createFlow>; busy: boolean }) {
+  const [id, setId] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+  const name = ADAPTER_NAMES[adapter] ?? adapter;
+  const add = async () => {
+    setWorking(true);
+    setErr(null);
+    const e = await flow.addById(adapter, id);
+    setWorking(false);
+    if (e) setErr(e);
+    else setId('');
+  };
+  return (
+    <div class="card" data-add-by-id={adapter}>
+      <label for={`add-${adapter}`} style="margin-top:0">
+        Missing a {name} position? <span class="hint">Enter its ID; the kit checks it belongs to this wallet.</span>
+      </label>
+      <div class="row" style="flex-wrap:nowrap">
+        <input id={`add-${adapter}`} inputMode="numeric" placeholder="e.g. 41448" value={id} onInput={(e) => setId((e.target as HTMLInputElement).value)} />
+        <button class="secondary" disabled={busy || working || !id.trim()} onClick={add}>
+          {working ? 'Checking…' : 'Add'}
+        </button>
+      </div>
+      {err && <p class="warn" style="margin:8px 0 0" role="status">{err}</p>}
+    </div>
   );
 }
 
