@@ -33,6 +33,11 @@ describe('single-file kit build', () => {
     expect(m![1]).toBe(`${CSP_PREFIX}${hash}${CSP_SUFFIX}`);
   });
 
+  test('production build: no local paths or dev JSX baked in, even when built under vitest (review I1)', () => {
+    expect(html).not.toMatch(/\/Users\/|\/home\/|[A-Z]:\\\\/);
+    expect(html).not.toContain('jsxDEV');
+  });
+
   test('size under 1 MB', () => {
     expect(Buffer.byteLength(html)).toBeLessThan(1_000_000);
   });

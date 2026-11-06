@@ -8,7 +8,7 @@ import { join } from 'node:path';
 const hashes = [];
 for (let i = 0; i < 2; i++) {
   const out = mkdtempSync(join(tmpdir(), `kit-repro-${i}-`));
-  const env = { ...process.env, SOURCE_DATE_EPOCH: '0', TZ: 'UTC', LC_ALL: 'C' };
+  const env = { ...process.env, NODE_ENV: 'production', SOURCE_DATE_EPOCH: '0', TZ: 'UTC', LC_ALL: 'C' };
   execFileSync('npx', ['vite', 'build', '--outDir', out, '--emptyOutDir'], { env, stdio: 'pipe' });
   execFileSync('node', ['scripts/inject-csp.mjs', out], { env, stdio: 'pipe' });
   hashes.push(createHash('sha256').update(readFileSync(join(out, 'blackout-kit.html'))).digest('hex'));
