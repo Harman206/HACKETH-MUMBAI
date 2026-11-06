@@ -11,6 +11,7 @@ export interface TState {
   rescue: unknown;
   chapter: 1 | 2 | 3 | 4;
   prepareTxs: string[];
+  prepared?: boolean;
   failures: { kind: string; at: number }[];
   /** The ENS name this booth is running (kit links must use it, not a hard-coded one). */
   ensName?: string;
@@ -28,7 +29,7 @@ export const CHAPTERS = [
 export function gate(n: 1 | 2 | 3 | 4, s: TState): { ok: true } | { ok: false; why: string } {
   if (n === 1) return { ok: true };
   if (!s.victim) return { ok: false, why: 'Prepare the victim wallet first (chapter 1).' };
-  if (s.prepareTxs.length === 0) return { ok: false, why: 'The victim wallet is not fully prepared yet (funding transactions pending or failed).' };
+  if (!(s.prepared ?? s.prepareTxs.length > 0)) return { ok: false, why: 'The victim wallet is not fully prepared yet (funding transactions pending or failed).' };
   if (n === 2) return { ok: true };
   if (s.chapter < 2) return { ok: false, why: 'Wait for the drain to land (chapter 2).' };
   if (n === 3) return { ok: true };

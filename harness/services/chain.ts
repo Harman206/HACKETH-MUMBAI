@@ -46,6 +46,13 @@ export function makePrepareVictim(o: { rpcUrl: string; deployerKey: Hex; dusd: A
   const { pub, wallet, account } = clients(o.rpcUrl, o.deployerKey);
   const [t0, t1] = o.dusd.toLowerCase() < o.deth.toLowerCase() ? [o.dusd, o.deth] : [o.deth, o.dusd];
   return async (victim: Address): Promise<Hex[]> => {
+    // Reuse an already-funded victim (re-running the demo with the same "Account 2" costs nothing).
+    const [dusdBal, npmBal, ethBal] = await Promise.all([
+      pub.readContract({ address: o.dusd, abi: erc20Abi, functionName: 'balanceOf', args: [victim] }),
+      pub.readContract({ address: NPM, abi: npmAbi, functionName: 'balanceOf', args: [victim] }),
+      pub.getBalance({ address: victim }),
+    ]);
+    if (dusdBal >= parseEther('10000') && npmBal >= 1n && ethBal >= parseEther('0.003')) return [];
     const wait = async (h: Hex) => {
       const r = await pub.waitForTransactionReceipt({ hash: h });
       if (r.status === 'success') return h;

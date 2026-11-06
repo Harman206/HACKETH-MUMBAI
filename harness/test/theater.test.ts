@@ -32,6 +32,24 @@ describe('theater', () => {
     expect(d.prepareVictim).toHaveBeenCalledTimes(1);
   });
 
+  test('an already-funded victim is reused: prepared with no new transactions', async () => {
+    const { d } = deps({ prepareVictim: vi.fn(async () => [] as Hex[]) });
+    const t = createTheater(d);
+    expect(await t.prepare(V1)).toEqual({ txs: [] });
+    expect((await t.state()).prepared).toBe(true);
+  });
+
+  test('prepared is false while funding is in flight or after it failed', async () => {
+    let release!: () => void;
+    const { d } = deps({ prepareVictim: vi.fn(() => new Promise<Hex[]>((r) => (release = () => r(['0x01'])))) });
+    const t = createTheater(d);
+    const p = t.prepare(V1);
+    expect((await t.state()).prepared).toBe(false);
+    release();
+    await p;
+    expect((await t.state()).prepared).toBe(true);
+  });
+
   test('a 4th victim is refused: demo cap reached', async () => {
     const t = createTheater(deps().d);
     for (const v of ['0x01', '0x02', '0x03']) await t.prepare(v.padEnd(42, '0') as Address);

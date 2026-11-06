@@ -90,7 +90,8 @@ export function Theater({ base }: { base: string }) {
         </div>
         {s.victim && (
           <p style="margin-top:12px">Victim <span class="mono">{s.victim}</span> holds <b>{s.victimDusd ?? '…'} DUSD</b> and Uniswap position{s.victimPositions.length === 1 ? '' : 's'} {s.victimPositions.map((p) => `#${p}`).join(', ') || '…'}
-            {s.prepareTxs.length > 0 && <> · funded in {s.prepareTxs.map((h, i) => <>{i ? ', ' : ' '}<TxLink h={h} fork={fork} label={`tx ${i + 1}`} /></>)}</>}</p>
+            {s.prepareTxs.length > 0 && <> · funded in {s.prepareTxs.map((h, i) => <>{i ? ', ' : ' '}<TxLink h={h} fork={fork} label={`tx ${i + 1}`} /></>)}</>}
+            {s.prepared && s.prepareTxs.length === 0 && <> · already funded, reused (no new transactions)</>}</p>
         )}
         <p style="margin-top:8px"><a href={s.links.demoswap} target="_blank" rel="noreferrer">Open DemoSwap</a>: the real site, working normally.</p>
       </article>

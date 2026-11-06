@@ -27,12 +27,15 @@ export interface TheaterState {
   rescue: unknown;
   chapter: 1 | 2 | 3 | 4;
   prepareTxs: Hex[];
+  /** Funding finished (possibly with no new txs, when an already-funded victim is reused). */
+  prepared: boolean;
 }
 
 const recovered = (r: unknown) => Array.isArray((r as { results?: unknown[] })?.results) && (r as { results: { status: string }[] }).results.some((x) => x.status === 'recovered');
 
 export function createTheater(d: TheaterDeps) {
   const prepared = new Map<string, Hex[]>();
+  const ready = new Set<string>();
   let current: Address | null = null;
   let verify: { real: string; tampered: string } | null = null;
 
@@ -48,6 +51,7 @@ export function createTheater(d: TheaterDeps) {
       try {
         const txs = await d.prepareVictim(v);
         prepared.set(v, txs);
+        ready.add(v);
         return { txs };
       } catch (e) {
         prepared.delete(v);
@@ -80,6 +84,7 @@ export function createTheater(d: TheaterDeps) {
         rescue,
         chapter,
         prepareTxs: current ? (prepared.get(current) ?? []) : [],
+        prepared: current ? ready.has(current) : false,
       };
     },
   };

@@ -27,7 +27,8 @@ describe('chapters', () => {
 
   test('gating explains why a step is not available yet (out-of-order safe)', () => {
     expect(gate(2, base)).toEqual({ ok: false, why: 'Prepare the victim wallet first (chapter 1).' });
-    expect(gate(2, { ...base, victim: '0x1', prepareTxs: [] })).toEqual({ ok: false, why: 'The victim wallet is not fully prepared yet (funding transactions pending or failed).' });
+    expect(gate(2, { ...base, victim: '0x1', prepareTxs: [], prepared: false })).toEqual({ ok: false, why: 'The victim wallet is not fully prepared yet (funding transactions pending or failed).' });
+    expect(gate(2, { ...base, victim: '0x1', prepareTxs: [], prepared: true }).ok).toBe(true); // reused, already-funded victim
     expect(gate(3, { ...base, victim: '0x1', prepareTxs: ['0x1', '0x2', '0x3'] })).toEqual({ ok: false, why: 'Wait for the drain to land (chapter 2).' });
     expect(gate(4, { ...base, victim: '0x1', prepareTxs: ['0x1', '0x2', '0x3'], chapter: 2 })).toEqual({ ok: false, why: 'Take the website and the RPC down first (chapter 3).' });
     expect(gate(4, { ...base, victim: '0x1', prepareTxs: ['0x1', '0x2', '0x3'], chapter: 3 }).ok).toBe(true);
