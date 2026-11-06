@@ -4,20 +4,13 @@ import './ui.css';
 import type { PublicState } from '../shared/types';
 import { getState, openPage, send, short } from './api';
 import { Chip, GuardChip, ProtocolCard, TopBar } from './components';
+import { CardFan, EnsGraph, Hero, RpcQuorum, ShieldBurst } from './art';
 import { Copey, Icon, type IconName } from './icons';
 
 const STEPS = ['Welcome', 'Wallet', 'Protocols', 'Connections', 'Done'] as const;
 const SUGGESTED = 'demoswap-blackout.eth';
 
 declare const chrome: { tabs: { create(p: { url: string }): Promise<unknown> } };
-
-const HELP: Record<(typeof STEPS)[number], string> = {
-  Welcome: 'What Copeybara does for you',
-  Wallet: 'The address to watch. No keys, no signing.',
-  Protocols: 'The protocols whose ENS records you trust',
-  Connections: 'Where Copeybara reads the blockchain from',
-  Done: 'You are set',
-};
 
 function Steps({ n }: { n: number }) {
   return (
@@ -31,7 +24,6 @@ function Steps({ n }: { n: number }) {
         ))}
       </ol>
       <p class="label step-meta" data-step={STEPS[n]}>Step {n + 1} of {STEPS.length}: {STEPS[n]}</p>
-      <p class="muted small" style="margin:0 0 4px">{HELP[STEPS[n]!]}</p>
     </>
   );
 }
@@ -39,8 +31,9 @@ function Steps({ n }: { n: number }) {
 function Feature({ icon, title, children }: { icon: IconName; title: string; children: string }) {
   return (
     <li>
-      <span class="feature-icon" aria-hidden="true"><Icon name={icon} size={18} /></span>
-      <p><b>{title}</b> {children}</p>
+      <span class="feature-icon" aria-hidden="true"><Icon name={icon} size={20} /></span>
+      <b>{title}</b>
+      <p>{children}</p>
     </li>
   );
 }
@@ -88,32 +81,27 @@ function Setup() {
       <Steps n={n} />
 
       {n === 0 && (
-        <div class="card step-card">
-          <div class="welcome-head">
-            <h1>Your way out, even when the website is gone.</h1>
-            <Copey mood="protected" size={128} />
-          </div>
-          <ul class="feature">
-            <Feature icon="shield-check" title="Checks every protocol site you open">
-              against the fingerprint its team published on ENS. A hijacked site is stopped before it can ask you for anything.
-            </Feature>
-            <Feature icon="eye" title="Reads every wallet request">
-              before your wallet does, and stops the drainer patterns: unlimited approvals, permits and transfers to strangers.
-            </Feature>
-            <Feature icon="log-out" title="Gets you out">
-              when a site is down or hijacked: one click opens the verified exit kit, which talks to the protocol’s contracts directly.
-            </Feature>
+        <div class="card step-card stage-card" key="s0">
+          <Hero
+            class="hero-welcome"
+            eyebrow="Copeybara · DeFi safety net"
+            title={<>Your way out, <em>even when the website is gone.</em></>}
+            art={<div class="fan-stage"><CardFan /><Copey mood="protected" size={118} class="hero-copey" /></div>}
+          />
+          <ul class="feature-grid">
+            <Feature icon="shield-check" title="Verifies every site">Matched against the fingerprint its team put on ENS.</Feature>
+            <Feature icon="eye" title="Reads every request">Stops drainer approvals, permits and transfers.</Feature>
+            <Feature icon="log-out" title="Gets you out">One click to the verified exit kit, straight to the contracts.</Feature>
           </ul>
-          <p class="foot-note"><Icon name="lock" size={14} />Copeybara never holds keys and never signs. It sends nothing anywhere except blockchain reads to the RPCs you choose.</p>
           <div class="actions">
-            <span />
+            <p class="foot-note" style="margin:0"><Icon name="lock" size={14} />No keys. No signing. Only blockchain reads.</p>
             <button onClick={() => setN(1)}>Start<Icon name="arrow-right" size={16} /></button>
           </div>
         </div>
       )}
 
       {n === 1 && (
-        <div class="card step-card">
+        <div class="card step-card" key="s1">
           <h2>Which wallet should Copeybara watch?</h2>
           <p class="muted small">Copeybara only reads your address to find your positions. Signing stays in your wallet.</p>
           {st.settings.account && (
@@ -159,10 +147,14 @@ function Setup() {
 
       {n === 2 && (
         <>
-          <div class="card step-card">
-            <h2>Follow the protocols you use</h2>
-            <p class="muted small">Enter the protocol’s ENS name (from its docs). Copeybara reads its records: the exit contracts, the exit kit fingerprint and the site fingerprint.</p>
-            <div class="row" style="margin-top:14px">
+          <div class="card step-card stage-card" key="s2">
+            <Hero
+              eyebrow="Step 3 · Protocols"
+              title={<>Follow the <em>protocols</em> you use.</>}
+              sub="Its ENS name holds the exit contracts and fingerprints. Only its 2-of-3 Safe can change them."
+              art={<EnsGraph />}
+            />
+            <div class="row" style="margin-top:4px">
               <input id="ens" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} placeholder="protocol.eth" style="flex:1;min-width:220px" />
               <button id="follow" disabled={busy || !name.trim()} onClick={() => act(() => send({ t: 'follow', name }))}>{busy ? 'Reading ENS…' : 'Follow'}</button>
             </div>
@@ -177,9 +169,13 @@ function Setup() {
       )}
 
       {n === 3 && (
-        <div class="card step-card">
-          <h2>Connections</h2>
-          <p class="muted small">Every ENS read goes to several independent RPC providers at the same block; at least 2 must answer and agree, or Copeybara says it cannot verify. Add your own node if you have one.</p>
+        <div class="card step-card stage-card" key="s3">
+          <Hero
+            eyebrow="Step 4 · Connections"
+            title={<>Three paths. <em>One answer.</em></>}
+            sub="Every read goes to independent RPCs at one block. Two must agree, or Copeybara says it cannot verify."
+            art={<RpcQuorum />}
+          />
           <ul class="clean small rpc-list">
             {rpcs.map((u) => (
               <li>
@@ -214,8 +210,8 @@ function Setup() {
             Use the 3 default public RPCs
           </label>
           <div class="option">
-            <h3><Icon name="external" size={15} />Exit kit location</h3>
-            <p class="muted small">Before opening it, Copeybara checks the downloaded kit against each protocol’s release record. Any copy works if its fingerprint matches.</p>
+            <h3><Icon name="external" size={15} />Exit kit</h3>
+            <p class="muted small">Checked against each protocol’s release fingerprint before it opens.</p>
             <p class="mono">{st.settings.kitUrl}</p>
           </div>
           <Err err={err} />
@@ -227,9 +223,14 @@ function Setup() {
       )}
 
       {n === 4 && (
-        <div class="card step-card done-hero">
-          <div class="copey-stage"><Copey mood="protected" size={150} /></div>
-          <h1>You’re protected.</h1>
+        <div class="card step-card stage-card" key="s4">
+          <Hero
+            class="hero-done"
+            eyebrow="Setup complete"
+            title={<>You’re <em>protected.</em></>}
+            sub="Copeybara now checks every protocol site and wallet request in this browser."
+            art={<ShieldBurst><Copey mood="protected" size={150} class="hero-copey" /></ShieldBurst>}
+          />
           <dl class="kv summary">
             <dt>Following</dt>
             <dd><b>{st.protocols.map((p) => p.name).join(', ') || 'no protocols yet'}</b></dd>
@@ -241,9 +242,12 @@ function Setup() {
               <Chip tone="bad" icon="x-octagon">stopped</Chip>
             </dd>
           </dl>
-          <button id="finish" onClick={async () => { await send({ t: 'settings', patch: { setupDone: true } }); await openPage('dashboard'); window.close(); }}>
-            <Icon name="grid" size={16} />Open my dashboard
-          </button>
+          <div class="actions">
+            <span />
+            <button id="finish" onClick={async () => { await send({ t: 'settings', patch: { setupDone: true } }); await openPage('dashboard'); window.close(); }}>
+              <Icon name="grid" size={16} />Open my dashboard
+            </button>
+          </div>
         </div>
       )}
     </div>
