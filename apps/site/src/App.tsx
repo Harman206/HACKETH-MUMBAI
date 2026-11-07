@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Download, Footer } from './sections/Sections';
 import { ExtensionBand, Faq, ForProtocols, Hero, Incidents, Scenarios, Steps } from './sections/Landing';
 import { BrandMark } from './sections/Icons';
+import { Benchmarks } from './sections/Benchmarks';
 import { LiveDemo } from './sections/LiveDemo';
 import { CertifiedPage } from './pages/Certified';
 import { DevelopersPage } from './pages/Developers';
@@ -59,6 +60,7 @@ export function App() {
             <Download sha={sha} offline={offline} />
             <ForProtocols />
             <Faq />
+            <Benchmarks />
           </>
         )}
       </main>

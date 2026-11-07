@@ -147,6 +147,7 @@ export function Footer() {
             <p class="foot-title">Trust</p>
             <a href="#/certified">Certified protocols</a>
             <a href="#/docs/security">Security model</a>
+            <a href="#benchmarks">Benchmarks</a>
           </div>
         </nav>
         <QrCard />
