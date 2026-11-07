@@ -2,7 +2,7 @@
 
 Copeybara was built at ETHGlobal Mumbai (5–7 November 2026) by a team of five (names on the ETHGlobal submission). We used a spec-driven, AI-assisted workflow, which the event rules permit. This page says plainly what AI did, what the team did, and where every artifact is.
 
-**In one paragraph.** Most of the code was written by AI coding assistants: Claude Code on one laptop (Harman's) and an AI coding tool on the second (Divyam's). The commits come from those two laptops; 201 of the 228 commits carry a `Co-Authored-By: Claude` line. The team came up with the product, set its scope and direction at every step, made the product and design decisions, reviewed what was built, tested it with real wallets on Sepolia and reported the bugs, held every key, deployed everything on chain and on the web, and made the demo and the video. Nothing in this repo was written before kickoff (timeline in the [README](../README.md#built-at-ethglobal-mumbai-whats-new-and-whats-reused)).
+**In one paragraph.** Most of the code was written by AI coding assistants: Claude Code on one laptop (Harman's) and an AI coding tool on the second (Divyam's). The commits come from those two laptops; most commits (all the ones Claude Code wrote) carry a `Co-Authored-By: Claude` line. The team came up with the product, set its scope and direction at every step, made the product and design decisions, reviewed what was built, tested it with real wallets on Sepolia and reported the bugs, held every key, deployed everything on chain and on the web, and made the demo and the video. Nothing in this repo was written before kickoff (timeline in the [README](../README.md#built-at-ethglobal-mumbai-whats-new-and-whats-reused)).
 
 ## Where AI was used
 
