@@ -53,6 +53,26 @@ The **Check a transaction** tab runs the same Exit Guard on anything a live site
 | A Uniswap v4 exit (not enumerable, action-list calldata) works against the real v4 contracts | Sepolia fork: mint via Permit2 → log-scan discovery → Guard → quorum simulation → send → "Recovered", preview = received to the wei | `pnpm vitest run -c vitest.fork.config.ts packages/exec/test/uniswap-v4.fork.test.ts` |
 | The kit loads zero third-party code | Playwright network log: 0 third-party origins (DemoSwap: 4) | `pnpm exec playwright test e2e/no-trackers.spec.ts e2e/scan.spec.ts` |
 
+## For judges: partner tracks
+
+**Live demo:** https://blackout-red.vercel.app · the working kit on the demo protocol: https://blackout-red.vercel.app/copeybara-kit.html?ens=demoswap-blackout.eth (any Sepolia wallet). The landing-page hero is an animation rebuilt from the real kit (its caption says so); the kit, the Attack Theater's public live-proof view and the certified page read Sepolia live.
+
+### ENS: Best Use of ENSv2
+
+ENSv2 is the product's root of trust, not a lookup. Everything below runs on ENSv2 on **Sepolia** and is read live; nothing about the protocol is hard-coded in the kit.
+- **The ENS name is the protocol's security root.** `demoswap-blackout.eth` publishes the kit's sha256, the exit plan (contracts and allowed functions), the site's script fingerprint and the extension's hash, plus an alarm state and a look-alike blocklist when needed (declarative exits for vaults use the same mechanism) ([records](#ens-records), codecs in [`packages/core/src/records.ts`](packages/core/src/records.ts)). The kit's only baked-in address is the ENSv2 UniversalResolver; it reads every record at one pinned block through a 3-RPC quorum ([`packages/ens/src/records.ts`](packages/ens/src/records.ts)).
+- **Permissioned Resolver + Enhanced Access Control as the security model.** The name is owned by a 2-of-3 Safe. A per-app PermissionedResolver gives the website key the `url` record only and the watcher key `status` + `blocklist` only. A stolen website key's attempts to change the release, swap the resolver, upgrade the resolver or grant itself roles all revert, on chain on Sepolia ([transactions](#deployed-addresses-and-transactions)) and in fork tests ([`contracts/test/Permissions.fork.t.sol`](contracts/test/Permissions.fork.t.sol)).
+- **An AI agent with its own ENSv2 identity.** The watcher is `watcher.demoswap-blackout.eth`, a subname in a Safe-owned UserRegistry (attached with `setSubregistry`) with its own resolver: `addr` is its key and `org.copeybara.agent` says exactly what it may write. It checks its own identity at startup, can only raise alarms, and the Safe can revoke it in one transaction ([Watcher agent](#watcher-agent), [`contracts/test/AgentIdentity.fork.t.sol`](contracts/test/AgentIdentity.fork.t.sol), [`contracts/deployments/sepolia-agent.json`](contracts/deployments/sepolia-agent.json)). With an Anthropic key, Claude writes its warning note from structured facts.
+- **ENS-gated releases for users.** Anyone can check a kit or an installed extension against the name from outside the browser: [`scripts/verify-kit.sh`](scripts/verify-kit.sh), [`scripts/verify-extension.sh`](scripts/verify-extension.sh). ENSv2 notes and verified addresses: [docs/ens-notes.md](docs/ens-notes.md).
+
+### Uniswap Foundation: Build with Uniswap
+
+Exits for Uniswap **v3 and v4** LPs straight from the PositionManager contracts, plus a guard that decodes v4 action lists. Code pointers with line numbers: [Uniswap v3 and v4 integration](#uniswap-v3-and-v4-integration-for-the-uniswap-foundation-track). Developer feedback: [FEEDBACK.md](FEEDBACK.md).
+
+### Ethereum Foundation: Best CROPS App
+
+Lead property: censorship resistance. MIT license, build and run steps in [Quick start](#quick-start), the [CROPS](#crops) section, and no third-party trackers or analytics in any client (kit, site or extension).
+
 ## Live demo: the Attack Theater
 
 The website (`apps/site`) explains Copeybara, offers the extension zip with its sha256, and embeds a four-chapter **real attack replication on Sepolia**:
@@ -153,24 +173,26 @@ All on the protocol's ENS name (here `demoswap-blackout.eth`), read through the 
 
 ### Uniswap v3 and v4 integration (for the Uniswap Foundation track)
 
+Developer feedback for the Uniswap Foundation: [FEEDBACK.md](FEEDBACK.md). Contracts used: v3 `NonfungiblePositionManager`; v4 `PositionManager`, `PoolManager` and `StateView`; Permit2 and the Universal Router (recognised so the normal app flow is not flagged).
+
 **Uniswap v4** ([`packages/adapters/src/uniswap-v4.ts`](packages/adapters/src/uniswap-v4.ts)):
-- Discovery ([`#L85-L108`](packages/adapters/src/uniswap-v4.ts#L85-L108)): v4 position NFTs are not enumerable, so the kit reads `balanceOf` for the true count, scans recent `Transfer(→ user)` logs in 10k-block chunks through the RPC quorum ([`#L30`](packages/adapters/src/uniswap-v4.ts#L30)), and confirms each id with `ownerOf`. If it finds fewer than the wallet owns, it says how many are missing, and the user adds them by ID ([`byId`, `#L110-L122`](packages/adapters/src/uniswap-v4.ts#L110-L122)); the kit checks ownership first.
+- Discovery ([`#L85-L108`](packages/adapters/src/uniswap-v4.ts#L85-L108)): v4 position NFTs are not enumerable, so the kit reads `balanceOf` for the true count, scans recent `Transfer(→ user)` logs in 10k-block chunks through the RPC quorum ([`#L19-L48`](packages/adapters/src/uniswap-v4.ts#L19-L48)), and confirms each id with `ownerOf`. If it finds fewer than the wallet owns, it says how many are missing, and the user adds them by ID ([`byId`, `#L110-L122`](packages/adapters/src/uniswap-v4.ts#L110-L122)); the kit checks ownership first.
 - Exit ([`#L129-L167`](packages/adapters/src/uniswap-v4.ts#L129-L167)): one `modifyLiquidities` call with `[DECREASE_LIQUIDITY(all liquidity, mins), TAKE_PAIR(currency0, currency1, user)]`. Minimums are the principal from v4 math at the pinned block minus slippage ([`v4-math.ts`](packages/adapters/src/v4-math.ts): `TickMath` / `SqrtPriceMath` ported to bigint; all 21 constants diffed against the Uniswap source). The preview adds fees owed from `StateView` fee growth.
-- Exit Guard ([`decodeV4`](packages/guard/src/decode.ts#L76-L113)): decodes the action list. Only `DECREASE_LIQUIDITY`, `BURN_POSITION` and `TAKE_PAIR` to the user are allowed. `SETTLE*` / `CLOSE_CURRENCY` / `MINT` / `INCREASE` (they can pull tokens through an existing Permit2 allowance), `SWEEP`, `TAKE*` and swaps are banned with a plain reason; unknown action codes fail closed.
-- Hook badges ([`hookBadges`](packages/adapters/src/v4-math.ts#L129-L140)): each position reads its pool's hook permission bits (the low 14 bits of the hook address, as in v4-core `Hooks.sol`). A hooked pool shows "Hook 0x12…ab". If the hook has `beforeRemoveLiquidity` or `afterRemoveLiquidity`, the row warns that it can block or delay exits. If it has `afterRemoveLiquidityReturnsDelta`, the row warns that it can change the payout. The badges are on `Position.badges` and show in the kit and the extension. They do not change what the Guard allows.
+- Exit Guard ([`decodeV4`](packages/guard/src/decode.ts#L156-L194)): decodes the action list. Only `DECREASE_LIQUIDITY`, `BURN_POSITION` and `TAKE_PAIR` to the user are allowed. `SETTLE*` / `CLOSE_CURRENCY` / `MINT` / `INCREASE` (they can pull tokens through an existing Permit2 allowance), `SWEEP`, `TAKE*` and swaps are banned with a plain reason; unknown action codes fail closed.
+- Hook badges ([`hookBadges`](packages/adapters/src/v4-math.ts#L130-L141)): each position reads its pool's hook permission bits (the low 14 bits of the hook address, as in v4-core `Hooks.sol`). A hooked pool shows "Hook 0x12…ab". If the hook has `beforeRemoveLiquidity` or `afterRemoveLiquidity`, the row warns that it can block or delay exits. If it has `afterRemoveLiquidityReturnsDelta`, the row warns that it can change the payout. The badges are on `Position.badges` and show in the kit and the extension. They do not change what the Guard allows.
 - Proven on a Sepolia fork against the real PoolManager, PositionManager and StateView ([`packages/exec/test/uniswap-v4.fork.test.ts`](packages/exec/test/uniswap-v4.fork.test.ts)): mint through Permit2, discover by log scan, exit through the kit's own `runExit`. "Recovered", and the previewed amounts equal what arrived, to the wei. Live on Sepolia: positions #41448 and #41449 in the demo wallet.
 
 **Permit2 without false alarms** ([`config/known-contracts.json`](config/known-contracts.json), [`packages/core/src/known.ts`](packages/core/src/known.ts)): the request classifier has a built-in table of Uniswap contracts on mainnet and Sepolia (Permit2, Universal Router 2.0 / 2.1.1 / 2.1.2, v3 NonfungiblePositionManager, SwapRouter02, v4 PoolManager / PositionManager / StateView), copied from Uniswap's deployment docs and checked for bytecode with `cast code`. The same table lists the big everyday spenders of 1inch, 0x, CoW Protocol, Aave v3, Lido, OpenSea/Seaport and Safe's MultiSend, each from the project's own docs or repo (sources in the JSON). The normal app flow (approve Permit2, then a Permit2 `PermitSingle` / `PermitBatch` for the Universal Router or the v4 PositionManager) is `known`. A Permit2 permit for any other spender is `dangerous`. The spender is looked up on the chain in the signature's domain, and only when `verifyingContract` is the real Permit2. Tests: [`packages/guard/test/known-uniswap.test.ts`](packages/guard/test/known-uniswap.test.ts). The table only lowers alarms; exit targets still come only from the ENS manifest.
 
 **Uniswap v3:**
 
-- Discovery: [`packages/adapters/src/uniswap-v3.ts#L34-L59`](packages/adapters/src/uniswap-v3.ts#L34-L59) calls `balanceOf`, then `tokenOfOwnerByIndex`, then `positions(id)`.
+- Discovery: [`packages/adapters/src/uniswap-v3.ts#L34-L55`](packages/adapters/src/uniswap-v3.ts#L34-L55) calls `balanceOf`, then `tokenOfOwnerByIndex`, then `positions(id)`.
 - Exit: [`#L62-L102`](packages/adapters/src/uniswap-v3.ts#L62-L102) builds `multicall[decreaseLiquidity(min from simulation), collect(to user)]` in one transaction.
   - Positions with liquidity 0 that are still owed tokens get a `collect`-only exit ([`#L86`](packages/adapters/src/uniswap-v3.ts#L86)), because `decreaseLiquidity(0)` reverts.
   - Expected deltas list only tokens with a simulated amount > 0 ([`#L95`](packages/adapters/src/uniswap-v3.ts#L95)).
 - Live on Sepolia and replayed on mainnet forks.
 
-### Exit Guard rules ([`packages/guard/src/guard.ts#L45`](packages/guard/src/guard.ts#L45))
+### Exit Guard rules ([`packages/guard/src/guard.ts#L55`](packages/guard/src/guard.ts#L55))
 
 1. The chain must be listed in the manifest.
 2. `to` must be an exit contract in the manifest.
@@ -266,14 +288,14 @@ pnpm copeybara watcher --up                # Docker Compose watcher with /health
 
 ## CROPS
 
-| | How Copeybara meets it |
-|---|---|
-| **C**ensorship resistance (lead) | **What we/the protocol control that users depend on, and what happens if it goes away:**<br>• the protocol's **website + DNS** → users open their saved kit (or any mirror); the drill switches the site off live and exits still land;<br>• the **primary RPC** → the kit reads through 3 independent providers (≥2 must answer and agree), so one dead RPC is tolerated (the other two still agree), and one lying RPC makes the kit stop safely instead of acting on a wrong answer;<br>• **this website host** (Vercel, https://blackout-red.vercel.app) → only a convenience; the kit file is verified against ENS, so any copy works. After one visit, the page and the kit keep opening from the browser's cache when the host is down (same-origin service worker, e2e-tested by switching a copy of the site off);<br>• the **release Safe** → if it never publishes again, the last ENS release stays valid; it cannot block an exit;<br>• **no Copeybara server exists** on the exit path.<br>What users still depend on: their **wallet's RPC** to broadcast (they can switch it) and Ethereum itself. |
-| **O**pen source | MIT. Anyone can build and run it from this repo alone (`pnpm install && pnpm --filter @copeybara/kit build`). Two builds on the same toolchain give the same sha256 (`apps/kit/scripts/check-repro.mjs`); cross-machine reproduction is not yet verified. |
-| **P**rivacy | **What each third party learns:**<br>• **RPC providers** (publicnode, Tenderly, ethPandaOps, or your own): your address and the contracts you query, plus your IP;<br>• **your wallet's RPC**: the exit transaction you send;<br>• **the website host** (Vercel), only if you open the hosted copy: that the page and kit file were fetched, plus your IP. A downloaded kit contacts no host;<br>• **no Copeybara server, no analytics, no trackers**: Playwright-verified, 0 third-party requests from the kit.<br>Anon-RPC: see [docs/crops.md](docs/crops.md). |
-| **S**ecurity | Keys stay in the wallet. The only transaction methods the kit calls are `eth_estimateGas` and `eth_sendTransaction` (plus `eth_requestAccounts`, `eth_chainId`, `wallet_switchEthereumChain`, and `wallet_addEthereumChain` only when the wallet does not know the network; the network check also runs before each exit), and it never asks for typed-data signatures. Every call passes the Exit Guard. Releases are published by a 2-of-3 Safe, and a stolen website key can write only `url`. In this testnet demo all three Safe owner keys were generated on one machine; a real protocol must use independent signers. |
+Lead property: **censorship resistance**. Shown end to end in the demo video and in the Fire Drill e2e (website, DNS and primary RPC switched off, exits still land). Full detail: [docs/crops.md](docs/crops.md).
 
-More detail: [docs/crops.md](docs/crops.md).
+| | |
+|---|---|
+| **C**ensorship resistance (lead) | We and the protocol control the website, DNS, primary RPC, this host and the release Safe; if any of them goes away, users open their saved kit, reads fall back to 3 independent RPCs that must agree, and the last ENS release stays valid. No Copeybara server is on the exit path; users still depend on their wallet's RPC to broadcast, and on Ethereum. |
+| **O**pen source | MIT. Anyone can build the kit from this repo alone (`pnpm install && pnpm --filter @copeybara/kit build`); two builds on the same toolchain give the same sha256 (cross-machine not yet verified). |
+| **P**rivacy | The RPC providers (publicnode, Tenderly, ethPandaOps, or your own) see your address, the contracts you read and your IP; your wallet's RPC sees the exit transaction; the host sees a page fetch only if you use the hosted copy. No Copeybara server, no analytics, no trackers: 0 third-party requests from the kit (Playwright-checked). |
+| **S**ecurity | Keys never leave the wallet: the kit only sends `eth_estimateGas` / `eth_sendTransaction`, never asks for typed-data signatures, and every transaction passes the fail-closed Exit Guard. Releases need 2 of 3 Safe signers and a stolen website key can write only `url` (in this testnet demo the three Safe keys sit on one machine). |
 
 ## Deployed addresses and transactions
 
@@ -344,6 +366,26 @@ Wallets: the automated e2e (kit and extension) uses an injected EIP-6963 test wa
 - The kit warns when it sees a lower release version than one seen before in this browser. On-chain monotonicity is not enforced. Serving an older record needs either the release Safe or a majority of the kit's RPC paths lying together (a single path reporting an old block is ignored: heads more than 16 blocks from the median are dropped).
 - The browser extension's in-page checks are best effort, and Chrome cannot prove which script bytes ran (see [Browser extension](#browser-extension)).
 - Replays are labelled **mainnet fork**, **impersonated account** and **counterfactual**. None is a live mainnet rescue.
+
+## Built at ETHGlobal Mumbai: what's new and what's reused
+
+**When.** Everything in this repository was built during ETHGlobal Mumbai (5–7 November 2026), after kickoff, on the Classic (start fresh) track. Timeline, in IST:
+- 6 Nov 03:02: first commit of the team's Copeybara brand repo (`copeybara-leash`), where the capybara mark and some UI assets come from.
+- 6 Nov 03:24: the technical PRD ([docs/spec](docs/spec/BLACKOUT-technical-PRD.txt)), drafted by Claude from the team's idea.
+- 6 Nov 03:25: first Claude Code prompt in this repo; 03:28: first commit. Every later change is in `git log`.
+
+The project was first called BLACKOUT and renamed to Copeybara during the event; the old name survives in the ENS name `demoswap-blackout.eth`, the Vercel URL and the frozen `org.blackout.*` records.
+
+**New (written at the hackathon):** all code in `apps/`, `packages/`, `contracts/`, `replay/`, `harness/`, `scripts/` and `tools/`, plus the docs, benchmarks, configs and the brand mark.
+
+**Reused, not ours:**
+- **Open-source libraries:** viem, Preact, Vite with `vite-plugin-singlefile`, `marked`, `qrcode`, the Geist fonts (`@fontsource-variable`), `@anthropic-ai/sdk`; for testing, Vitest, fast-check, Playwright and jsdom; Foundry with `forge-std`.
+- **Deployed contracts we build on:** ENSv2 on Sepolia (UniversalResolver, ETHRegistrar, VerifiableFactory, PermissionedResolver, UserRegistry implementations), Safe (deployed through Safe's own `SafeProxyFactory`), Uniswap v3 and v4, Aave v3 and Curve 3pool. We wrote only scripts and tests against them.
+- **Ported code:** `TickMath` / `SqrtPriceMath` from Uniswap v4-core, ported to TypeScript bigint in [`v4-math.ts`](packages/adapters/src/v4-math.ts), and the hook permission bits from v4-core `Hooks.sol`.
+- **Public data:** the PTXPhish dataset (NDSS'25), ScamSniffer's drainer and domain lists, MetaMask's eth-phishing-detect list, the real Ledger Connect Kit 1.1.5–1.1.7 payloads, Wayback captures of the Balancer and Curve hijacks, and the real Curve 2022 incident transactions on mainnet ([sources](docs/benchmarks/literature.md)). Well-known contract addresses come from each project's own docs ([`config/known-contracts.json`](config/known-contracts.json)).
+- **Not shipped:** "The Capybara Song" is only linked (YouTube); none of it is in the repo.
+
+**AI use.** Built with AI coding assistants under the team's direction, disclosed in full in [docs/ai-use.md](docs/ai-use.md): what the team did, where AI was used, the spec and plans, and the prompts ([docs/ai/prompts](docs/ai/prompts/README.md)).
 
 ## License and disclosures
 

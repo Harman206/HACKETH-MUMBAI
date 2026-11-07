@@ -5,6 +5,9 @@
 - **No server on the exit path.** The kit is a static file served from `http://localhost`. Switching off the protocol's website, DNS, company or primary RPC cannot block an exit. The Fire Drill does this live: `apps/kit/e2e/drill.spec.ts` presses the three switches on the judge's control page and then exits three positions.
 - **Read quorum.** By default the kit reads from the user's endpoints plus two or three public providers. It refuses to continue if fewer than two answer, or if any two disagree on the chain ID, an ENS record, ownership, positions or balances. All of these are read at one pinned block.
 - **Trusted dependency, disclosed.** Broadcast goes through the wallet's own RPC (`eth_sendTransaction`). If the wallet's RPC censors you, switch your wallet's RPC.
+- **This website's host** (Vercel, https://blackout-red.vercel.app) is only a convenience. The kit file is verified against ENS, so any copy works. After one visit, the page and the kit keep opening from the browser's cache when the host is down (same-origin service worker, e2e-tested by switching a copy of the site off). That covers the host going down, not being hijacked: check the kit's sha256 (`scripts/verify-kit.sh`) or keep your own copy.
+- **The release Safe.** If it never publishes again, the last ENS release stays valid. Nothing it writes can block an exit: `status` and `blocklist` only warn about or block websites.
+- **One dead or lying RPC.** One dead RPC is tolerated (the other two still agree). One lying RPC makes the kit stop safely instead of acting on a wrong answer.
 
 ## O: open source
 

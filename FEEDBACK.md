@@ -4,7 +4,7 @@ What we built: **independent exit tooling for Uniswap v3 and v4 LPs** that keeps
 
 ## How we used Uniswap
 
-- `NonfungiblePositionManager` discovery: `balanceOf` → `tokenOfOwnerByIndex` → `positions(id)` ([adapter](packages/adapters/src/uniswap-v3.ts#L34-L59)).
+- `NonfungiblePositionManager` discovery: `balanceOf` → `tokenOfOwnerByIndex` → `positions(id)` ([adapter](packages/adapters/src/uniswap-v3.ts#L34-L55)).
 - One-transaction exit: `multicall[decreaseLiquidity, collect(recipient = user)]`. Minimums come from an `eth_call` simulation minus 0.5 % ([adapter](packages/adapters/src/uniswap-v3.ts#L62-L102)).
 - Live on Sepolia (`0x1238…cDA52`) and replayed on mainnet forks at the 9 Aug 2022 Curve-hijack block. A real LP (#287037, USDC/USDT 0.01 %) exits through the kit's code at that block ([report](docs/replay/R1.md)).
 
@@ -23,7 +23,7 @@ What we built: **independent exit tooling for Uniswap v3 and v4 LPs** that keeps
 
 ## Uniswap v4: what we built and what we hit
 
-We added v4 exits: discovery, `modifyLiquidities([DECREASE_LIQUIDITY, TAKE_PAIR])`, and an Exit Guard that decodes the action list ([adapter](packages/adapters/src/uniswap-v4.ts), [guard](packages/guard/src/decode.ts#L76-L111), [fork test against the real Sepolia contracts](packages/exec/test/uniswap-v4.fork.test.ts)).
+We added v4 exits: discovery, `modifyLiquidities([DECREASE_LIQUIDITY, TAKE_PAIR])`, and an Exit Guard that decodes the action list ([adapter](packages/adapters/src/uniswap-v4.ts), [guard](packages/guard/src/decode.ts#L156-L194), [fork test against the real Sepolia contracts](packages/exec/test/uniswap-v4.fork.test.ts)).
 
 What worked well:
 - The action list is a clean, decodable "intent". A security check can allowlist exactly `DECREASE_LIQUIDITY` / `BURN_POSITION` / `TAKE_PAIR` and refuse the rest with a reason a user understands.
@@ -36,7 +36,7 @@ Friction:
 3. **Recipient magic values.** `_mapRecipient` treats `address(1)` as msg.sender and `address(2)` as the PositionManager. A policy that pins every payout to the user's address must know about them. We refuse both and always encode the user's address explicitly.
 4. **Permit2 allowances outlive the mint.** An LP who minted through the app has a live Permit2 allowance to the PositionManager. A hijacked frontend can send a `modifyLiquidities` that looks like "manage position" but contains `SETTLE_PAIR` or `INCREASE_LIQUIDITY` and pulls tokens from the wallet. Wallet-level decoding of v4 action lists, and docs that call this out, would protect users. Our Guard bans those actions in an exit.
 
-5. **Hook permissions are in the address, which helps.** We read the low 14 bits of `PoolKey.hooks` and warn when a pool's hook runs on remove liquidity or can return a delta on it ([`hookBadges`](packages/adapters/src/v4-math.ts#L129-L140)). This needs no RPC call. The bits only say which callbacks run, not what they do, so the warning has to be generic. A public list of reviewed hooks would let tools say more.
+5. **Hook permissions are in the address, which helps.** We read the low 14 bits of `PoolKey.hooks` and warn when a pool's hook runs on remove liquidity or can return a delta on it ([`hookBadges`](packages/adapters/src/v4-math.ts#L130-L141)). This needs no RPC call. The bits only say which callbacks run, not what they do, so the warning has to be generic. A public list of reviewed hooks would let tools say more.
 6. **No machine-readable address list.** To stop flagging the normal Permit2 flow as a drainer we keep our own table of Uniswap contracts ([`config/known-contracts.json`](config/known-contracts.json)), copied from the deployment docs pages (now on developers.uniswap.org) and checked with `cast code`. Each chain has three live Universal Router versions. UniswapX reactors are not in that table, so we still flag a UniswapX order signature (`PermitWitnessTransferFrom` to a reactor) as dangerous. A signed JSON of official addresses per chain would let wallets tell the Uniswap flow from a phishing Permit2 request.
 
 ## Where to look
