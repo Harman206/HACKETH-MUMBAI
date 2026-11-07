@@ -33,7 +33,7 @@ Each item can be checked against the prompt logs ([`docs/ai/prompts/`](ai/prompt
   - the side panel, the demo portal, the watcher agent and its notes
   - the "Saved by Copey" moment
 - **Design.**
-  - The Copeybara brand: the capybara mark and UI assets come from the team's own `copeybara-leash` repo, started during the event.
+  - The Copeybara brand: the capybara mark and UI assets, made by the team during the event.
   - The landing-page designs and palettes (Divyam).
   - A screen-by-screen UI review of 19 screens, with each marked approved or changed and why (7 Nov 01:22).
 - **Review and critique.** The team brought in a competitive review of BLACKOUT against other projects in the same tracks and turned its weak points into work (6 Nov 21:55): a judge-visible demo, usability, the public repo, README contradictions, and CI.
@@ -60,4 +60,4 @@ Each item can be checked against the prompt logs ([`docs/ai/prompts/`](ai/prompt
 | Prompts (Claude Code, verbatim) | [`docs/ai/prompts/`](ai/prompts/README.md) |
 | Every change | `git log` (small commits; AI-written commits carry a `Co-Authored-By` line) |
 
-Not in the repo: the Claude Docs conversation that drafted the PRD, and the prompts from the second laptop.
+Not in the repo yet: the claude.ai conversation that drafted the PRD, and the prompts from the second laptop.

@@ -21,6 +21,5 @@ Exported verbatim from the Claude Code session logs on this machine, in order, w
 
 ## Not in this folder yet
 
-- The Claude Docs conversation in which the PRD was drafted.
+- The claude.ai conversation in which the PRD was drafted. The PRD itself lives in Claude Docs ("BLACKOUT — Technical PRD", exported as .docx on 6 Nov 03:24 IST); its exported text is the file above.
 - The prompts from the second laptop (Divyam's commits: landing page, protocol SDK and CLI, build plugins, widget, certify directory, integration guide).
-- The `copeybara-leash` brand repo (the capybara mark and UI assets), which is private.

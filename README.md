@@ -370,13 +370,12 @@ Wallets: the automated e2e (kit and extension) uses an injected EIP-6963 test wa
 ## Built at ETHGlobal Mumbai: what's new and what's reused
 
 **When.** Everything in this repository was built during ETHGlobal Mumbai (5–7 November 2026), after kickoff, on the Classic (start fresh) track. Timeline, in IST:
-- 6 Nov 03:02: first commit of the team's Copeybara brand repo (`copeybara-leash`), where the capybara mark and some UI assets come from.
 - 6 Nov 03:24: the technical PRD ([docs/spec](docs/spec/BLACKOUT-technical-PRD.txt)), drafted by Claude from the team's idea.
 - 6 Nov 03:25: first Claude Code prompt in this repo; 03:28: first commit. Every later change is in `git log`.
 
 The project was first called BLACKOUT and renamed to Copeybara during the event; the old name survives in the ENS name `demoswap-blackout.eth`, the Vercel URL and the frozen `org.blackout.*` records.
 
-**New (written at the hackathon):** all code in `apps/`, `packages/`, `contracts/`, `replay/`, `harness/`, `scripts/` and `tools/`, plus the docs, benchmarks, configs and the brand mark.
+**New (written at the hackathon):** all code in `apps/`, `packages/`, `contracts/`, `replay/`, `harness/`, `scripts/` and `tools/`, plus the docs, benchmarks and configs. The capybara mark and brand assets were also made by the team during the event.
 
 **Reused, not ours:**
 - **Open-source libraries:** viem, Preact, Vite with `vite-plugin-singlefile`, `marked`, `qrcode`, the Geist fonts (`@fontsource-variable`), `@anthropic-ai/sdk`; for testing, Vitest, fast-check, Playwright and jsdom; Foundry with `forge-std`.
