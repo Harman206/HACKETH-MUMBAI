@@ -16,6 +16,9 @@ export const WATCHER_PERMISSIONS = watcherPermissions as PermissionCheck[];
 export const SAFE = (deployment as { safe: string }).safe;
 export const RESOLVER = (deployment as { resolver: string }).resolver;
 
+/** The demo video (YouTube or Loom). Linked, never embedded: the site loads nothing from third parties. Empty hides the link. */
+export const DEMO_VIDEO_URL = '';
+
 export const HERO = {
   title: 'The emergency exit for DeFi.',
   sub: 'When a protocol’s website goes down or gets hijacked, Copeybara still gets your funds back to your wallet, straight from the protocol’s contracts.',

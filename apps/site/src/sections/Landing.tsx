@@ -1,4 +1,4 @@
-import { EXT_PITCH, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, REPLAY_R1, SCENARIOS, STEPS_SIMPLE, TRUSTED, type Incident } from '../content';
+import { DEMO_VIDEO_URL, EXT_PITCH, HERO, HOW, INCIDENTS, LIMITS, NOT_TRUSTED, REPLAY_R1, SCENARIOS, STEPS_SIMPLE, TRUSTED, type Incident } from '../content';
 import { useCountUp, useInView } from '../motion';
 import { CertifiedTick } from '../pages/Certified';
 import { ExtensionPreview } from './ExtensionPreview';
@@ -25,6 +25,9 @@ export function Hero({ live }: { live: string | null }) {
           <div class="cta" data-reveal style="--d:3">
             <a class="btn" href="#download">Get the exit kit <span aria-hidden="true">↓</span></a>
             <a class="btn ghost" href="#demo">See the live demo</a>
+            {DEMO_VIDEO_URL && (
+              <a class="text-link" href={DEMO_VIDEO_URL} target="_blank" rel="noopener noreferrer">Watch the demo video <span aria-hidden="true">↗</span></a>
+            )}
           </div>
         </div>
         <div class="hero-visual" data-reveal style="--d:2">
