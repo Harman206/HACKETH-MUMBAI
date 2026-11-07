@@ -31,10 +31,10 @@
 
 ## TL;DR
 
-- **The problem.** DeFi's contracts rarely fail; its websites do. DNS hijacks, poisoned third-party scripts and outages have drained or locked out users at Curve, Balancer, Ledger Connect Kit, Polymarket and a dozen Name.com sites, while the contracts underneath kept working.
+- **The problem.** Some of DeFi's most painful losses never touched the contracts: the website was the weak point. DNS hijacks, poisoned third-party scripts and outages have drained or locked out users at Curve, Balancer, Ledger Connect Kit, Polymarket and a dozen Name.com sites, while the contracts underneath kept working.
 - **What we built.** A one-file **exit kit** that withdraws your positions straight from the contracts, a **browser extension** that stops drainers before your wallet sees them, a **watcher agent** with its own ENS identity, and an **SDK** that lets any protocol publish all of it on its **ENSv2** name in under an hour.
 - **Why it's different.** Nothing is trusted, everything is checked: the kit's fingerprint against ENS, every chain read against three RPCs, and every transaction against a fail-closed Exit Guard that can only ever pay you.
-- **Proof.** A live rescue on Sepolia with the website, DNS and RPC switched off; the 2022 Curve hijack replayed on a mainnet fork (400,227.23 USDC lost without Copeybara, 0 with it); 696 of 697 real drainer requests stopped; 917 automated tests.
+- **Proof.** A live rescue on Sepolia with the website, DNS and RPC switched off; the 2022 Curve hijack replayed on a mainnet fork (400,227.23 USDC lost without Copeybara, 0 with it); 696 of 697 real drainer requests stopped or held before signing; 917 automated tests.
 
 ## Demo video
 
@@ -44,7 +44,7 @@
   [![Watch the Copeybara demo](assets/brand/copey-card-fan.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
 -->
 
-> **Watch the demo:** _video coming soon_. Until then, [try a real exit on Sepolia](https://blackout-red.vercel.app/copeybara-kit.html?ens=demoswap-blackout.eth) in under a minute.
+> **Watch the demo:** the video is on our ETHGlobal Mumbai showcase page. Or [try a real exit on Sepolia](https://blackout-red.vercel.app/copeybara-kit.html?ens=demoswap-blackout.eth) in under a minute.
 
 The video follows one user through a real attack on Sepolia: DemoSwap's site is hijacked and drains a wallet that has no protection; then the website and its RPC are switched off, and the same user exits every position with a saved kit that checks itself against ENS.
 
@@ -153,7 +153,7 @@ Lead property: **censorship resistance**, shown end to end in the demo video and
 | | |
 |---|---|
 | **C**ensorship resistance (lead) | We and the protocol control the website, DNS, primary RPC, this host and the release Safe. If any of them goes away, users open their saved kit, reads fall back to 3 independent RPCs that must agree, and the last ENS release stays valid. No Copeybara server is on the exit path. |
-| **O**pen source | MIT. Anyone can build the kit from this repo alone (`pnpm install && pnpm --filter @copeybara/kit build`), and two builds give the same sha256 as the one published on ENS. |
+| **O**pen source | MIT. Anyone can build the kit from this repo alone (`pnpm install && pnpm --filter @copeybara/kit build`), and two builds of the same commit give the same sha256, so a published hash can be checked against a rebuild. |
 | **P**rivacy | The RPC providers (publicnode, Tenderly, ethPandaOps, or your own) see your address and the contracts you read; your wallet's RPC sees the exit transaction. No Copeybara server, no accounts, no analytics: 0 third-party requests from the kit (Playwright-checked). |
 | **S**ecurity | Keys never leave the wallet: the kit only sends `eth_estimateGas` / `eth_sendTransaction`, never asks for typed-data signatures, and every transaction passes the fail-closed Exit Guard. Releases need 2 of 3 Safe signers, and a stolen website key can write only `url`. |
 
