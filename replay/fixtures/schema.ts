@@ -1,5 +1,5 @@
 import { isAddress, isHex } from 'viem';
-import type { AdapterId, Address, Hex } from '@blackout/core';
+import type { AdapterId, Address, Hex } from '@copeybara/core';
 
 export interface Fixture {
   id: 'R1' | 'R2' | 'R3' | 'C1';

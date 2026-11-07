@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Copeybara: a single self-contained HTML **exit kit** that lets a DeFi user withdraw positions straight from protocol contracts when the protocol's website, DNS or RPC is down or hijacked. The kit's sha256 and the list of allowed exit contracts are published in the protocol's **ENSv2** name (Sepolia). It also ships a browser extension (`apps/extension`) and a watcher agent (`apps/watcher`). Renamed from BLACKOUT: ENS records are `org.copeybara.{release,manifest,site,extension,status,blocklist}`; the old `org.blackout.*` records stay frozen on chain for already-saved kits; the ENS name stays `demoswap-blackout.eth`. README.md is the source of truth for claims, trust boundaries and honest limits; keep it in sync with behavior.
+Copeybara: a single self-contained HTML **exit kit** that lets a DeFi user withdraw positions straight from protocol contracts when the protocol's website, DNS or RPC is down or hijacked. The kit's sha256 and the list of allowed exit contracts are published in the protocol's **ENSv2** name (Sepolia). It also ships a browser extension (`apps/extension`) and a watcher agent (`apps/watcher`). Renamed from BLACKOUT: ENS records are `org.copeybara.{release,manifest,site,extension,status,blocklist}`; the old `org.blackout.*` records stay frozen on chain for already-saved kits; the ENS name stays `demoswap-blackout.eth`. README.md is the source of truth for claims and trust boundaries, and docs/threat-model.md for limits and open edges; keep both in sync with behavior.
 
 ## Commands
 
@@ -12,7 +12,7 @@ Node 22 (`.nvmrc`), pnpm 9 (`corepack enable && pnpm install`). Foundry is neede
 
 ```bash
 pnpm typecheck                     # tsc -b over the project references in tsconfig.json
-pnpm test                          # vitest unit tests (all workspaces; excludes *.fork.test.ts) — this is what CI runs
+pnpm test                          # vitest unit tests (all workspaces; excludes *.fork.test.ts)
 pnpm vitest run packages/guard/test/guard.test.ts     # a single test file
 pnpm vitest run -t "name of test"                     # a single test by name
 pnpm test:fork                     # *.fork.test.ts: spawns anvil forks; needs MAINNET_RPC / SEPOLIA_RPC; serial
@@ -66,4 +66,4 @@ pnpm workspace; internal packages are consumed as TS source (`main: src/index.ts
 
 ## Deploy
 
-GitHub Pages workflow builds kit + site on push to main. Vercel production (https://blackout-red.vercel.app) is deployed with `scripts/deploy-site.sh`, which then verifies the hosted kit against the ENS record. Secrets (`DEPLOYER_KEY`, `ATTACKER_KEY`, Safe owner keys) live in `contracts/.env` (gitignored).
+Vercel builds kit, extension and site from `vercel.json` on push to main. Vercel production (https://blackout-red.vercel.app) is deployed with `scripts/deploy-site.sh`, which then verifies the hosted kit against the ENS record. Secrets (`DEPLOYER_KEY`, `ATTACKER_KEY`, Safe owner keys) live in `contracts/.env` (gitignored).
