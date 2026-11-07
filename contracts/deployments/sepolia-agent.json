@@ -1,0 +1,20 @@
+{
+  "addr": "0xeBbcD4fC4265dbb7Fc7b2df00f1fD7B89FA1EfF8",
+  "description": "Copeybara watcher agent for demoswap-blackout.eth: fingerprints the official site and probes look-alike domains. It may only raise or clear the warning (org.copeybara.status) and add look-alikes (org.copeybara.blocklist). The Safe can revoke it.",
+  "name": "watcher.demoswap-blackout.eth",
+  "operator": "0x3ae03951044Ced07F7fa12072CfE7F95827A057F",
+  "org.copeybara.agent": {
+    "role": "watcher",
+    "may_write": [
+      "org.copeybara.status",
+      "org.copeybara.blocklist"
+    ],
+    "of": "demoswap-blackout.eth",
+    "operator": "0x3ae03951044Ced07F7fa12072CfE7F95827A057F",
+    "code": "apps/watcher",
+    "version": 1
+  },
+  "resolver": "0xE319Bc6696833F1a5B5a64511D18A1AbCEC1eb6c",
+  "subregistry": "0xFF0e3f51bc904B13CCE7099e5D75b3040C110905",
+  "url": "https://github.com/Harman206/HACKETH-MUMBAI/tree/main/apps/watcher"
+}
