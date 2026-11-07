@@ -4,7 +4,7 @@ Every prompt the team typed into this Claude Code session, verbatim and in order
 
 **Fri 06 Nov 03:25 IST**
 
-> /Users/harry/Downloads/BLACKOUT\ —\ Technical\ PRD.docx I want you to go through the technical PRD in detail before we start working on it.
+> ~/Downloads/BLACKOUT\ —\ Technical\ PRD.docx I want you to go through the technical PRD in detail before we start working on it.
 
 **Fri 06 Nov 03:27 IST**
 
@@ -336,7 +336,7 @@ Every prompt the team typed into this Claude Code session, verbatim and in order
 
 **Sat 07 Nov 01:51 IST**
 
-> /Users/harry/Downloads/The\ Capybara\ Song\ Official\ Music\ Video\ 🎶🎶.mp4 use the song from this video, also give me a status update on everything
+> ~/Downloads/The\ Capybara\ Song\ Official\ Music\ Video\ 🎶🎶.mp4 use the song from this video, also give me a status update on everything
 
 **Sat 07 Nov 01:55 IST**
 

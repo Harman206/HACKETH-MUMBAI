@@ -1,5 +1,7 @@
 {
   "name": "copeybara",
+  "description": "Copeybara: the emergency exit for DeFi. A verified one-file exit kit, browser extension, watcher agent and protocol SDK on ENSv2.",
+  "repository": "github:Harman206/HACKETH-MUMBAI",
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@9.15.9",
